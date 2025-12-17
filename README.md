@@ -17,6 +17,7 @@ Personal notes for reproducing my preferred Arch Linux installation. The flow st
 
 
 ### 0. Preconfig the install medis
+
 Set Parallel and Color
 ```bash
 sudo sed -i \
@@ -52,6 +53,7 @@ rm -f "$tmpfile"
 ```
 
 ## 1. Partitioning (GPT)
+
 Target layout:
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
@@ -65,6 +67,7 @@ cfdisk
 ```
 
 ## 2. Format
+
 ```bash
 mkfs.btrfs -f /dev/nvme0n1p2 -L "ArchLinuxFS"
 mkswap /dev/nvme0n1p3
@@ -80,12 +83,31 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ## 3. Btrfs Subvolumes
 
 ```bash
+echo "Mount blank btrfs vol and create subvols"
+mount UUID=${root_uuid} /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@var
 btrfs subvolume create /mnt/@var
 btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
+umount /mnt
+
+echo "Mount btrfs and mount subvols to mount points"
+mount -o compress=zstd:1,noatime,subvol=@ UUID=${root_uuid}  /mnt
+
+mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID=${root_uuid}  /mnt/home
+mount --mkdir -o compress=zstd:1,noatime,subvol=@log UUID=${root_uuid}  /mnt/var/log
+mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID=${root_uuid}  /mnt/var/cache
+mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID=${root_uuid}  /mnt/var/root
+mount --mkdir -o compress=zstd:1,noatime,subvol=@srv UUID=${root_uuid}  /mnt/var/srv
+
+mount --mkdir UUID=${esp_uuid}  /mnt/boot
+
+swaopn UUID=${swap_uuid}
+
+
+
 ```
 
 

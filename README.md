@@ -88,25 +88,26 @@ mount UUID=${root_uuid} /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@var
-btrfs subvolume create /mnt/@var
+btrfs subvolume create /mnt/@log
+btrfs subvolume create /mnt/@cache
 btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
 umount /mnt
 
-echo "Mount btrfs and mount subvols to mount points"
+echo "Mount btrfs subvolumes"
 mount -o compress=zstd:1,noatime,subvol=@ UUID=${root_uuid}  /mnt
-
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID=${root_uuid}  /mnt/home
+mount --mkdir -o compress=zstd:1,noatime,subvol=@var UUID=${root_uuid}  /mnt/var
 mount --mkdir -o compress=zstd:1,noatime,subvol=@log UUID=${root_uuid}  /mnt/var/log
 mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID=${root_uuid}  /mnt/var/cache
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID=${root_uuid}  /mnt/var/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv UUID=${root_uuid}  /mnt/var/srv
 
-echo "Mount /boot"
+echo "Mount ESP at /boot"
 mount --mkdir UUID=${esp_uuid}  /mnt/boot
 
 echo "Swapon"
-swaopn UUID=${swap_uuid}
+swapon UUID=${swap_uuid}
 
 echo "genfstab"
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -122,7 +123,10 @@ if lscpu | grep -qi amd; then
 fi
 
 pacstrap -K /mnt base base-devel linux linux-firmware btrfs-progs \
-        networkmanager vim git sudo "${ucode_pkg}" man curl
+        networkmanager vim nvim git sudo "${ucode_pkg}" man curl \
+        efibootmgr inotify-tools pipewire pipewire-alsa pipewire-pulse pipewire-jack \
+        wireplumber reflector zsh zsh-completions zsh-autosuggestions \
+        bash-completion openssh
 arch-chroot /mnt
 ```
 
@@ -199,26 +203,72 @@ mkinitcpio -P
 ```
 
 ## 6. Limine Bootloader
-Limine lives on the small ext4 partition.
+Limine lives on the FAT32 ESP mounted at `/boot`.
 ```bash
 pacman -S --needed limine
-mkdir -p /boot/limine
-limine-deploy /dev/nvme0n1
+
+mkdir -p /boot/EFI/limine /boot/limine
+
+cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
 ```
 
-Sample `/boot/limine/limine.conf`:
+Now we need to create an entry for Limine in the NVRAM:
+```bash
+efibootmgr --create --disk /dev/nvme0n1 --part 1 \
+      --label "Limine Bootloader" \
+      --loader '\EFI\limine\BOOTX64.EFI' \
+      --unicode
 ```
-TIMEOUT=5
-DEFAULT_ENTRY=Arch Linux
+N.B. --disk /dev/nvme0n1 --part 1 means /dev/nvme0n1p1
+
+N.B. Do NOT include boot when pointing to Limine Bootloader file.
+
+N.B. In a Limine config, boot():/ represents the partition on which limine.conf is located.
+
+Copy kernels, initramfs, and microcode into `/boot/limine` so Limine can read them:
+```bash
+ucode_img="intel-ucode"
+if lscpu | grep -qi amd; then
+  ucode_img="amd-ucode"
+fi
+
+cp -v /boot/vmlinuz-linux /boot/limine/
+cp -v /boot/initramfs-linux*.img /boot/limine/
+cp -v "/boot/${ucode_img}.img" /boot/limine/
+```
+
+Repeat the copy step whenever the kernel or microcode packages update.
+
+Finally let's make a basic configuration for Limine. The following command writes the config directly to `/boot/limine/limine.conf`:
+
+```bash
+root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
+ucode_module="boot():/limine/intel-ucode.img"
+if lscpu | grep -qi amd; then
+  ucode_module="boot():/limine/amd-ucode.img"
+fi
+
+cat <<EOF | sudo tee /boot/limine/limine.conf >/dev/null
+timeout: 3
 
 :Arch Linux
-    PROTOCOL=linux
-    KERNEL_PATH=boot:///vmlinuz-linux
-    MODULE_PATH=boot:///initramfs-linux.img
-    CMDLINE=root=UUID=<UUID_OF_BTRFS> rootflags=subvol=@ rw loglevel=3 quiet
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/limine/vmlinuz-linux
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rw rootflags=subvol=@ rootfstype=btrfs
+    MODULE_PATH: ${ucode_module}
+    MODULE_PATH: boot():/limine/initramfs-linux.img
+
+:Arch Linux (fallback)
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/limine/vmlinuz-linux
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rw rootflags=subvol=@ rootfstype=btrfs
+    MODULE_PATH: ${ucode_module}
+    MODULE_PATH: boot():/limine/initramfs-linux-fallback.img
+EOF
+limine-install /boot/limine
 ```
 
-Run `limine-install /boot/limine` after editing the config.
+
 
 ## 7. KDE Plasma & Desktop Stack
 ```bash

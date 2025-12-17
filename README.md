@@ -147,8 +147,9 @@ echo "Enable swap"
 swapon UUID="${swap_uuid}"
 
 echo "Generate fstab"
-mkdir /mnt/etc
+mkdir mnt/etc
 genfstab -U /mnt >> /mnt/etc/fstab
+cat /mnt/etc/fstab
 ```
 
 ---

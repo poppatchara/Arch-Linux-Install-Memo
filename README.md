@@ -223,8 +223,13 @@ EOF
 ### 5.4 Users and sudo
 ```bash
 passwd
+```
+```bash
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash pop   # change username
 passwd pop
+```
+Uncomment %wheel% for sudoer
+```bash
 EDITOR=vim visudo   # uncomment: %wheel ALL=(ALL) ALL
 ```
 

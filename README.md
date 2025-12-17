@@ -128,32 +128,74 @@ arch-chroot /mnt
 
 ## 5. Continue inside chroot
 
-Set Locale and hostname
+Config pacman inside chroot again
 ```bash
-ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+sudo sed -i \
+  -e 's/^\(ParallelDownloads *= *\)5/\115/' \
+  -e 's/^#Color/Color/' \
+  -e 's/^#\[multilib\]/[multilib]/' \
+  -e 's|^#Include = /etc/pacman.d/mirrorlist|Include = /etc/pacman.d/mirrorlist|' \
+  /etc/pacman.conf
+```
+
+Set Locale
+Remove any locale you dont want. Most people only need en_US
+```bash
+ln -sf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
 hwclock --systohc
+sed -i 's/^#ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/^#th_TH.UTF-8 UTF-8/th_TH.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/^#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen
 sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
-echo aurora > /etc/hostname
+```
+
+Hosts and Hostnames. Change hostname to whatever you want.
+```bash
+hname="arch"
+echo $hname~ > /etc/hostname
+
 cat <<EOF > /etc/hosts
 127.0.0.1   localhost
 ::1         localhost
-127.0.1.1   aurora.localdomain aurora
+127.0.1.1   ${hname}.localdomain ${hname}
 EOF
 ```
 
-Adjust `mkinitcpio.conf`:
-- Set `MODULES=(btrfs)`
-- Hooks order: `HOOKS=(base systemd autodetect keyboard sd-vconsole modconf block filesystems fsck)`
-- Rebuild: `mkinitcpio -P`
-
-Enable networking and sudo:
+Setup password
 ```bash
-systemctl enable NetworkManager
-useradd -m -G wheel -s /usr/bin/zsh pop
-passwd pop
-EDITOR=vim visudo  # uncomment %wheel ALL=(ALL:ALL) ALL
+passwd
+```
+
+Add user and set passwd
+```bash
+useradd -m -G wheel,storage,power,audio,video -s /bin/bash <yourusername>
+passwd <yourusername>
+```
+
+Add wheel group to sudoers file to allow users to run sudo:
+```bash
+EDITOR=vim visudo
+```
+[uncomment following line in file]
+`%wheel ALL=(ALL) ALL`
+
+Create viconsole
+```bash
+touch /etc/vconsole.conf
+echo KEYMAP=us>>/etc/vconsole.conf
+echo FONT=>>/etc/vconsole.conf
+```
+
+Adjust `mkinitcpio.conf`:
+```bash
+sudo sed -i \
+  -e 's/^MODULES=.*/MODULES=(btrfs)/' \
+  -e 's/^HOOKS=.*/HOOKS=(base udev systemd autodetect microcode modconf keyboard keymap sd-vconsole block filesystems resume fsck)/' \
+  /etc/mkinitcpio.conf
+mkinitcpio -P
 ```
 
 ## 6. Limine Bootloader

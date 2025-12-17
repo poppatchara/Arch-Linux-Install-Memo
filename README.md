@@ -105,6 +105,7 @@ sudo pacman -Syy
 Use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
 
 ### 2. Format and capture UUIDs
+*CAUTION!! check your /dev. Mine was /dev/nvme0n1p2*
 ```bash
 mkfs.btrfs -f -L ArchLinuxFS /dev/nvme0n1p2
 mkswap /dev/nvme0n1p3
@@ -169,6 +170,7 @@ pacstrap -K /mnt \
 arch-chroot /mnt
 ```
 
+Wait for the install to finish. Then, it will drop into chroot.
 ---
 
 ## Chroot Configuration
@@ -295,6 +297,9 @@ timeout: 3
     module_path: boot():/initramfs-linux-fallback.img
     cmdline: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
 EOF
+
+clear
+cat /boot/limine/limine.conf
 
 ```
 

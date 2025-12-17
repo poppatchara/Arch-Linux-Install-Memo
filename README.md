@@ -19,6 +19,7 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 ---
 
 ## Assumptions
+🧩 This memo is written as a linear “do this, then that” install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
 - Arch ISO already written to USB (any recent release).
 - I SSH into the live ISO from another machine (root password set with `passwd`, IP from `ip a`), purely for copy/paste convenience.
 - Secure Boot disabled, UEFI mode enabled.
@@ -30,8 +31,9 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 ---
 
 ## Live ISO Prep
+🧰 Goal: make package installs fast/repeatable in the live environment (pacman config + mirrors) before you partition/format. On the Arch ISO you are usually `root` already; `sudo` is fine to keep the same commands for later.
 
-### 0.1 Configure pacman appearance & parallel downloads
+### 0.1 Configure pacman appearance & parallel downloads 🎛️
 ```bash
 conf=/etc/pacman.conf
 sudo sed -i \
@@ -50,7 +52,7 @@ if [ "$lines" -ge 8 ]; then
 fi
 ```
 
-### 0.2 Refresh mirror list
+### 0.2 Refresh mirror list 🌐
 Reorder the existing mirrorlist: move your `## <country>` section to right before `## Worldwide`, with exactly one blank line between them.
 ```bash
 country=Thailand
@@ -98,6 +100,7 @@ sudo pacman -Syy
 ---
 
 ## Partition & Format
+💽 Goal: create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don’t wipe the wrong device.
 
 ### 1. Partition layout
 | Partition | Size | Type | Purpose |
@@ -122,6 +125,12 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ---
 
 ## Btrfs Subvolumes & Mounts
+🧱 Goal: create a subvolume layout that plays nicely with snapshot tools (e.g., Snapper) and keeps “churny” paths isolated (logs/cache). This is a personal layout; feel free to add/remove subvolumes depending on what you plan to snapshot.
+
+📝 Notes:
+- Subvolumes here are named `@something` by convention; `@` is mounted as `/` later.
+- `compress=zstd:1,noatime` is a common baseline; tune for your workload.
+- If you don’t care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
 
 ```bash
 # Create subvolumes
@@ -142,25 +151,26 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID="${root_uuid}" /mnt/h
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var  UUID="${root_uuid}" /mnt/var
 mount --mkdir -o compress=zstd:1,noatime,subvol=@log  UUID="${root_uuid}" /mnt/var/log
 mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID="${root_uuid}" /mnt/var/cache
-mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/var/root
-mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/var/srv
+mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/root
+mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/srv
 
 # Mount ESP at /boot
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 
-# Enable swap"]
+# Enable swap
 swapon UUID="${swap_uuid}"
 ```
 ```bash
 # Generate fstab
 mkdir -p /mnt/etc
-genfstab -U /mnt >> /mnt/etc/fstab
+genfstab -U /mnt > /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
 
 ---
 
 ## Base Install
+📦 Goal: install a bootable base system onto `/mnt` (kernel, firmware, networking, editors, etc.), then switch into it with `arch-chroot`. If you prefer fewer packages, trim this list, but keep `base`, a kernel, `linux-firmware`, and whatever you need for networking and your filesystem.
 
 ```bash
 # Detect arch
@@ -186,9 +196,24 @@ pacstrap -K /mnt \
 arch-chroot /mnt
 ```
 
+<details>
+  <summary>📦 Packages being installed (Base Install)</summary>
+
+  - Core system: `base`, `base-devel`
+  - Kernel + firmware: `linux`, `linux-headers`, `linux-firmware`
+  - CPU microcode: `intel-ucode` or `amd-ucode` (chosen via `lscpu`)
+  - Filesystem tools: `btrfs-progs`
+  - Boot/UEFI tools: `efibootmgr`
+  - Networking + SSH: `networkmanager`, `openssh`
+  - Editors + tools: `vim`, `nvim`, `git`, `sudo`, `man`, `curl`, `inotify-tools`
+  - Audio stack (PipeWire): `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
+  - Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
+</details>
+
 Wait for the install to finish, then continue inside the chroot.
 
 ## Chroot Configuration
+🏠 Everything below runs inside `arch-chroot /mnt` unless explicitly stated otherwise. This section sets the system identity (locale/time/hostname/users) and ensures your initramfs includes the bits needed to boot from Btrfs.
 
 ### 5.1 Pacman tweaks (again, now inside the chroot)
 ```bash
@@ -266,6 +291,7 @@ mkinitcpio -P
 ---
 
 ## Limine Bootloader
+🚀 Goal: install Limine to the EFI System Partition and generate a `limine.conf` that boots your Arch kernel/initramfs from Btrfs by UUID. The key idea is to keep Limine’s config and the kernel artifacts together under `/boot/limine`.
 
 ### 6.1 Install Limine binaries (ESP mounted at `/boot`)
 ```bash
@@ -273,6 +299,12 @@ pacman -S --needed limine
 mkdir -p /boot/EFI/limine /boot/limine
 cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
 ```
+
+<details>
+  <summary>🚀 Packages being installed (Limine)</summary>
+
+  - `limine`: Limine UEFI bootloader EFI binaries + templates/config support
+</details>
 
 ### 6.2 Register Limine with the firmware
 ```bash
@@ -348,6 +380,11 @@ EOF
 ---
 
 ## Services & QoL
+⚙️ Goal: enable the essential background services you want on every boot (networking, printing, bluetooth, etc.). Pick a networking stack and enable only what you actually use to avoid service conflicts.
+
+🧠 Networking note (choose one approach):
+- `NetworkManager` (common on desktops/laptops): enable `NetworkManager` (and optionally `iwd` for Wi‑Fi backend).
+- `systemd-networkd` + `systemd-resolved` (common on servers/minimal): enable those, skip `NetworkManager` and `dhcpcd`.
 
 ### Extra packages (optional)
 ```bash
@@ -357,13 +394,37 @@ sof-firmware bluez bluez-utils cups util-linux terminus-font openssh rsync \
 dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber iwd
 ```
 
+<details>
+  <summary>⚙️ Packages being installed (Services &amp; QoL extras)</summary>
+
+  - Basics: `wget`, `htop`, `inetutils`, `usbutils`, `rsync`
+  - Archives: `zip`, `unzip`, `p7zip`
+  - CLI quality-of-life: `bat`
+  - Images/media: `imagemagick`
+  - Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
+  - PipeWire stack: `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
+  - Networking (pick what you use): `iwd`, `dhcpcd`, `avahi`, `nss-mdns`, `openssh`
+  - Bluetooth: `bluez`, `bluez-utils`
+  - Printing: `cups`
+  - Power/ACPI: `acpi`, `acpi_call`, `acpid`
+  - Fonts/terminal: `noto-fonts`, `nerd-fonts`, `ttf-jetbrains-mono`, `terminus-font`
+  - Desktop/user dirs: `xdg-user-dirs`
+  - System utilities: `util-linux`
+  - Office: `libreoffice-fresh`
+</details>
+
 ### Enable services
 ```bash
+# Networking (choose one)
 systemctl enable NetworkManager
-systemctl enable dhcpcd
-systemctl enable iwd
-systemctl enable systemd-networkd
-systemctl enable systemd-resolved
+# systemctl enable systemd-networkd
+# systemctl enable systemd-resolved
+
+# Optional Wi‑Fi tooling (only enable if you actually use it)
+# systemctl enable iwd
+# systemctl enable dhcpcd
+
+# Everything else (pick what you need)
 systemctl enable bluetooth
 systemctl enable cups
 systemctl enable avahi-daemon
@@ -378,9 +439,16 @@ pacman -S --needed util-linux
 systemctl enable fstrim.timer
 ```
 
+<details>
+  <summary>🧹 Packages being installed (Periodic TRIM)</summary>
+
+  - `util-linux`: provides `fstrim` and `fstrim.timer`
+</details>
+
 ---
 
 ## Desktop Stack
+🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you’ll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don’t want the full KDE app suite, replace `kde-applications-meta` with a hand-picked list.
 
 ### KDE Plasma & apps
 ```bash
@@ -401,14 +469,51 @@ systemctl enable sddm
 systemctl enable power-profiles-daemon
 ```
 
+<details>
+  <summary>🖥️ Packages being installed (KDE Plasma desktop)</summary>
+
+  - Plasma desktop: `plasma-meta`
+  - KDE apps bundle: `kde-applications-meta` (large meta package)
+  - Display manager: `sddm`, `sddm-kcm`
+  - Desktop integration: `plasma-nm`, `plasma-pa`, `kscreen`, `bluedevil`, `print-manager`
+  - Portals: `xdg-desktop-portal`, `xdg-desktop-portal-kde`
+  - Common apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `filelight`, `kcalc`
+  - Thumbnails/integration: `kdeconnect`, `kio-extras`, `ffmpegthumbs`, `kdegraphics-thumbnailers`
+  - Power profiles: `power-profiles-daemon`
+  - Fonts: `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `ttf-dejavu`, `ttf-liberation`, `ttf-jetbrains-mono`, `ttf-fira-code`, `ttf-ubuntu-font-family`, `adobe-source-sans-fonts`, `adobe-source-serif-fonts`, `adobe-source-code-pro-fonts`
+</details>
+
 ---
 
 ## Snapper
+📸 Goal: set up snapshot management for Btrfs so you can roll back system changes. `snapper` itself is in the official repos; the Limine integration shown below uses AUR packages (requires an AUR helper such as `yay`, see Post-Install Ideas).
 
+yay
+```bash
+sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+```
+
+<details>
+  <summary>🧰 Packages being installed (bootstrap AUR helper)</summary>
+
+  - `git`: fetch the `yay` PKGBUILD repo
+  - `base-devel`: required toolchain for building AUR packages via `makepkg`
+</details>
+
+snapper
 ```bash
 pacman -Syu snapper
+# Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
 yay -S limine-snapper-sync limine-mkinitcpio-hook
 ```
+
+<details>
+  <summary>📸 Packages being installed (Snapper + optional Limine integration)</summary>
+
+  - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
+  - (AUR) `limine-snapper-sync`: keep Limine config/entries aligned with snapshots
+  - (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
+</details>
 
 Add `btrfs-overlayfs` to the end of `HOOKS` and rebuild initramfs:
 ```bash
@@ -429,9 +534,16 @@ cp /etc/limine-snapper-sync.conf /etc/default/limine
 pacman -Syu snap-pac
 ```
 
+<details>
+  <summary>📸 Packages being installed (Snapper add-on)</summary>
+
+  - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
+</details>
+
 ---
 
 ## Trim & Reboot
+🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
 
 ### Exit chroot and reboot
 ```bash
@@ -444,15 +556,12 @@ reboot
 ---
 
 ## Post-Install Ideas
+✨ Optional follow-ups after you can boot and log in. This section is intentionally “pick what you need” rather than part of the minimal base install.
 
 ### Login to your new system
 
-#### yay
-```bash
-sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
-```
-
 ### CachyOS Kernels
+🐆 If you want CachyOS’ tuned kernels/userspace, add their repo and install the kernel packages. This is optional and changes your system away from “pure Arch”, so it’s a good idea to keep a package list backup first.
 
 Backup pacman config
 ```bash
@@ -479,10 +588,26 @@ sudo pacman -S \
   linux-cachyos linux-cachyos-headers
 ```
 
+<details>
+  <summary>🐆 Packages being installed (CachyOS kernels)</summary>
+
+  - `linux-cachyos`, `linux-cachyos-headers`: CachyOS kernel + headers
+  - `linux-cachyos-eevdf`, `linux-cachyos-eevdf-headers`: alternative CachyOS kernel variant + headers
+</details>
+
 CachyOS Packages
 ```bash
 sudo pacman -S cachyos-settings appmenu-gtk-module libdbusmenu-glib cachyos-gaming-meta cachyos-hello
 ```
+
+<details>
+  <summary>🐆 Packages being installed (CachyOS extras)</summary>
+
+  - `cachyos-settings`: CachyOS defaults/tweaks
+  - `cachyos-gaming-meta`: gaming-oriented meta package
+  - `cachyos-hello`: welcome/info app
+  - `appmenu-gtk-module`, `libdbusmenu-glib`: appmenu/DBus menu integration
+</details>
 
 Update all packages to CachyOS Optimized
 ```bash
@@ -490,6 +615,7 @@ sudo pacman -Qqn | sudo pacman -S -
 ```
 
 ### Extra Packages and fonts
+🧺 Personal “daily driver” package list. Treat it as a pick-list; some items overlap with earlier sections and some are heavy (office suite, IDE, Steam).
 ```bash
 yay -Syu wget htop gvfs gvfs-smb inetutils imagemagick usbutils easyeffects openbsd-netcat nss-mdns bat zip unzip \
 p7zip brightnessctl xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh firefox mailspring \
@@ -498,12 +624,39 @@ visual-studio-code-bin proton-ge-custom-bin goverlay noto-fonts noto-fonts-emoji
 ttf-ms-fonts
 ```
 
+<details>
+  <summary>🧺 Packages being installed (daily-driver pick list)</summary>
+
+  - Desktop integration: `gvfs`, `gvfs-smb`
+  - Browsers/mail: `firefox`, `mailspring`
+  - Media/creative: `vlc`, `gimp`, `obs-studio`, `imagemagick`
+  - Gaming: `steam`, `lutris`, `gamemode`, `mangohud`, `proton-ge-custom-bin`, `goverlay`
+  - System/power: `tlp`, `tlp-rdw`, `brightnessctl`, `acpi`, `acpi_call`
+  - Filesystem: `btrfs-progs`
+  - Networking/tools: `openbsd-netcat`, `inetutils`, `usbutils`, `nss-mdns`
+  - Audio: `easyeffects`
+  - Packaging/platforms: `flatpak`
+  - Editors/IDE: `visual-studio-code-bin`
+  - Utilities: `wget`, `htop`, `bat`, `zip`, `unzip`, `p7zip`, `xdg-user-dirs`
+  - Fonts: `noto-fonts`, `noto-fonts-emoji`, `noto-fonts-extra`, `nerd-fonts`, `ttf-jetbrains-mono`, `ttf-ms-fonts`
+  - Office: `libreoffice-fresh`
+</details>
+
 ### Nvidia Driver
+🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware.
 
 ```bash
 yay -S nvidia-dkms nvidia-utils lib32-nvidia-utils nvidia-settings \
 ocl-icd opencl-nvidia clinfo cuda 
 ```
+
+<details>
+  <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
+
+  - Driver (DKMS): `nvidia-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
+  - OpenCL: `ocl-icd`, `opencl-nvidia`, `clinfo`
+  - CUDA toolkit/runtime: `cuda`
+</details>
 
 Add DRM Kernel Module
 

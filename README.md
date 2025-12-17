@@ -324,8 +324,8 @@ Additional packages
 ```bash
 pacman -Syu wget htop inetutils imagemagick usbutils easyeffects nss-mdns bat zip unzip \
 p7zip xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh \
-sof-firmware firewalld bluez bluez-utils cups util-linux terminus-font openssh rsync \
-dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber 
+sof-firmware bluez bluez-utils cups util-linux terminus-font openssh rsync \
+dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber iwd
 ```
 
 Enable services
@@ -338,9 +338,9 @@ systemctl enable systemd-resolved
 systemctl enable bluetooth
 systemctl enable cups
 systemctl enable avahi-daemon
-systemctl enable firewalld
 systemctl enable acpid
 systemctl enable reflector.timer
+systemctl enable sshd
 ```
 
 Periodic TRIM
@@ -354,12 +354,15 @@ systemctl enable fstrim.timer
 
 ### 8. KDE Plasma (Wayland-first) & friends
 ```bash
-pacman -S --needed \
-  plasma-meta plasma-x11-session\
-  systemsettings plasma-nm plasma-pa kscreen powerdevil power-profiles-daemon kactivitymanagerd \
-  konsole dolphin ark kate kcalc okular spectacle gwenview krdp kdeconnect kio-extras \
-  elisa haruna \
+pacman -S \
+  plasma-desktop plasma-x11-session \
   sddm sddm-kcm \
+  plasma-nm plasma-pa kscreen bluedevil print-manager \
+  xdg-desktop-portal xdg-desktop-portal-kde \
+  dolphin dolphin-plugins konsole kate \
+  okular gwenview spectacle ark \
+  kdeconnect kio-extras ffmpegthumbs kdegraphics-thumbnailers \
+  filelight kcalc\
   noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-liberation \
   ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family \
   adobe-source-sans-fonts adobe-source-serif-fonts adobe-source-code-pro-fonts

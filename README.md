@@ -40,28 +40,50 @@ sudo sed -i \
   /etc/pacman.conf
 ```
 
-### 0.2 Refresh mirror list (keep first three lines + Worldwide, insert chosen country)
+### 0.2 Refresh mirror list
+Change `country` to your location; the snippet moves that section just above Worldwide and uncomments the servers already on disk. This will make the download faster since it prefer your local mirrors.
 ```bash
 country=Thailand
-mirror_url="https://archlinux.org/mirrorlist/?country=all&protocol=http&protocol=https&ip_version=4"
+mirrorfile="/etc/pacman.d/mirrorlist"
 tmpfile="$(mktemp)"
+sudo cp "$mirrorfile" "$tmpfile"
 
-curl -s "$mirror_url" > "$tmpfile"
 awk -v country="$country" '
-  NR <= 3 { header = header $0 ORS; next }
-  /^## / { current = $0; next }
-  current == ("## " country)   { country_block = country_block $0 ORS; next }
-  current == "## Worldwide"    { world_block   = world_block   $0 ORS; next }
-  { next }
-  END {
-    printf "%s", header
-    printf "## %s\n", country
-    printf "%s", country_block
-    printf "\n## Worldwide\n"
-    printf "%s", world_block
+  /^## / {
+    section = $0
+    sections[section] = section ORS
+    order[++count] = section
+    next
   }
-' "$tmpfile" | sed 's/^#Server/Server/' | sudo tee /etc/pacman.d/mirrorlist >/dev/null
+  {
+    if (section == "") {
+      header = header $0 ORS
+    } else {
+      sections[section] = sections[section] $0 ORS
+    }
+  }
+  END {
+    country_key = "## " country
+    printf "%s", header
+    for (i = 1; i <= count; ++i) {
+      sec = order[i]
+      if (sec == country_key) {
+        next
+      }
+      if (sec == "## Worldwide" && (country_key in sections)) {
+        printf "%s", sections[country_key]
+      }
+      printf "%s", sections[sec]
+    }
+    if (!(country_key in sections)) {
+      # nothing extra
+    } else if (!("## Worldwide" in sections)) {
+      printf "%s", sections[country_key]
+    }
+  }
+' "$tmpfile" | sed 's/^#Server/Server/' | sudo tee "$mirrorfile" >/dev/null
 rm -f "$tmpfile"
+sudo pacman -Syy
 ```
 
 ---

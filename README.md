@@ -492,6 +492,9 @@ systemctl enable power-profiles-daemon
 ### Exit chroot and reboot
 ```bash
 exit
+```
+Then:
+```bash
 umount -R /mnt
 swapoff -a
 reboot

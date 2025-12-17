@@ -520,7 +520,7 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 
 snapper
 ```bash
-pacman -Syu snapper
+sudo pacman -Syu snapper
 # Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
 yay -S limine-snapper-sync limine-mkinitcpio-hook
 ```
@@ -535,8 +535,8 @@ yay -S limine-snapper-sync limine-mkinitcpio-hook
 
 Create configs
 ```bash
-snapper -c root create-config /
-snapper -c home create-config /home
+sudo snapper -c root create-config /
+sudo snapper -c home create-config /home
 sudo sed -i 's/^TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/' /etc/snapper/configs/{root,home}
 sudo sed -i 's/^NUMBER_LIMIT="50"/NUMBER_LIMIT="5"/' /etc/snapper/configs/{root,home}
 sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT="10"/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/{root,home}

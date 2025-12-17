@@ -1,4 +1,4 @@
-# Arch Linux + Btrfs + KDE Plasma + Limine + Dualboot + Nvidia DKMS + Snapper 
+# Arch Linux + Btrfs + CachyOS Kernels + KDE Plasma + Limine + Dualboot + Nvidia DKMS + Snapper 
 
 Personal notes for reproducing my preferred Arch Linux installation. The flow starts from a fresh Arch ISO, targets a modern UEFI system, uses a Btrfs root on NVMe, installs KDE Plasma as the desktop, and boots with Limine.
 
@@ -102,26 +102,33 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID=${root_uuid}  /mnt/v
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID=${root_uuid}  /mnt/var/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv UUID=${root_uuid}  /mnt/var/srv
 
+echo "Mount /boot"
 mount --mkdir UUID=${esp_uuid}  /mnt/boot
 
+echo "Swapon"
 swaopn UUID=${swap_uuid}
 
-
-
+echo "genfstab"
+genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
-
+## 4. install packages and chroot into /mnt
 
 ```bash
+
+ucode_pkg=intel-ucode
+if lscpu | grep -qi amd; then
+  ucode_pkg=amd-ucode
+fi
+
 pacstrap -K /mnt base base-devel linux linux-firmware btrfs-progs \
-        networkmanager vim zsh git sudo
-genfstab -U /mnt >> /mnt/etc/fstab
+        networkmanager vim git sudo "${ucode_pkg}" man curl
 arch-chroot /mnt
 ```
 
+## 5. Continue inside chroot
 
-
-Inside the chroot:
+Set Locale and hostname
 ```bash
 ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 hwclock --systohc

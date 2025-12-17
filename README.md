@@ -322,7 +322,10 @@ EOF
 
 Additional packages
 ```bash
-pacman -Syu wget htop inetutils imagemagick usbutils easyeffects nss-mdns bat zip unzip  xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh sof-firmware firewalld bluez bluez-utils cups util-linux terminus-font openssh rsync base base-devel dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber 
+pacman -Syu wget htop inetutils imagemagick usbutils easyeffects nss-mdns bat zip unzip \
+p7zip xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh \
+sof-firmware firewalld bluez bluez-utils cups util-linux terminus-font openssh rsync \
+dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber 
 ```
 
 Enable services

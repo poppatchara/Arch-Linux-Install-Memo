@@ -32,67 +32,63 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 
 ### 0.1 Configure pacman appearance & parallel downloads
 ```bash
+conf=/etc/pacman.conf
 sudo sed -i \
   -e 's/^\(ParallelDownloads *= *\)5/\115/' \
   -e 's/^#Color/Color/' \
-  -e 's/^#\[multilib\]/[multilib]/' \
-  -e 's|^#Include = /etc/pacman.d/mirrorlist|Include = /etc/pacman.d/mirrorlist|' \
-  /etc/pacman.conf
+  "$conf"
+
+# Uncomment [multilib] and its Include line (assumed to be near the end of the file).
+lines="$(wc -l < "$conf")"
+sudo sed -i \
+  -e "$((lines-6)) s/^#//" \
+  -e "$((lines-7)) s/^#//" \
+  "$conf"
 ```
 
 ### 0.2 Refresh mirror list
-Change `country` to your location; the snippet moves that section just above Worldwide and uncomments the servers already on disk. This will make the download faster since it prefer your local mirrors.
+Reorder the existing mirrorlist: move your `## <country>` section to right before `## Worldwide`, with exactly one blank line between them.
 ```bash
 country=Thailand
 mirrorfile="/etc/pacman.d/mirrorlist"
-tmpfile="$(mktemp)"
-sudo cp "$mirrorfile" "$tmpfile"
+sudo cp "$mirrorfile" "${mirrorfile}.bak"
 
+tmpfile="$(mktemp)"
 awk -v country="$country" '
-  BEGIN {
-    section = ""
-  }
-  /^## / {
-    section = $0
-    sections[section] = section ORS
-    order[++count] = section
-    next
-  }
-  {
-    if (section == "") {
-      header = header $0 ORS
-    } else {
-      sections[section] = sections[section] $0 ORS
-    }
-  }
+  { lines[NR] = $0; n = NR }
   END {
-    country_key = "## " country
-    printf "%s", header
-    for (i = 1; i <= count; ++i) {
-      sec = order[i]
-      if (sec == country_key) {
-        next
-      }
-      if (sec == "## Worldwide" && (country_key in sections)) {
-        printf "%s", sections[country_key]
-      }
-      printf "%s", sections[sec]
+    country_re   = "^##[[:space:]]+" country "[[:space:]]*$"
+    worldwide_re = "^##[[:space:]]+Worldwide[[:space:]]*$"
+
+    for (i = 1; i <= n; ++i) if (lines[i] ~ country_re)   { cs = i; break }
+    for (i = 1; i <= n; ++i) if (lines[i] ~ worldwide_re) { ws = i; break }
+    if (!cs) { print "Country section not found: ## " country > "/dev/stderr"; exit 2 }
+    if (!ws) { print "Worldwide section not found: ## Worldwide" > "/dev/stderr"; exit 2 }
+
+    ce = n + 1
+    for (i = cs + 1; i <= n; ++i) {
+      if (lines[i] ~ /^##[[:space:]]+/) { ce = i; break }
     }
-    if (!(country_key in sections)) {
-      # nothing extra
-    } else if (!("## Worldwide" in sections)) {
-      printf "%s", sections[country_key]
+
+    m = 0
+    for (i = cs; i < ce; ++i) { c[++m] = lines[i] }
+    while (m > 0 && c[m] ~ /^[[:space:]]*$/) { --m }
+
+    for (i = 1; i < ws; ++i) {
+      if (i < cs || i >= ce) print lines[i]
+    }
+    for (i = 1; i <= m; ++i) print c[i]
+    print ""
+    for (i = ws; i <= n; ++i) {
+      if (i < cs || i >= ce) print lines[i]
     }
   }
-' "$tmpfile" | sed 's/^#Server/Server/' | sudo tee "$mirrorfile" >/dev/null
-if [ -s "$mirrorfile" ]; then
-  sudo pacman -Syy
-  rm -f "$tmpfile"
-else
-  echo "Mirrorlist rewrite failed; restoring original."
-  sudo mv "$tmpfile" "$mirrorfile"
-  exit 1
-fi
+' "$mirrorfile" > "$tmpfile" || { echo "mirrorlist reorder failed; restoring backup." >&2; sudo cp "${mirrorfile}.bak" "$mirrorfile"; rm -f "$tmpfile"; exit 1; }
+
+sudo cp "$tmpfile" "$mirrorfile"
+rm -f "$tmpfile"
+
+sudo pacman -Syy
 ```
 
 ---

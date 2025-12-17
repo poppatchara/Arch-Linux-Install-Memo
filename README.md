@@ -175,12 +175,19 @@ arch-chroot /mnt
 
 ### 5.1 Pacman tweaks (again, now inside the chroot)
 ```bash
-sed -i \
+conf=/etc/pacman.conf
+sudo sed -i \
   -e 's/^\(ParallelDownloads *= *\)5/\115/' \
   -e 's/^#Color/Color/' \
-  -e 's/^#\[multilib\]/[multilib]/' \
-  -e 's|^#Include = /etc/pacman.d/mirrorlist|Include = /etc/pacman.d/mirrorlist|' \
-  /etc/pacman.conf
+  "$conf"
+
+# Uncomment [multilib] and its Include line (assumed to be near the end of the file).
+lines="$(wc -l < "$conf")"
+sudo sed -i \
+  -e "$((lines-6)) s/^#//" \
+  -e "$((lines-7)) s/^#//" \
+  "$conf"
+pacman -Syy
 ```
 
 ### 5.2 Locale, time, and console
@@ -288,7 +295,6 @@ timeout: 3
     MODULE_PATH: boot():/limine/initramfs-linux-fallback.img
 EOF
 
-limine-install /boot/limine
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
@@ -310,10 +316,20 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 
 ## Desktop Stack
 
-### 7. KDE Plasma (Wayland-first) & friends
+### 7. Reboot then login or ssh as user
+###Install yay
+
+```bash
+sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+```
+Install nvidia driver
+
+
+
+### 8. KDE Plasma (Wayland-first) & friends
 ```bash
 pacman -S --needed \
-  plasma-desktop plasma-workspace plasma-wayland-session \
+  plasma-meta plasma-x11-session\
   systemsettings plasma-nm plasma-pa kscreen powerdevil kactivitymanagerd \
   konsole dolphin ark kate kcalc okular spectacle gwenview krdp kdeconnect kio-extras \
   elisa haruna \

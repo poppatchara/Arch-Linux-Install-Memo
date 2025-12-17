@@ -163,13 +163,21 @@ cat /mnt/etc/fstab
 ## Base Install
 
 ```bash
+# Detect arch
 ucode_pkg=intel-ucode
 if lscpu | grep -qi amd; then
   ucode_pkg=amd-ucode
 fi
 
+# Prepare vconsole
+cat <<'EOF' > /mnt/etc/vconsole.conf
+KEYMAP=us
+FONT=
+EOF
+
+# Installations
 pacstrap -K /mnt \
-  base base-devel linux linux-firmware btrfs-progs \
+  base base-devel linux linux-headers linux-firmware btrfs-progs \
   networkmanager vim nvim git sudo "${ucode_pkg}" man curl \
   efibootmgr inotify-tools pipewire pipewire-alsa pipewire-pulse pipewire-jack \
   wireplumber reflector zsh zsh-completions zsh-autosuggestions \
@@ -196,6 +204,7 @@ if [ "$lines" -ge 8 ]; then
   sed -i \
     -e "$((lines-8)) s/^#//" \
     -e "$((lines-7)) s/^#//" \
+    -e "$((lines-6)) s/^#//" \
     "$conf"
 fi
 pacman -Syy
@@ -211,11 +220,6 @@ sed -i 's/^#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen
 sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
-
-cat <<'EOF' > /etc/vconsole.conf
-KEYMAP=us
-FONT=
-EOF
 ```
 
 ### 5.3 Hostname and hosts file

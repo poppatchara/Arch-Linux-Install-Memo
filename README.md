@@ -15,6 +15,7 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 10. [Snapper](#snapper)
 11. [Trim & Reboot](#trim--reboot)
 12. [Post-Install Ideas](#post-install-ideas)
+13. [Credits & Thanks](#credits--thanks)
 
 ---
 
@@ -515,13 +516,6 @@ yay -S limine-snapper-sync limine-mkinitcpio-hook
   - (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
 </details>
 
-Add `btrfs-overlayfs` to the end of `HOOKS` and rebuild initramfs:
-```bash
-if ! grep -Eq '^[[:space:]]*HOOKS=\([^)]*btrfs-overlayfs' /etc/mkinitcpio.conf; then
-  sudo sed -i -E 's/^([[:space:]]*HOOKS=\([^)]*)\)/\1 btrfs-overlayfs)/' /etc/mkinitcpio.conf
-fi
-sudo mkinitcpio -P
-```
 Create configs
 ```bash
 snapper -c root create-config /
@@ -703,3 +697,12 @@ cat <<'EOF' >> ~/.config/kwalletrc
 Enabled=false
 EOF
 ```
+
+---
+
+## Credits & Thanks
+🙏 Huge thanks to the authors/maintainers of these guides and notes that helped shape parts of this memo:
+- `fstab` notes: https://gist.github.com/mjkstra/96ce7a5689d753e7a6bdd92cdc169bae#fstab
+- Arch install walkthrough/reference: https://github.com/silentz/arch-linux-install-guide
+- Chroot exit + reboot checklist: https://gist.github.com/yovko/512326b904d120f3280c163abfbcb787#exit-from-chroot-and-reboot
+- NVIDIA driver guide: https://github.com/korvahannu/arch-nvidia-drivers-installation-guide

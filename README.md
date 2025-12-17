@@ -49,6 +49,9 @@ tmpfile="$(mktemp)"
 sudo cp "$mirrorfile" "$tmpfile"
 
 awk -v country="$country" '
+  BEGIN {
+    section = ""
+  }
   /^## / {
     section = $0
     sections[section] = section ORS
@@ -82,8 +85,14 @@ awk -v country="$country" '
     }
   }
 ' "$tmpfile" | sed 's/^#Server/Server/' | sudo tee "$mirrorfile" >/dev/null
-rm -f "$tmpfile"
-sudo pacman -Syy
+if [ -s "$mirrorfile" ]; then
+  sudo pacman -Syy
+  rm -f "$tmpfile"
+else
+  echo "Mirrorlist rewrite failed; restoring original."
+  sudo mv "$tmpfile" "$mirrorfile"
+  exit 1
+fi
 ```
 
 ---

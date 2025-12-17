@@ -353,8 +353,7 @@ DEFAULT_ENTRY=Arch Linux
 /Arch Linux (fallback)
     PROTOCOL: linux
     KERNEL_PATH: boot():/limine/vmlinuz-linux
-    MODULE_PATH: boot():/limine/${ucode_img}.img
-    MODULE_PATH: boot():/limine/initramfs-linux-fallback.img
+    MODULE_PATH: boot():/limine/initramfs-linux.img
     CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
 EOF
 

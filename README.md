@@ -124,7 +124,7 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ## Btrfs Subvolumes & Mounts
 
 ```bash
-#"Create subvolumes"
+# Create subvolumes
 mount UUID="${root_uuid}" /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
@@ -134,8 +134,9 @@ btrfs subvolume create /mnt/@cache
 btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
 umount /mnt
-
-#"Mount subvolumes"
+```
+```bash
+# Mount subvolumes
 mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID="${root_uuid}" /mnt/home
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var  UUID="${root_uuid}" /mnt/var
@@ -144,13 +145,14 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID="${root_uuid}" /mnt/
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/var/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/var/srv
 
-#"Mount ESP at /boot"
+# Mount ESP at /boot
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 
-#"Enable swap"
+# Enable swap"]
 swapon UUID="${swap_uuid}"
-
-#"Generate fstab"
+```
+```bash
+# Generate fstab
 mkdir -p /mnt/etc
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab

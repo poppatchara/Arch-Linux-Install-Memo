@@ -1,78 +1,103 @@
-# Arch Linux + Btrfs + KDE Plasma + Limine
+# Arch Linux + Btrfs + KDE Plasma + Limine + Dualboot + Nvidia DKMS + Snapper 
 
 Personal notes for reproducing my preferred Arch Linux installation. The flow starts from a fresh Arch ISO, targets a modern UEFI system, uses a Btrfs root on NVMe, installs KDE Plasma as the desktop, and boots with Limine.
 
-## Goals & Assumptions
+## Assumptions
+- Assumed you already made a USB media
+- I use another machine to ssh in to the live install. It made copy and paste command much easier.
+- Just set the root password using `passwd` and check the ip with `ip a`.
 - UEFI firmware with Secure Boot disabled.
-- Single NVMe drive at `/dev/nvme0n1`.
+- Boot NVMe drive at `/dev/nvme0n1`.
 - Wired network or reliable Wi-Fi with `iwctl`.
-- Timezone `America/New_York` (adjust when running commands).
-- Hostname `aurora` (change freely).
+- Timezone `Asia/Bangkok` (adjust when running commands).
+- Hostname `arch` (change freely).
+- ESP partition already exists, first partition.
+- Disk Swap is lask partition. It is easier if you want to resize it later.
 
-## 1. Prep Work (on another machine)
-1. Download latest Arch ISO and verify checksum:
-   ```bash
-   curl -O https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso
-   curl -O https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso.sig
-   gpg --keyserver hkps://keys.openpgp.org --recv-keys 0x9741E8AC
-   gpg --verify archlinux-x86_64.iso.sig
-   ```
-2. Write ISO to USB:
-   ```bash
-   sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
-   ```
 
-## 2. Boot ISO & Set Up Live Environment
-- `loadkeys us` (or `setxkbmap` for console layout).
-- Connect to network, e.g. `iwctl station wlan0 connect <ssid>`.
-- Sync time: `timedatectl set-ntp true`.
-- Confirm disk: `lsblk`.
 
-## 3. Partitioning (GPT)
+### 0. Preconfig the install medis
+Set Parallel and Color
+```bash
+sudo sed -i \
+  -e 's/^\(ParallelDownloads *= *\)5/\115/' \
+  -e 's/^#Color/Color/' \
+  -e 's/^#\[multilib\]/[multilib]/' \
+  -e 's|^#Include = /etc/pacman.d/mirrorlist|Include = /etc/pacman.d/mirrorlist|' \
+  /etc/pacman.conf
+```
+
+Set pacmaan parallel and mirror list. Change the country to your location.
+```bash
+country=Thailand
+mirror_url="https://archlinux.org/mirrorlist/?country=all&protocol=http&protocol=https&ip_version=4"
+tmpfile="$(mktemp)"
+
+curl -s "$mirror_url" > "$tmpfile"
+awk -v country="$country" '
+  NR <= 3 { header = header $0 ORS; next }
+  /^## / { current = $0; next }
+  current == ("## " country)   { country_block = country_block $0 ORS; next }
+  current == "## Worldwide"    { world_block   = world_block   $0 ORS; next }
+  { next }
+  END {
+    printf "%s", header
+    printf "## %s\n", country
+    printf "%s", country_block
+    printf "\n## Worldwide\n"
+    printf "%s", world_block
+  }
+' "$tmpfile" | sed 's/^#Server/Server/' | tee /etc/pacman.d/mirrorlist >/dev/null
+rm -f "$tmpfile"
+```
+
+## 1. Partitioning (GPT)
 Target layout:
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
-| `/dev/nvme0n1p1` | 1G | EFI System (type 1) | `/boot` |
-| `/dev/nvme0n1p2` | 1G | Linux filesystem | `/boot/limine` |
-| `/dev/nvme0n1p3` | Rest | Linux filesystem | Btrfs root |
+| `/dev/nvme0n1p1` | 4G | EFI System (type 1) | `/boot` |
+| `/dev/nvme0n1p2` | Rest | Linux filesystem | Btrfs root|
+| `/dev/nvme0n1p3` | About Ram size | Linux Swap | swap |
 
 Commands:
 ```bash
-sgdisk --zap-all /dev/nvme0n1
-sgdisk -n1:0:+1G -t1:ef00 -c1:"EFI"
-sgdisk -n2:0:+1G -t2:8300 -c2:"Limine"
-sgdisk -n3:0:0   -t3:8300 -c3:"Btrfs"
+cfdisk
 ```
 
-## 4. Format & Subvolumes
+## 2. Format
 ```bash
-mkfs.vfat -n EFI /dev/nvme0n1p1
-mkfs.ext4 -L LIMINE /dev/nvme0n1p2
-mkfs.btrfs -L archroot /dev/nvme0n1p3
+mkfs.btrfs -f /dev/nvme0n1p2 -L "ArchLinuxFS"
+mkswap /dev/nvme0n1p3
+```
 
-mount /dev/nvme0n1p3 /mnt
+Check UUIDs of the partitions and save it in vars:
+```bash
+esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
+root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
+swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+```
+
+## 3. Btrfs Subvolumes
+
+```bash
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@log
-btrfs subvolume create /mnt/@pkg
-umount /mnt
-
-mount -o subvol=@,compress=zstd,noatime /dev/nvme0n1p3 /mnt
-mkdir -p /mnt/{boot,home,var/log,var/cache/pacman/pkg}
-mount -o subvol=@home,compress=zstd,noatime /dev/nvme0n1p3 /mnt/home
-mount -o subvol=@log,compress=zstd,noatime /dev/nvme0n1p3 /mnt/var/log
-mount -o subvol=@pkg,compress=zstd,noatime /dev/nvme0n1p3 /mnt/var/cache/pacman/pkg
-mount /dev/nvme0n1p1 /mnt/boot
-mount /dev/nvme0n1p2 /mnt/boot/limine
+btrfs subvolume create /mnt/@var
+btrfs subvolume create /mnt/@var
+btrfs subvolume create /mnt/@root
+btrfs subvolume create /mnt/@srv
 ```
 
-## 5. Base Install
+
+
 ```bash
 pacstrap -K /mnt base base-devel linux linux-firmware btrfs-progs \
         networkmanager vim zsh git sudo
 genfstab -U /mnt >> /mnt/etc/fstab
 arch-chroot /mnt
 ```
+
+
 
 Inside the chroot:
 ```bash

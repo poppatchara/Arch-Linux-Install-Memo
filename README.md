@@ -147,7 +147,7 @@ echo "Enable swap"
 swapon UUID="${swap_uuid}"
 
 echo "Generate fstab"
-genfstab -U /mnt | tee -a /mnt/etc/fstab
+genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
 ---
@@ -234,11 +234,19 @@ EDITOR=vim visudo   # uncomment: %wheel ALL=(ALL) ALL
 ```
 
 ### 5.5 mkinitcpio
+Look for these lines in `/etc/mkinitcpio.conf` and replace to this.
+
+```ini
+MODULES=(btrfs)
+...
+BINARIES=(/usr/bin/btrfs)
+...
+HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)
+...
+```
+
+Then run
 ```bash
-sed -i \
-  -e 's/^MODULES=.*/MODULES=(btrfs)/' \
-  -e 's/^HOOKS=.*/HOOKS=(base udev systemd autodetect microcode modconf keyboard keymap sd-vconsole block filesystems resume fsck)/' \
-  /etc/mkinitcpio.conf
 mkinitcpio -P
 ```
 
@@ -365,7 +373,7 @@ pacman -S \
   plasma-nm plasma-pa kscreen bluedevil print-manager \
   xdg-desktop-portal xdg-desktop-portal-kde \
   dolphin dolphin-plugins konsole kate \
-  okular gwenview spectacle ark \
+  okular gwenview spectacle ark power-profiles-daemon\
   kdeconnect kio-extras ffmpegthumbs kdegraphics-thumbnailers \
   filelight kcalc\
   noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-liberation \

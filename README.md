@@ -10,10 +10,11 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 5. [Base Install](#base-install)
 6. [Chroot Configuration](#chroot-configuration)
 7. [Limine Bootloader](#limine-bootloader)
-8. [Desktop Stack](#desktop-stack)
-9. [Services & QoL](#services--qol)
-10. [Trim & Reboot](#trim--reboot)
-11. [Post-Install Ideas](#post-install-ideas)
+8. [Services & QoL](#services--qol)
+9. [Desktop Stack](#desktop-stack)
+10. [Snapper](#snapper)
+11. [Trim & Reboot](#trim--reboot)
+12. [Post-Install Ideas](#post-install-ideas)
 
 ---
 
@@ -40,10 +41,13 @@ sudo sed -i \
 
 # Uncomment [multilib] and its Include line (assumed to be near the end of the file).
 lines="$(wc -l < "$conf")"
-sudo sed -i \
-  -e "$((lines-6)) s/^#//" \
-  -e "$((lines-7)) s/^#//" \
-  "$conf"
+if [ "$lines" -ge 8 ]; then
+  sudo sed -i \
+    -e "$((lines-8)) s/^#//" \
+    -e "$((lines-7)) s/^#//" \
+    -e "$((lines-6)) s/^#//" \
+    "$conf"
+fi
 ```
 
 ### 0.2 Refresh mirror list
@@ -54,7 +58,7 @@ mirrorfile="/etc/pacman.d/mirrorlist"
 sudo cp "$mirrorfile" "${mirrorfile}.bak"
 
 tmpfile="$(mktemp)"
-awk -v country="$country" '
+sudo awk -v country="$country" '
   { lines[NR] = $0; n = NR }
   END {
     country_re   = "^##[[:space:]]+" country "[[:space:]]*$"
@@ -105,7 +109,7 @@ sudo pacman -Syy
 Use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
 
 ### 2. Format and capture UUIDs
-*CAUTION!! check your /dev. Mine was /dev/nvme0n1p2*
+**CAUTION:** double-check your device paths (e.g. `/dev/nvme0n1p2`) before formatting.
 ```bash
 mkfs.btrfs -f -L ArchLinuxFS /dev/nvme0n1p2
 mkswap /dev/nvme0n1p3
@@ -120,7 +124,7 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ## Btrfs Subvolumes & Mounts
 
 ```bash
-echo "Create subvolumes"
+#"Create subvolumes"
 mount UUID="${root_uuid}" /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
@@ -131,7 +135,7 @@ btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
 umount /mnt
 
-echo "Mount subvolumes"
+#"Mount subvolumes"
 mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID="${root_uuid}" /mnt/home
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var  UUID="${root_uuid}" /mnt/var
@@ -140,14 +144,14 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID="${root_uuid}" /mnt/
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/var/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/var/srv
 
-echo "Mount ESP at /boot"
+#"Mount ESP at /boot"
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 
-echo "Enable swap"
+#"Enable swap"
 swapon UUID="${swap_uuid}"
 
-echo "Generate fstab"
-mkdir mnt/etc
+#"Generate fstab"
+mkdir -p /mnt/etc
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
@@ -172,25 +176,26 @@ pacstrap -K /mnt \
 arch-chroot /mnt
 ```
 
-Wait for the install to finish. Then, it will drop into chroot.
----
+Wait for the install to finish, then continue inside the chroot.
 
 ## Chroot Configuration
 
 ### 5.1 Pacman tweaks (again, now inside the chroot)
 ```bash
 conf=/etc/pacman.conf
-sudo sed -i \
+sed -i \
   -e 's/^\(ParallelDownloads *= *\)5/\115/' \
   -e 's/^#Color/Color/' \
   "$conf"
 
 # Uncomment [multilib] and its Include line (assumed to be near the end of the file).
 lines="$(wc -l < "$conf")"
-sudo sed -i \
-  -e "$((lines-6)) s/^#//" \
-  -e "$((lines-7)) s/^#//" \
-  "$conf"
+if [ "$lines" -ge 8 ]; then
+  sed -i \
+    -e "$((lines-8)) s/^#//" \
+    -e "$((lines-7)) s/^#//" \
+    "$conf"
+fi
 pacman -Syy
 ```
 
@@ -230,7 +235,7 @@ passwd
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash pop   # change username
 passwd pop
 ```
-Uncomment %wheel% for sudoer
+Enable wheel sudo in `sudoers`
 ```bash
 EDITOR=vim visudo   # uncomment: %wheel ALL=(ALL) ALL
 ```
@@ -247,7 +252,7 @@ HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont bl
 ...
 ```
 
-Then run
+Then rebuild initramfs:
 ```bash
 mkinitcpio -P
 ```
@@ -290,32 +295,31 @@ Repeat after every kernel, initramfs, or microcode update (consider adding a pac
 ```bash
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
-ucode_module="intel-ucode"
+ucode_img="intel-ucode"
 if lscpu | grep -qi amd; then
-  ucode_module="amd-ucode"
+  ucode_img="amd-ucode"
 fi
 
 cat <<EOF | tee /boot/limine/limine.conf >/dev/null
-timeout: 3
+TIMEOUT=3
+DEFAULT_ENTRY=Arch Linux
 
-/Arch Linux - Vanilla
-    protocol: linux
-    path: boot():/vmlinuz-linux
-    module_path: boot():/${ucode_module}.img
-    module_path: boot():/initramfs-linux.img
-    cmdline: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 amd_iommu=on ipmmu=pt
+:Arch Linux
+    PROTOCOL=linux
+    KERNEL_PATH=boot():/limine/vmlinuz-linux
+    MODULE_PATH=boot():/limine/${ucode_img}.img
+    MODULE_PATH=boot():/limine/initramfs-linux.img
+    CMDLINE=loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 amd_iommu=on iommu=pt
 
-/Arch Linux (fallback)
-    protocol: linux
-    path: boot():/vmlinuz-linux
-    module_path: boot():/${ucode_module}.img
-    module_path: boot():/initramfs-linux-fallback.img
-    cmdline: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
+:Arch Linux (fallback)
+    PROTOCOL=linux
+    KERNEL_PATH=boot():/limine/vmlinuz-linux
+    MODULE_PATH=boot():/limine/${ucode_img}.img
+    MODULE_PATH=boot():/limine/initramfs-linux-fallback.img
+    CMDLINE=loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
 EOF
 
-clear
 cat /boot/limine/limine.conf
-
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
@@ -335,7 +339,11 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 EOF
 ```
 
-Additional packages
+---
+
+## Services & QoL
+
+### Extra packages (optional)
 ```bash
 pacman -Syu wget htop inetutils imagemagick usbutils easyeffects nss-mdns bat zip unzip \
 p7zip xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh \
@@ -343,7 +351,7 @@ sof-firmware bluez bluez-utils cups util-linux terminus-font openssh rsync \
 dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber iwd
 ```
 
-Enable services
+### Enable services
 ```bash
 systemctl enable NetworkManager
 systemctl enable dhcpcd
@@ -358,7 +366,7 @@ systemctl enable reflector.timer
 systemctl enable sshd
 ```
 
-Periodic TRIM
+### Periodic TRIM
 ```bash
 pacman -S --needed util-linux
 systemctl enable fstrim.timer
@@ -366,18 +374,19 @@ systemctl enable fstrim.timer
 
 ---
 
+## Desktop Stack
 
-### 8. KDE Plasma (Wayland-first) & friends
+### KDE Plasma & apps
 ```bash
-pacman -S \
-  plasma-desktop plasma-x11-session \
+pacman -S --needed \
+  plasma-meta kde-applications-meta \
   sddm sddm-kcm \
   plasma-nm plasma-pa kscreen bluedevil print-manager \
   xdg-desktop-portal xdg-desktop-portal-kde \
   dolphin dolphin-plugins konsole kate \
-  okular gwenview spectacle ark power-profiles-daemon\
+  okular gwenview spectacle ark power-profiles-daemon \
   kdeconnect kio-extras ffmpegthumbs kdegraphics-thumbnailers \
-  filelight kcalc\
+  filelight kcalc \
   noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-liberation \
   ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family \
   adobe-source-sans-fonts adobe-source-serif-fonts adobe-source-code-pro-fonts
@@ -388,11 +397,39 @@ systemctl enable power-profiles-daemon
 
 ---
 
-### 9. Exit chroot and reboot
+## Snapper
+
+```bash
+pacman -Syu snapper
+yay -S limine-snapper-sync limine-mkinitcpio-hook
+```
+
+Add `btrfs-overlayfs` to the end of `HOOKS` and rebuild initramfs:
+```bash
+if ! grep -Eq '^[[:space:]]*HOOKS=\([^)]*btrfs-overlayfs' /etc/mkinitcpio.conf; then
+  sudo sed -i -E 's/^([[:space:]]*HOOKS=\([^)]*)\)/\1 btrfs-overlayfs)/' /etc/mkinitcpio.conf
+fi
+sudo mkinitcpio -P
+```
+Create configs
+```bash
+snapper -c root create-config /
+snapper -c home create-config /home
+sudo sed -i 's/^TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/' /etc/snapper/configs/{root,home}
+sudo sed -i 's/^NUMBER_LIMIT="50"/NUMBER_LIMIT="5"/' /etc/snapper/configs/{root,home}
+sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT="10"/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/{root,home}
+
+cp /etc/limine-snapper-sync.conf /etc/default/limine
+pacman -Syu snap-pac
+```
+
+---
+
+## Trim & Reboot
+
+### Exit chroot and reboot
 ```bash
 exit
-```
-```bash
 umount -R /mnt
 swapoff -a
 reboot
@@ -400,16 +437,110 @@ reboot
 
 ---
 
-## Login to your new system with your user.
+## Post-Install Ideas
 
-### 10. YAY
+### Login to your new system
+
+#### yay
 ```bash
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 
-## Post-Install Ideas
-- Create pacman hooks to sync `/boot/limine` automatically whenever kernels/microcode update.
-- Layer `snapper` or `btrbk` for automated Btrfs snapshots, especially before pacman upgrades.
-- Add `reflector` configuration (`/etc/xdg/reflector/reflector.conf`) tailored to your region.
-- Explore `cachyos` kernels or additional Limine entries for other OSes (dual-boot).
-- Document recovery steps (Btrfs send/receive, snapshot rollback) in this repo for quick reference.
+### CachyOS Kernels
+
+Backup pacman config
+```bash
+sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
+pacman -Qqe > ~/pkglist.pre-cachy.txt
+```
+
+Add CachyOS repos (fast/automated way)
+
+```bash
+cd ~
+curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+tar xvf cachyos-repo.tar.xz && cd cachyos-repo
+sudo ./cachyos-repo.sh
+
+sudo pacman -Syu
+```
+
+Install CachyOS kernels
+
+```bash
+sudo pacman -S \
+  linux-cachyos-eevdf linux-cachyos-eevdf-headers \
+  linux-cachyos linux-cachyos-headers
+```
+
+CachyOS Packages
+```bash
+sudo pacman -S cachyos-settings appmenu-gtk-module libdbusmenu-glib cachyos-gaming-meta cachyos-hello
+```
+
+Update all packages to CachyOS Optimized
+```bash
+sudo pacman -Qqn | sudo pacman -S -
+```
+
+### Extra Packages and fonts
+```bash
+yay -Syu wget htop gvfs gvfs-smb inetutils imagemagick usbutils easyeffects openbsd-netcat nss-mdns bat zip unzip \
+p7zip brightnessctl xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh firefox mailspring \
+vlc gimp obs-studio btrfs-progs acpi acpi_call tlp tlp-rdw flatpak gamemode steam lutris mangohud \
+visual-studio-code-bin proton-ge-custom-bin goverlay noto-fonts noto-fonts-emoji noto-fonts-extra \
+ttf-ms-fonts
+```
+
+### Nvidia Driver
+
+```bash
+yay -S nvidia-dkms nvidia-utils lib32-nvidia-utils nvidia-settings \
+ocl-icd opencl-nvidia clinfo cuda 
+```
+
+Add DRM Kernel Module
+
+add to `cmdline` in limine
+```bash
+nvidia-drm.modeset=1 nvidia-drm.fbdev=1
+```
+in `/etc/mkinitcpio.conf`
+```bash
+MODULES=(btrfs nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+...
+remove `kms` from HOOKS
+```
+
+```bash
+sudo mkdir -p /etc/pacman.d/hooks/
+sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
+[Trigger]
+Operation=Install
+Operation=Upgrade
+Operation=Remove
+Type=Package
+Target=nvidia-dkms
+Target=linux-cachyos
+Target=linux-cachyos-eevdf
+Target=linux
+# Adjust line(6) above to match your driver, e.g. Target=nvidia-470xx-dkms
+# Change line(7) above, if you are not using the regular kernel For example, Target=linux-lts
+
+[Action]
+Description=Update Nvidia module in initcpio
+Depends=mkinitcpio
+When=PostTransaction
+NeedsTargets
+Exec=/bin/sh -c 'while read -r trg; do case $trg in linux) exit 0; esac; done; /usr/bin/mkinitcpio -P'
+EOF
+```
+
+Disable annoying kwallet
+```bash
+mkdir -p ~/.config
+cat <<'EOF' >> ~/.config/kwalletrc
+[Wallet]
+Enabled=false
+EOF
+```

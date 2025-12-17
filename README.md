@@ -268,15 +268,71 @@ EOF
 limine-install /boot/limine
 ```
 
+### Pacman hook for Limine
+Add `/etc/pacman.d/hooks/99-limine.hook` file with the following content:
 
+```bash
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = limine
+
+[Action]
+Description = Deploying Limine after upgrade...
+When = PostTransaction
+Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
+```
+
+### Networking
+Enable NetworkManager and systemd-networkd services before rebooting. Otherwise, you won't be able to connect. The systemd-resolved service is a kind of optional, but most probably it is better to enable it. Also you may need dhcpcd.service and (if you need WiFi) iwd.service.
+
+```bash
+systemctl enable NetworkManager
+systemctl enable dhcpcd
+systemctl enable iwd
+systemctl enable systemd-networkd
+systemctl enable systemd-resolved
+systemctl enable bluetooth
+systemctl enable cups
+systemctl enable avahi-daemon
+systemctl enable firewalld
+systemctl enable acpid
+systemctl enable reflector.timer
+```
 
 ## 7. KDE Plasma & Desktop Stack
 ```bash
-pacman -S --needed plasma-meta plasma-wayland-session sddm \
-    pipewire pipewire-pulse wireplumber power-profiles-daemon \
-    konsole dolphin firefox
+sudo pacman -S --needed \
+plasma-desktop plasma-workspace plasma-wayland-session \
+systemsettings plasma-nm plasma-pa kscreen powerdevil kactivitymanagerd \
+konsole dolphin ark kate kcalc okular spectacle gwenview \
+krdp kdeconnect kio-extras \
+elisa haruna \
+sddm sddm-kcm \
+noto-fonts noto-fonts-cjk noto-fonts-emoji \
+ttf-dejavu ttf-liberation \
+ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family \
+adobe-source-sans-fonts adobe-source-serif-fonts adobe-source-code-pro-fonts
+
 systemctl enable sddm
 systemctl enable power-profiles-daemon
+```
+
+### TRIM
+```bash
+pacman -S --needed util-linux
+systemctl enable --now fstrim.timer
+```
+
+## 8. Exit from chroot and reboot
+It's time to exit the chroot, unmount the /mnt, close the crypted container and reboot to the newly installed Arch Linux.
+
+```bash
+exit
+umount -R /mnt
+cryptsetup close root
+reboot
 ```
 
 Optional extras:

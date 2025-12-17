@@ -344,18 +344,18 @@ TIMEOUT=3
 DEFAULT_ENTRY=Arch Linux
 
 /Arch Linux
-    PROTOCOL=linux
-    KERNEL_PATH=boot():/limine/vmlinuz-linux
-    MODULE_PATH=boot():/limine/${ucode_img}.img
-    MODULE_PATH=boot():/limine/initramfs-linux.img
-    CMDLINE=loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 amd_iommu=on iommu=pt
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/limine/vmlinuz-linux
+    MODULE_PATH: boot():/limine/${ucode_img}.img
+    MODULE_PATH: boot():/limine/initramfs-linux.img
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 amd_iommu=on iommu=pt
 
 /Arch Linux (fallback)
-    PROTOCOL=linux
-    KERNEL_PATH=boot():/limine/vmlinuz-linux
-    MODULE_PATH=boot():/limine/${ucode_img}.img
-    MODULE_PATH=boot():/limine/initramfs-linux-fallback.img
-    CMDLINE=loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/limine/vmlinuz-linux
+    MODULE_PATH: boot():/limine/${ucode_img}.img
+    MODULE_PATH: boot():/limine/initramfs-linux-fallback.img
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
 EOF
 
 cat /boot/limine/limine.conf

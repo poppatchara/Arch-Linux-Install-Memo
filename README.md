@@ -486,7 +486,22 @@ systemctl enable power-profiles-daemon
 
 ---
 
-## Snapper
+## Reboot
+🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
+
+### Exit chroot and reboot
+```bash
+exit
+umount -R /mnt
+swapoff -a
+reboot
+```
+
+---
+
+## Login to your new system using your user account
+
+### Snapper
 📸 Goal: set up snapshot management for Btrfs so you can roll back system changes. `snapper` itself is in the official repos; the Limine integration shown below uses AUR packages (requires an AUR helper such as `yay`, see Post-Install Ideas).
 
 yay
@@ -535,24 +550,6 @@ pacman -Syu snap-pac
 </details>
 
 ---
-
-## Trim & Reboot
-🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
-
-### Exit chroot and reboot
-```bash
-exit
-umount -R /mnt
-swapoff -a
-reboot
-```
-
----
-
-## Post-Install Ideas
-✨ Optional follow-ups after you can boot and log in. This section is intentionally “pick what you need” rather than part of the minimal base install.
-
-### Login to your new system
 
 ### CachyOS Kernels
 🐆 If you want CachyOS’ tuned kernels/userspace, add their repo and install the kernel packages. This is optional and changes your system away from “pure Arch”, so it’s a good idea to keep a package list backup first.

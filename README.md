@@ -272,34 +272,36 @@ Repeat after every kernel, initramfs, or microcode update (consider adding a pac
 ### 6.4 Generate `/boot/limine/limine.conf`
 ```bash
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-ucode_module="boot():/limine/intel-ucode.img"
+swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+ucode_module="intel-ucode"
 if lscpu | grep -qi amd; then
-  ucode_module="boot():/limine/amd-ucode.img"
+  ucode_module="amd-ucode"
 fi
 
 cat <<EOF | tee /boot/limine/limine.conf >/dev/null
 timeout: 3
 
-:Arch Linux
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rw rootflags=subvol=@ rootfstype=btrfs
-    MODULE_PATH: ${ucode_module}
-    MODULE_PATH: boot():/limine/initramfs-linux.img
+/Arch Linux - Vanilla
+    protocol: linux
+    path: boot():/vmlinuz-linux
+    module_path: boot():/${ucode_module}.img
+    module_path: boot():/initramfs-linux.img
+    cmdline: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 amd_iommu=on ipmmu=pt
 
-:Arch Linux (fallback)
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rw rootflags=subvol=@ rootfstype=btrfs
-    MODULE_PATH: ${ucode_module}
-    MODULE_PATH: boot():/limine/initramfs-linux-fallback.img
+/Arch Linux (fallback)
+    protocol: linux
+    path: boot():/vmlinuz-linux
+    module_path: boot():/${ucode_module}.img
+    module_path: boot():/initramfs-linux-fallback.img
+    cmdline: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
 EOF
 
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
-`/etc/pacman.d/hooks/99-limine.hook`
-```ini
+```bash
+sudo mkdir -p /etc/pacman.d/hooks
+sudo tee /etc/pacman.d/hooks/99-limine.hook >/dev/null <<'EOF'
 [Trigger]
 Operation = Install
 Operation = Upgrade
@@ -310,42 +312,15 @@ Target    = limine
 Description = Copy Limine EFI files to the ESP
 When = PostTransaction
 Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
+EOF
 ```
 
----
-
-## Desktop Stack
-
-### 7. Reboot then login or ssh as user
-###Install yay
-
+Additional packages
 ```bash
-sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
-```
-Install nvidia driver
-
-
-
-### 8. KDE Plasma (Wayland-first) & friends
-```bash
-pacman -S --needed \
-  plasma-meta plasma-x11-session\
-  systemsettings plasma-nm plasma-pa kscreen powerdevil kactivitymanagerd \
-  konsole dolphin ark kate kcalc okular spectacle gwenview krdp kdeconnect kio-extras \
-  elisa haruna \
-  sddm sddm-kcm \
-  noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-liberation \
-  ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family \
-  adobe-source-sans-fonts adobe-source-serif-fonts adobe-source-code-pro-fonts
-
-systemctl enable sddm
-systemctl enable power-profiles-daemon
+pacman -Syu wget htop inetutils imagemagick usbutils easyeffects nss-mdns bat zip unzip  xdg-user-dirs noto-fonts nerd-fonts ttf-jetbrains-mono libreoffice-fresh sof-firmware firewalld bluez bluez-utils cups util-linux terminus-font openssh rsync base base-devel dhcpcd avahi acpi acpi_call acpid alsa-utils pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber 
 ```
 
----
-
-## Services & QoL
-
+Enable services
 ```bash
 systemctl enable NetworkManager
 systemctl enable dhcpcd
@@ -360,32 +335,51 @@ systemctl enable acpid
 systemctl enable reflector.timer
 ```
 
-Optional extras:
-- `flatpak` + Flathub.
-- `steam`, `gamescope`, `mangohud` for gaming.
-- `bluez bluez-utils` (already implied by Bluetooth service), `pipewire` stack already installed.
-- `grc`, `bat`, `zoxide`, and other quality-of-life CLI tools.
-- Snapshot tooling (`snapper`, `btrbk`, etc.) once the system is up.
+Periodic TRIM
+```bash
+pacman -S --needed util-linux
+systemctl enable fstrim.timer
+```
 
 ---
 
-## Trim & Reboot
 
-### 9. Periodic TRIM
+### 8. KDE Plasma (Wayland-first) & friends
 ```bash
-pacman -S --needed util-linux
-systemctl enable --now fstrim.timer
+pacman -S --needed \
+  plasma-meta plasma-x11-session\
+  systemsettings plasma-nm plasma-pa kscreen powerdevil power-profiles-daemon kactivitymanagerd \
+  konsole dolphin ark kate kcalc okular spectacle gwenview krdp kdeconnect kio-extras \
+  elisa haruna \
+  sddm sddm-kcm \
+  noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-dejavu ttf-liberation \
+  ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family \
+  adobe-source-sans-fonts adobe-source-serif-fonts adobe-source-code-pro-fonts
+
+systemctl enable sddm
+systemctl enable power-profiles-daemon
 ```
 
-### 10. Exit chroot and reboot
+---
+
+### 9. Exit chroot and reboot
 ```bash
 exit
+```
+```bash
 umount -R /mnt
 swapoff -a
 reboot
 ```
 
 ---
+
+## Login to your new system with your user.
+
+### 10. YAY
+```bash
+sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+```
 
 ## Post-Install Ideas
 - Create pacman hooks to sync `/boot/limine` automatically whenever kernels/microcode update.

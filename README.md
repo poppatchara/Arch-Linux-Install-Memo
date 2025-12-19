@@ -596,6 +596,8 @@ reboot
 ### YAY package manager
 ```bash
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+cd ..
+rm -rf yay
 ```
 
 <details>
@@ -630,8 +632,6 @@ sudo su
 ```bash
 snapper -c root create-config /
 snapper -c home create-config /home
-
-cp /etc/limine-snapper-sync.conf /etc/default/limine
 ```
 ```bash
 # Exit root
@@ -640,23 +640,23 @@ exit
 
 ### Extra Packages for Limine
 ```bash
-yay -S --needed \
-  btrfs-assistant \
-  snapper-gui-git \
-  snapper-tools
-```
-
-```bash
 # Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
 yay -S \
   limine-snapper-sync \
   limine-mkinitcpio-hook \
   snap-pac
-
+  
+cp /etc/limine-snapper-sync.conf /etc/default/limine
 # trigger sync
 sudo limine-snapper-sync
 ```
 
+```bash
+yay -S --needed \
+  btrfs-assistant \
+  snapper-gui-git \
+  snapper-tools
+```
 ---
 
 ### CachyOS Kernels

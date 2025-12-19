@@ -1047,10 +1047,8 @@ pyenv which python
 ```
 
 ### Flatpak Apps
+Install this in the logg-in session.
 ```bash
-sudo flatpak --system remote-add --if-not-exists flathub \
-https://flathub.org/repo/flathub.flatpakrepo
-
 flatpak install -y flathub \
   org.gnome.baobab \
   io.github.jonmagon.kdiskmark \

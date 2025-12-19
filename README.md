@@ -192,7 +192,7 @@ pacstrap -K /mnt \
   vim nvim git sudo man curl wget perl \
   zsh zsh-completions zsh-autosuggestions bash-completion \
   pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector \
-  inotify-tools 
+  inotify-tools
 
 arch-chroot /mnt
 ```
@@ -237,10 +237,14 @@ pacman -Syy
 ln -sf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
 hwclock --systohc
 # Uncomment desired locales in `/etc/locale.gen` (add or remove lines as appropriate for your setup).
-sed -i 's/^#ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen   # Japanese
-sed -i 's/^#th_TH.UTF-8 UTF-8/th_TH.UTF-8 UTF-8/' /etc/locale.gen   # Thai
-sed -i 's/^#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen   # British English
-sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen   # US English
+# Japanese
+sed -i 's/^#ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen
+# Thai
+sed -i 's/^#th_TH.UTF-8 UTF-8/th_TH.UTF-8 UTF-8/' /etc/locale.gen
+# British English
+sed -i 's/^#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen
+# US English
+sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 ```
@@ -263,7 +267,8 @@ echo "Setting Root Password"
 passwd
 ```
 ```bash
-user=pop # change username
+# change username
+user=pop
 echo "Create user, and set password"
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
 passwd $user
@@ -393,16 +398,25 @@ EOF
 
 ### Extra packages (optional)
 ```bash
+# core system tools & CLI utilities: util-linux inetutils usbutils rsync htop bat zip unzip p7zip
+# wifi: iwd
+# mDNS: avahi nss-mdns
+# DHCP: dhcpcd
+# audio tools & firmware: alsa-utils sof-firmware easyeffects
+# Bluetooth support: bluez bluez-utils
+# printing system: cups
+# power & hardware management: acpi acpi_call acpid
+# user directory structure: xdg-user-dirs
 pacman -Syu --needed \
-  util-linux inetutils usbutils rsync htop bat zip unzip p7zip \   # core system tools & CLI utilities
-  iwd \                                                             # wifi
-  avahi nss-mdns \                                                  # mDNS
-  dhcpcd \                                                          # DHCP, mDNS
-  alsa-utils sof-firmware easyeffects \                             # audio tools & firmware
-  bluez bluez-utils \                                               # Bluetooth support
-  cups \                                                            # printing system
-  acpi acpi_call acpid \                                            # power & hardware management
-  xdg-user-dirs \                                                   # user directory structure
+  util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
+  iwd \
+  avahi nss-mdns \
+  dhcpcd \
+  alsa-utils sof-firmware easyeffects \
+  bluez bluez-utils \
+  cups \
+  acpi acpi_call acpid \
+  xdg-user-dirs
 ```
 
 <details>
@@ -445,13 +459,19 @@ systemctl enable fstrim.timer
 ### KDE Plasma & apps
 #### KDE Core
 ```bash
+# Display/login manager (graphical login screen): sddm
+# System Settings module to configure SDDM: sddm-kcm
+# “Portal” framework (file picker, screen share, sandbox app integration): xdg-desktop-portal
+# KDE backend for portals (needed for Wayland screen share, Flatpak, etc.): xdg-desktop-portal-kde
+# Qt6 Wayland platform plugin: qt6-wayland
+# Runs X11 apps under Wayland: xorg-xwayland
 pacman -S --needed \
-  sddm                    # Display/login manager (graphical login screen)
-  sddm-kcm                # System Settings module to configure SDDM
-  xdg-desktop-portal      # “Portal” framework (file picker, screen share, sandbox app integration)
-  xdg-desktop-portal-kde  # KDE backend for portals (needed for Wayland screen share, Flatpak, etc.)
-  qt6-wayland             # Qt6 Wayland platform plugin
-  xorg-xwayland           # Runs X11 apps under Wayland
+  sddm \
+  sddm-kcm \
+  xdg-desktop-portal \
+  xdg-desktop-portal-kde \
+  qt6-wayland \
+  xorg-xwayland
 
 systemctl enable sddm
 systemctl enable power-profiles-daemon
@@ -459,50 +479,86 @@ systemctl enable power-profiles-daemon
 
 #### KDE Plasma Core
 ```bash
+# The Plasma desktop shell (panels, launcher, desktop UI): plasma-desktop
+# Core workspace components (session bits, shell integration, essentials): plasma-workspace
+# Wayland session entry + components for logging into Plasma Wayland: plasma-wayland-session
+# KDE window manager + compositor (Wayland/X11): kwin
+# KDE System Settings app: systemsettings
+# NetworkManager integration (network tray, VPN UI): plasma-nm
+# Audio volume controls for PipeWire/PulseAudio: plasma-pa
+# Display configuration + monitor hotplug handling: kscreen
+# Configure GTK theme/fonts under KDE: kde-gtk-config
+# Breeze theme for GTK apps (visual consistency): breeze-gtk
 pacman -S --needed \
-  plasma-desktop          # The Plasma desktop shell (panels, launcher, desktop UI)
-  plasma-workspace        # Core workspace components (session bits, shell integration, essentials)
-  plasma-wayland-session  # Wayland session entry + components for logging into Plasma Wayland
-  kwin                    # KDE window manager + compositor (Wayland/X11)
-  systemsettings          # KDE System Settings app
-  plasma-nm               # NetworkManager integration (network tray, VPN UI)
-  plasma-pa               # Audio volume controls for PipeWire/PulseAudio
-  kscreen                 # Display configuration + monitor hotplug handling
-  kde-gtk-config          # Configure GTK theme/fonts under KDE
-  breeze-gtk              # Breeze theme for GTK apps (visual consistency)
+  plasma-desktop \
+  plasma-workspace \
+  plasma-wayland-session \
+  kwin \
+  systemsettings \
+  plasma-nm \
+  plasma-pa \
+  kscreen \
+  kde-gtk-config \
+  breeze-gtk
 
 ```
 
 #### KDE Plasma (Optionals)
 You can select what you need.
 ```bash
-pacman -S --needed bluedevil                    # Bluetooth tray + pairing UI
-pacman -S --needed power-profiles-daemon        # Laptop power modes (balanced/performance/powersave)
-pacman -S --needed kdeplasma-addons             # Extra Plasma widgets/applets (more features, more stuff)
-# pacman -S --needed plasma-vault                 # Encrypted “vault” folders integration
-pacman -S --needed plasma-systemmonitor         # KDE System Monitor app (optional if you use htop/Mission Center)
-pacman -S --needed plasma-browser-integration   # Browser media controls + integration
-pacman -S --needed discover                     # KDE software center (can add background notifier)
-pacman -S --needed krdp                         # KDE Remote Desktop server/client bits (krdpserver)
-pacman -S --needed print-manager                # KDE printer management UI
-# pacman -S --needed kdeconnect                   # Phone integration (kdeconnectd service)
+# Bluetooth tray + pairing UI: bluedevil
+# Laptop power modes (balanced/performance/powersave): power-profiles-daemon
+# Extra Plasma widgets/applets (more features, more stuff): kdeplasma-addons
+# KDE System Monitor app (optional if you use htop/Mission Center): plasma-systemmonitor
+# Browser media controls + integration: plasma-browser-integration
+# KDE software center (can add background notifier): discover
+# KDE Remote Desktop server/client bits (krdpserver): krdp
+# KDE printer management UI: print-manager
+pacman -S --needed \
+  bluedevil \
+  power-profiles-daemon \
+  kdeplasma-addons \
+  plasma-systemmonitor \
+  plasma-browser-integration \
+  discover \
+  krdp \
+  print-manager
+
+# Optional: Encrypted “vault” folders integration: plasma-vault
+# pacman -S --needed plasma-vault
+# Optional: Phone integration (kdeconnectd service): kdeconnect
+# pacman -S --needed kdeconnect
 ```
 
 #### Desktop Apps
 ````bash
-pacman -S --needed dolphin                    # File manager
-pacman -S --needed dolphin-plugins            # Git/Share/extra Dolphin integrations
-pacman -S --needed konsole                    # Terminal
-pacman -S --needed kate                       # GUI text editor
-pacman -S --needed okular                     # PDF/EPUB viewer
-pacman -S --needed gwenview                   # Image viewer
-pacman -S --needed spectacle                  # Screenshot tool
-pacman -S --needed ark                        # Archive manager GUI
-pacman -S --needed kio-extras                 # SMB/SFTP/etc. support inside Dolphin/KIO
-pacman -S --needed ffmpegthumbs               # Video thumbnails in Dolphin
-pacman -S --needed kdegraphics-thumbnailers   # Document/image thumbnail plugins
-pacman -S --needed filelight                  # Disk usage GUI
-pacman -S --needed kcalc                      # Calculator
+# File manager: dolphin
+# Git/Share/extra Dolphin integrations: dolphin-plugins
+# Terminal: konsole
+# GUI text editor: kate
+# PDF/EPUB viewer: okular
+# Image viewer: gwenview
+# Screenshot tool: spectacle
+# Archive manager GUI: ark
+# SMB/SFTP/etc. support inside Dolphin/KIO: kio-extras
+# Video thumbnails in Dolphin: ffmpegthumbs
+# Document/image thumbnail plugins: kdegraphics-thumbnailers
+# Disk usage GUI: filelight
+# Calculator: kcalc
+pacman -S --needed \
+  dolphin \
+  dolphin-plugins \
+  konsole \
+  kate \
+  okular \
+  gwenview \
+  spectacle \
+  ark \
+  kio-extras \
+  ffmpegthumbs \
+  kdegraphics-thumbnailers \
+  filelight \
+  kcalc
 
 ````
 
@@ -546,7 +602,9 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 ### Extra Packages for Limine
 ```bash
 yay -S --needed \
-btrfs-assistant snapper-gui-git snapper-tools
+  btrfs-assistant \
+  snapper-gui-git \
+  snapper-tools
 ```
 
 <details>
@@ -563,7 +621,7 @@ btrfs-assistant snapper-gui-git snapper-tools
 sudo pacman -Syu snapper
 # Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
 yay -S limine-snapper-sync limine-mkinitcpio-hook
-sudo limine-snapper-sync 
+sudo limine-snapper-sync
 
 sudo pacman -Syu snap-pac
 ```
@@ -582,9 +640,12 @@ You can omit `/home` snapping if you prefer (e.g., for large media folders).
 ```bash
 sudo snapper -c root create-config /
 sudo snapper -c home create-config /home
-sudo sed -i 's/^TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/' /etc/snapper/configs/{root,home}           # disable automatic timeline snapshots
-sudo sed -i 's/^NUMBER_LIMIT="50"/NUMBER_LIMIT="5"/' /etc/snapper/configs/{root,home}                  # keep only 5 regular snapshots
-sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT="10"/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/{root,home} # keep only 5 important snapshots
+# disable automatic timeline snapshots
+sudo sed -i 's/^TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/' /etc/snapper/configs/{root,home}
+# keep only 5 regular snapshots
+sudo sed -i 's/^NUMBER_LIMIT="50"/NUMBER_LIMIT="5"/' /etc/snapper/configs/{root,home}
+# keep only 5 important snapshots
+sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT="10"/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/{root,home}
 
 cp /etc/limine-snapper-sync.conf /etc/default/limine
 ```
@@ -614,9 +675,11 @@ sudo pacman -Syu
 Install CachyOS kernels
 
 ```bash
+# CachyOS EEVDF kernel + headers
+# Default CachyOS kernel + headers
 sudo pacman -S \
-  linux-cachyos-eevdf linux-cachyos-eevdf-headers \   # CachyOS EEVDF kernel + headers
-  linux-cachyos linux-cachyos-headers                 # Default CachyOS kernel + headers
+  linux-cachyos-eevdf linux-cachyos-eevdf-headers \
+  linux-cachyos linux-cachyos-headers
 ```
 
 <details>
@@ -628,12 +691,17 @@ sudo pacman -S \
 
 CachyOS Packages
 ```bash
+# CachyOS defaults/tweaks: cachyos-settings
+# AppMenu GTK module: appmenu-gtk-module
+# DBus menu integration: libdbusmenu-glib
+# Gaming-oriented meta package: cachyos-gaming-meta
+# Welcome/info app: cachyos-hello
 sudo pacman -S \
-  cachyos-settings \           # CachyOS defaults/tweaks
-  appmenu-gtk-module \         # AppMenu GTK module
-  libdbusmenu-glib \           # DBus menu integration
-  cachyos-gaming-meta \        # Gaming-oriented meta package
-  cachyos-hello                # Welcome/info app
+  cachyos-settings \
+  appmenu-gtk-module \
+  libdbusmenu-glib \
+  cachyos-gaming-meta \
+  cachyos-hello
 ```
 
 <details>
@@ -654,62 +722,94 @@ sudo pacman -Qqn | sudo pacman -S -
 🧺 Personal “daily driver” package list. Treat it as a pick-list; some items overlap with earlier sections and some are heavy (office suite, IDE, Steam).
 ```bash
 ## Core CLI + utilities
+# nc: TCP/UDP swiss-army knife: openbsd-netcat
+# image convert/resize/identify CLI tools: imagemagick
 yay -S --needed \
-  openbsd-netcat     # nc: TCP/UDP swiss-army knife \
-  imagemagick        # image convert/resize/identify CLI tools
+  openbsd-netcat \
+  imagemagick
 
 ## Filesystem / network integration
+# virtual filesystem layer (trash, mtp, gphoto2, etc.): gvfs
+# SMB/CIFS browsing in Dolphin (Windows shares): gvfs-smb
 yay -S --needed \
-  gvfs               # virtual filesystem layer (trash, mtp, gphoto2, etc.) \
-  gvfs-smb           # SMB/CIFS browsing in Dolphin (Windows shares)
+  gvfs \
+  gvfs-smb
 
 ## Power / laptop bits
-yay -S --needed \
-  brightnessctl      # backlight/brightness control (laptops)
+# backlight/brightness control (laptops): brightnessctl
+yay -S --needed brightnessctl
 
 ## Audio / media / creative
+# media player (handles basically everything): vlc
+# image editor: gimp
+# screen recording + streaming: obs-studio
 yay -S --needed \
-  vlc                # media player (handles basically everything) \
-  gimp               # image editor \
-  obs-studio         # screen recording + streaming
+  vlc \
+  gimp \
+  obs-studio
 
 ## Desktop apps
+# web browser: firefox
+# office suite (latest branch; big but useful): libreoffice-fresh
+# email client (Electron-based): mailspring
+# VS Code (official build; AUR): visual-studio-code-bin
 yay -S --needed \
-  firefox            # web browser \
-  libreoffice-fresh  # office suite (latest branch; big but useful) \
-  mailspring         # email client (Electron-based) \
-  visual-studio-code-bin # VS Code (official build; AUR)
+  firefox \
+  libreoffice-fresh \
+  mailspring \
+  visual-studio-code-bin
 
 ## Gaming stack
+# Feral gamemode (CPU governor/priority tweaks): gamemode
+# Steam client: steam
+# game launcher (Wine/Proton management): lutris
+# Vulkan/OpenGL performance overlay: mangohud
+# GUI to configure MangoHud: goverlay
+# Proton-GE builds (AUR) for better game compatibility: proton-ge-custom-bin
 yay -S --needed \
-  gamemode              # Feral gamemode (CPU governor/priority tweaks) \
-  steam                 # Steam client \
-  lutris                # game launcher (Wine/Proton management) \
-  mangohud              # Vulkan/OpenGL performance overlay \
-  goverlay              # GUI to configure MangoHud \
-  proton-ge-custom-bin  # Proton-GE builds (AUR) for better game compatibility
+  gamemode \
+  steam \
+  lutris \
+  mangohud \
+  goverlay \
+  proton-ge-custom-bin
 
 ## Flatpak
-yay -S --needed \
-  flatpak               # Flatpak runtime + app management
+# Flatpak runtime + app management: flatpak
+yay -S --needed flatpak
 
 ## Fonts
+# Google Noto base fonts: noto-fonts
+# Noto for Chinese/Japanese/Korean: noto-fonts-cjk
+# Noto Color Emoji: noto-fonts-emoji
+# extra Noto families: noto-fonts-extra
+# solid fallback font set: ttf-dejavu
+# metric-compatible with Arial/Times/Courier: ttf-liberation
+# dev-friendly monospace: ttf-jetbrains-mono
+# monospace with ligatures: ttf-fira-code
+# Ubuntu UI font family: ttf-ubuntu-font-family
+# crisp bitmap-ish console font: terminus-font
+# Adobe Source Sans: adobe-source-sans-fonts
+# Adobe Source Serif: adobe-source-serif-fonts
+# Adobe Source Code Pro: adobe-source-code-pro-fonts
+# icon glyphs patched into many fonts (large install): nerd-fonts
+# Microsoft core fonts (AUR; licensing caveats): ttf-ms-fonts
 yay -S --needed \
-  noto-fonts                    # Google Noto base fonts \
-  noto-fonts-cjk                # Noto for Chinese/Japanese/Korean \
-  noto-fonts-emoji              # Noto Color Emoji \
-  noto-fonts-extra              # extra Noto families \
-  ttf-dejavu                    # solid fallback font set \
-  ttf-liberation                # metric-compatible with Arial/Times/Courier \
-  ttf-jetbrains-mono            # dev-friendly monospace \
-  ttf-fira-code                 # monospace with ligatures \
-  ttf-ubuntu-font-family        # Ubuntu UI font family \
-  terminus-font                 # crisp bitmap-ish console font \
-  adobe-source-sans-fonts       # Adobe Source Sans \
-  adobe-source-serif-fonts      # Adobe Source Serif \
-  adobe-source-code-pro-fonts   # Adobe Source Code Pro \
-  nerd-fonts                    # icon glyphs patched into many fonts (large install) \
-  ttf-ms-fonts                  # Microsoft core fonts (AUR; licensing caveats)
+  noto-fonts \
+  noto-fonts-cjk \
+  noto-fonts-emoji \
+  noto-fonts-extra \
+  ttf-dejavu \
+  ttf-liberation \
+  ttf-jetbrains-mono \
+  ttf-fira-code \
+  ttf-ubuntu-font-family \
+  terminus-font \
+  adobe-source-sans-fonts \
+  adobe-source-serif-fonts \
+  adobe-source-code-pro-fonts \
+  nerd-fonts \
+  ttf-ms-fonts
 
 ```
 
@@ -732,15 +832,23 @@ yay -S --needed \
 🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware.
 
 ```bash
+# NVIDIA DKMS driver (kernel modules): nvidia-dkms
+# NVIDIA userspace libraries + tools: nvidia-utils
+# 32-bit NVIDIA libs (Steam/Proton): lib32-nvidia-utils
+# NVIDIA X11 settings GUI: nvidia-settings
+# OpenCL ICD loader: ocl-icd
+# NVIDIA OpenCL implementation: opencl-nvidia
+# query OpenCL platforms/devices: clinfo
+# CUDA toolkit/runtime: cuda
 yay -S --needed \
-  nvidia-dkms         # NVIDIA DKMS driver (kernel modules) \
-  nvidia-utils        # NVIDIA userspace libraries + tools \
-  lib32-nvidia-utils  # 32-bit NVIDIA libs (Steam/Proton) \
-  nvidia-settings     # NVIDIA X11 settings GUI \
-  ocl-icd             # OpenCL ICD loader \
-  opencl-nvidia       # NVIDIA OpenCL implementation \
-  clinfo              # query OpenCL platforms/devices \
-  cuda                # CUDA toolkit/runtime
+  nvidia-dkms \
+  nvidia-utils \
+  lib32-nvidia-utils \
+  nvidia-settings \
+  ocl-icd \
+  opencl-nvidia \
+  clinfo \
+  cuda
 ```
 
 <details>
@@ -799,8 +907,10 @@ grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
 
 Add a NVIDIA pacman hook so DKMS/initramfs are rebuilt automatically when kernels or the driver are updated:
 ```bash
-sudo mkdir -p /etc/pacman.d/hooks/                             # ensure hooks directory exists
-sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'    # hook: rebuild NVIDIA initramfs on updates
+# ensure hooks directory exists
+sudo mkdir -p /etc/pacman.d/hooks/
+# hook: rebuild NVIDIA initramfs on updates
+sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
 [Trigger]
 Operation = Install
 Operation = Upgrade

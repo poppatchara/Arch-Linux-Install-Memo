@@ -610,11 +610,6 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 
 ```bash
 sudo pacman -Syu snapper
-# Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
-yay -S limine-snapper-sync limine-mkinitcpio-hook
-sudo limine-snapper-sync
-
-sudo pacman -Syu snap-pac
 ```
 
 <details>
@@ -631,10 +626,15 @@ You can omit `/home` snapping if you prefer (e.g., for large media folders).
 ```bash
 # We need tobe root for this part
 sudo su
+```
+```bash
 snapper -c root create-config /
 snapper -c home create-config /home
 
 cp /etc/limine-snapper-sync.conf /etc/default/limine
+```
+```bash
+# Exit root
 exit
 ```
 
@@ -644,6 +644,17 @@ yay -S --needed \
   btrfs-assistant \
   snapper-gui-git \
   snapper-tools
+```
+
+```bash
+# Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
+yay -S \
+  limine-snapper-sync \
+  limine-mkinitcpio-hook \
+  snap-pac
+
+# trigger sync
+sudo limine-snapper-sync
 ```
 
 ---

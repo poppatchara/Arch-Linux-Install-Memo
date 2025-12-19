@@ -598,14 +598,6 @@ reboot
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 
-### Extra Packages for Limine
-```bash
-yay -S --needed \
-  btrfs-assistant \
-  snapper-gui-git \
-  snapper-tools
-```
-
 <details>
   <summary>🧰 Packages being installed (bootstrap AUR helper)</summary>
 
@@ -637,16 +629,21 @@ sudo pacman -Syu snap-pac
 #### Create Snapper Configs
 You can omit `/home` snapping if you prefer (e.g., for large media folders).
 ```bash
-sudo snapper -c root create-config /
-sudo snapper -c home create-config /home
-# disable automatic timeline snapshots
-sudo sed -i 's/^TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/' /etc/snapper/configs/{root,home}
-# keep only 5 regular snapshots
-sudo sed -i 's/^NUMBER_LIMIT="50"/NUMBER_LIMIT="5"/' /etc/snapper/configs/{root,home}
-# keep only 5 important snapshots
-sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT="10"/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/{root,home}
+# We need tobe root for this part
+sudo su
+snapper -c root create-config /
+snapper -c home create-config /home
 
 cp /etc/limine-snapper-sync.conf /etc/default/limine
+exit
+```
+
+### Extra Packages for Limine
+```bash
+yay -S --needed \
+  btrfs-assistant \
+  snapper-gui-git \
+  snapper-tools
 ```
 
 ---

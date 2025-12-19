@@ -474,7 +474,6 @@ pacman -S --needed \
   xorg-xwayland
 
 systemctl enable sddm
-systemctl enable power-profiles-daemon
 ```
 
 #### KDE Plasma Core
@@ -522,7 +521,9 @@ pacman -S --needed \
   plasma-browser-integration \
   discover \
   krdp \
-  print-manager
+  print-manager \
+
+  systemctl enable power-profiles-daemon
 
 # Optional: Encrypted “vault” folders integration: plasma-vault
 # pacman -S --needed plasma-vault

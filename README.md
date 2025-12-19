@@ -765,7 +765,8 @@ yay -S --needed \
   libreoffice-fresh \
   mailspring \
   visual-studio-code-bin \
-  filezilla
+  filezilla \
+  fatfetch
 
 ## Gaming stack
 # Feral gamemode (CPU governor/priority tweaks): gamemode
@@ -784,7 +785,7 @@ yay -S --needed \
 
 ## Flatpak
 # Flatpak runtime + app management: flatpak
-yay -S --needed flatpak
+yay -S flatpak
 
 ## Fonts
 # Google Noto base fonts: noto-fonts

@@ -480,7 +480,6 @@ systemctl enable sddm
 ```bash
 # The Plasma desktop shell (panels, launcher, desktop UI): plasma-desktop
 # Core workspace components (session bits, shell integration, essentials): plasma-workspace
-# Wayland session entry + components for logging into Plasma Wayland: plasma-wayland-session
 # KDE window manager + compositor (Wayland/X11): kwin
 # KDE System Settings app: systemsettings
 # NetworkManager integration (network tray, VPN UI): plasma-nm
@@ -491,7 +490,6 @@ systemctl enable sddm
 pacman -S --needed \
   plasma-desktop \
   plasma-workspace \
-  plasma-wayland-session \
   kwin \
   systemsettings \
   plasma-nm \

@@ -297,16 +297,20 @@ mkinitcpio -P
 
 ### 6.1 Install Limine binaries (ESP mounted at `/boot`)
 ```bash
-pacman -S --needed limine
+# Limine Bootloader
+pacman -S --needed limine 
 mkdir -p /boot/EFI/limine /boot/limine
 cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
+
 ```
+Some extra for Limine are in AUR, so we will install them later, after we got yay installed.
 
 <details>
   <summary>🚀 Packages being installed (Limine)</summary>
 
   - `limine`: Limine UEFI bootloader EFI binaries + templates/config support
 </details>
+
 
 ### 6.2 Register Limine with the firmware
 ```bash
@@ -537,6 +541,12 @@ reboot
 ### YAY package manager
 ```bash
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+```
+
+### Extra Packages for Limine
+```bash
+yay -S --needed \
+btrfs-assistant snapper-gui-git snapper-tools
 ```
 
 <details>

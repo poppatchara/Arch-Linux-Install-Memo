@@ -764,7 +764,8 @@ yay -S --needed \
   firefox \
   libreoffice-fresh \
   mailspring \
-  visual-studio-code-bin
+  visual-studio-code-bin \
+  filezilla
 
 ## Gaming stack
 # Feral gamemode (CPU governor/priority tweaks): gamemode
@@ -1008,12 +1009,20 @@ git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 
 ### Shell integration (Fish)
 ```bash
-# Add to ~/.config/fish/config.fish (below your other exports/aliases)
+mkdir -p ~/.config/fish
+conf="$HOME/.config/fish/config.fish"
+touch "$conf"
+
+# Add pyenv init block (idempotent)
+if ! grep -qF 'PYENV_ROOT' "$conf"; then
+  cat <<'EOF' >> "$conf"
+
+# pyenv
 set -gx PYENV_ROOT $HOME/.pyenv
 fish_add_path $PYENV_ROOT/bin
-
-# Initialize pyenv on every new shell
 pyenv init - | source
+EOF
+fi
 ```
 
 ### Use pyenv to install a Python version
@@ -1028,6 +1037,32 @@ pyenv global 3.12.2
 # Confirm which Python is active
 python --version
 pyenv which python
+```
+
+### Flatpak Apps
+```bash
+sudo flatpak --system remote-add --if-not-exists flathub \
+https://flathub.org/repo/flathub.flatpakrepo
+
+flatpak install -y flathub \
+  org.gnome.baobab \
+  io.github.jonmagon.kdiskmark \
+  io.github.flattool.Warehouse \
+  io.missioncenter.MissionCenter \
+  xyz.z3ntu.razergenie \
+  io.github.arunsivaramanneo.GPUViewer \
+  org.kde.kdf \
+  com.kgurgul.cpuinfo \
+  org.raspberrypi.rpi-imager \
+  io.github.shonubot.Spruce \
+  org.localsend.localsend_app \
+  com.agateau.nanonote \
+  org.gnome.Cheese \
+  com.discordapp.Discord \
+  com.cassidyjames.butler \
+  com.adobe.Reader \
+  net.davidotek.pupgui2 \
+  com.vysp3r.ProtonPlus 
 ```
 
 ---

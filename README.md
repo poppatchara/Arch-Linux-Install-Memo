@@ -2,6 +2,8 @@
 
 Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop, Limine bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
 
+Not the best way or most correct way. Just the way I like.
+
 ## Contents
 1. [Assumptions](#assumptions)
 2. [Live ISO Prep](#live-iso-prep)
@@ -35,6 +37,7 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 🧰 Goal: make package installs fast/repeatable in the live environment (pacman config + mirrors) before you partition/format. On the Arch ISO you are usually `root` already; `sudo` is fine to keep the same commands for later.
 
 ### 0.1 Configure pacman appearance & parallel downloads 🎛️
+
 ```bash
 conf=/etc/pacman.conf
 # Bump ParallelDownloads from 5→15 and enable colorized pacman output.
@@ -51,10 +54,10 @@ pacman -Syy
 ```
 
 ### 0.2 Refresh mirror list 🌐
-Reorder the existing mirrorlist: move your `## <country>` section to right before `## Worldwide`, with exactly one blank line between them.
+Reorder the existing mirrorlist: move your `## <country>` section to right before `## Worldwide`.
+Change `country=` to yours.
+
 ```bash
-# Reorder the mirrorlist so the `## $country` block sits right before `## Worldwide`.
-# This keeps your local mirrors near the top without touching the rest of the file.
 country=Thailand
 mirrorfile="/etc/pacman.d/mirrorlist"
 sudo cp "$mirrorfile" "${mirrorfile}.bak"
@@ -100,23 +103,26 @@ sudo pacman -Syy
 ---
 
 ## Partition & Format
-💽 Goal: create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don’t wipe the wrong device.
+💽 Create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don’t wipe the wrong device.
 
-### 1. Partition layout
+### 1. My Partition layout
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
-| `/dev/nvme0n1p1` | 4 GiB | EFI System (type `ef00`) | Mounted at `/boot` |
+| `/dev/nvme0n1p1` | 2-4 GB| EFI System (type `ef00`) | Mounted at `/boot` |
 | `/dev/nvme0n1p2` | Remainder | Linux filesystem (`8300`) | Btrfs root |
-| `/dev/nvme0n1p3` | ≈ RAM size | Linux swap | Swap |
+| `/dev/nvme0n1p3` | About half or equal your RAM size | Linux swap | Swap |
 
-Use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
+You can use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
+
 
 ### 2. Format and capture UUIDs
 **CAUTION:** double-check your device paths (e.g. `/dev/nvme0n1p2`) before formatting.
 ```bash
+# Change the disk path to match yours!!!
 mkfs.btrfs -f -L ArchLinuxFS /dev/nvme0n1p2
 mkswap /dev/nvme0n1p3
 
+# Store UUID for later scripts.
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
@@ -131,28 +137,57 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 - Subvolumes here are named `@something` by convention; `@` is mounted as `/` later.
 - `compress=zstd:1,noatime` is a common baseline; tune for your workload.
 - If you don’t care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
+- I have Downloads, .cache, and Git isolated. These usually get big and I don't want to snapsho them. 
 
+### 3.1 Create Subvolumes and Mounts
 ```bash
 # Create subvolumes
 mount UUID="${root_uuid}" /mnt
+
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@var
-btrfs subvolume create /mnt/@log
-btrfs subvolume create /mnt/@cache
+btrfs subvolume create /mnt/@var_log
+btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
-umount /mnt
 
-# Mount subvolumes
+# OPTIONAL: extra subvolumes
+# I find these folders usually grow large on my system and they changes quite often. So I opted to not snapshot them.
+# You can skip these. Espically home/Git, thats my place for all git repos. 
+
+#btrfs subvolume create /mnt/@home_cache
+#btrfs subvolume create /mnt/@home_downloads
+#btrfs subvolume create /mnt/@home_git
+
+# remount as btrfs subvolumes
+umount -R /mnt
 mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
+
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home UUID="${root_uuid}" /mnt/home
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var  UUID="${root_uuid}" /mnt/var
-mount --mkdir -o compress=zstd:1,noatime,subvol=@log  UUID="${root_uuid}" /mnt/var/log
-mount --mkdir -o compress=zstd:1,noatime,subvol=@cache UUID="${root_uuid}" /mnt/var/cache
+mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /mnt/var/log
+mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/srv
 
+# If you created optional subvolumes, mount them.
+# I'm the only user of this machine, so I will mount it directly to my home. 
+# You will need to come up with symlink solution for multiusers.
+
+#mkdir -p /mnt/mnt/homes
+#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_cache UUID="${root_uuid}" /mnt/home/pop/.cache
+#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_downloads UUID="${root_uuid}" /mnt/home/pop/Downloads
+#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
+
+# Fix permission
+#chowm -R pop:pop /mnt/home/pop
+```
+
+</details>
+
+### 3.2 Swap, ESP and fstab
+```bash
 # Mount ESP at /boot
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 
@@ -164,39 +199,41 @@ mkdir -p /mnt/etc
 genfstab -U /mnt > /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
-
 ---
 
 ## Base Install
 📦 Goal: install a bootable base system onto `/mnt` (kernel, firmware, networking, editors, etc.), then switch into it with `arch-chroot`. If you prefer fewer packages, trim this list, but keep `base`, a kernel, `linux-firmware`, and whatever you need for networking and your filesystem.
 
+### 4.1 Install base packages
 ```bash
-# Detect arch
-ucode_pkg=intel-ucode
+# Detect cpu
+cpu=intel
 if lscpu | grep -qi amd; then
-  ucode_pkg=amd-ucode
+  cpu=amd
 fi
 
 # Prepare vconsole
+# ter-116n, ter-120n, ter-124n, ter-32n
+# or use nay others you like
 cat <<'EOF' > /mnt/etc/vconsole.conf
 KEYMAP=us
-FONT=
+FONT=ter-120n
 EOF
 
 # Installations
 pacstrap -K /mnt \
   base base-devel \
-  linux linux-headers linux-firmware "${ucode_pkg}" \
-  efibootmgr btrfs-progs  dosfstools \
+  linux linux-headers linux-firmware "${cpu}-ucode" \
+  efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs\
   networkmanager openssh \
   vim nvim git sudo man curl wget perl \
   zsh zsh-completions zsh-autosuggestions bash-completion \
   pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector \
   inotify-tools
 
-arch-chroot /mnt
+# copy pacman config
+cp /etc/pacman.conf /mnt/etc/pacman.conf
 ```
-
 <details>
   <summary>📦 Packages being installed (Base Install)</summary>
 
@@ -211,31 +248,22 @@ arch-chroot /mnt
   - Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
 </details>
 
-Wait for the install to finish, then continue inside the chroot.
+### 4.2 Then chroot into our setup
+```bash
+arch-chroot /mnt
+```
+
+
 
 ## Chroot Configuration
 🏠 Everything below runs inside `arch-chroot /mnt` unless explicitly stated otherwise. This section sets the system identity (locale/time/hostname/users) and ensures your initramfs includes the bits needed to boot from Btrfs.
 
-### 5.1 Pacman tweaks (again, now inside the chroot)
+### 5.1 Locale, time, and console
 ```bash
-conf=/etc/pacman.conf
-# Same pacman tweaks as on the ISO: raise ParallelDownloads and enable colorized output.
-perl -pi -e '
-  s/^(ParallelDownloads\s*=\s*)5/${1}15/;
-  s/^#Color/Color/;
-' "$conf"
-
-# Uncomment `[multilib]` and its `Include = /etc/pacman.d/mirrorlist` line near the end of the file.
-perl -0777 -pi -e '
-s/^#\[(multilib)\]\n#(Include\s*=\s*\/etc\/pacman\.d\/mirrorlist)(\n)/[\1]\n\2\3/mg
-' "$conf"
-pacman -Syy
-```
-
-### 5.2 Locale, time, and console
-```bash
+# Change the timezone to yours.
 ln -sf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
 hwclock --systohc
+
 # Uncomment desired locales in `/etc/locale.gen` (add or remove lines as appropriate for your setup).
 # Japanese
 sed -i 's/^#ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen
@@ -245,11 +273,12 @@ sed -i 's/^#th_TH.UTF-8 UTF-8/th_TH.UTF-8 UTF-8/' /etc/locale.gen
 sed -i 's/^#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen
 # US English
 sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 ```
 
-### 5.3 Hostname and hosts file
+### 5.2 Hostname and hosts file
 Change `host_name` to your liking.
 ```bash
 host_name="arch"
@@ -261,11 +290,13 @@ cat <<EOF > /etc/hosts
 EOF
 ```
 
-### 5.4 Users and sudo
+### 5.3 Users and sudo
+  Root Password
 ```bash
 echo "Setting Root Password"
 passwd
 ```
+  Create User and Passeord
 ```bash
 # change username
 user=pop
@@ -273,13 +304,14 @@ echo "Create user, and set password"
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
 passwd $user
 ```
-Enable wheel sudo in `sudoers`
+  Enable wheel sudo in `sudoers`
+  We wont automate this.
 ```bash
-# uncomment: %wheel ALL=(ALL) ALL
+# Open and uncomment: %wheel ALL=(ALL) ALL
 EDITOR=vim visudo   
 ```
 
-### 5.5 mkinitcpio
+### 5.4 mkinitcpio
 Set `MODULES`, `BINARIES`, and `HOOKS` for a basic Btrfs initramfs. Enable resume. Adjust the values to your own needs.
 ```bash
 perl -pi -e '
@@ -294,7 +326,6 @@ perl -pi -e '
 # Rebuild initramfs with the new mkinitcpio configuration
 mkinitcpio -P
 ```
-
 ---
 
 ## Limine Bootloader
@@ -358,7 +389,7 @@ DEFAULT_ENTRY=Arch Linux
     KERNEL_PATH: boot():/limine/vmlinuz-linux
     MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
     MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 ${ucode_img}_iommu=on iommu=pt
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 ${ucode_img}_iommu=on iommu=pt
 
 /Arch Linux (fallback)
     PROTOCOL: linux
@@ -399,14 +430,14 @@ EOF
 ### Extra packages (optional)
 ```bash
 # core system tools & CLI utilities: util-linux inetutils usbutils rsync htop bat zip unzip p7zip
-# wifi: iwd
+# iwd : wifi
 # mDNS: avahi nss-mdns
-# DHCP: dhcpcd
+# dhcpcd : DHCP
 # audio tools & firmware: alsa-utils sof-firmware easyeffects
 # Bluetooth support: bluez bluez-utils
-# printing system: cups
+# cups : printing system
 # power & hardware management: acpi acpi_call acpid
-# user directory structure: xdg-user-dirs
+# xdg-user-dirs : user directory structure
 pacman -Syu --needed \
   util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
   iwd \
@@ -459,12 +490,12 @@ systemctl enable fstrim.timer
 ### KDE Plasma & apps
 #### KDE Core
 ```bash
-# Display/login manager (graphical login screen): sddm
-# System Settings module to configure SDDM: sddm-kcm
-# “Portal” framework (file picker, screen share, sandbox app integration): xdg-desktop-portal
-# KDE backend for portals (needed for Wayland screen share, Flatpak, etc.): xdg-desktop-portal-kde
-# Qt6 Wayland platform plugin: qt6-wayland
-# Runs X11 apps under Wayland: xorg-xwayland
+# sddm : Display/login manager (graphical login screen)
+# sddm-kcm : System Settings module to configure SDDM
+# xdg-desktop-portal : “Portal” framework (file picker, screen share, sandbox app integration)
+# xdg-desktop-portal-kde : KDE backend for portals (needed for Wayland screen share, Flatpak, etc.)
+# qt6-wayland : Qt6 Wayland platform plugin
+# xorg-xwayland : Runs X11 apps under Wayland
 pacman -S --needed \
   sddm \
   sddm-kcm \
@@ -478,15 +509,15 @@ systemctl enable sddm
 
 #### KDE Plasma Core
 ```bash
-# The Plasma desktop shell (panels, launcher, desktop UI): plasma-desktop
-# Core workspace components (session bits, shell integration, essentials): plasma-workspace
-# KDE window manager + compositor (Wayland/X11): kwin
-# KDE System Settings app: systemsettings
-# NetworkManager integration (network tray, VPN UI): plasma-nm
-# Audio volume controls for PipeWire/PulseAudio: plasma-pa
-# Display configuration + monitor hotplug handling: kscreen
-# Configure GTK theme/fonts under KDE: kde-gtk-config
-# Breeze theme for GTK apps (visual consistency): breeze-gtk
+# plasma-desktop : The Plasma desktop shell (panels, launcher, desktop UI)
+# plasma-workspace : Core workspace components (session bits, shell integration, essentials)
+# kwin : KDE window manager + compositor (Wayland/X11)
+# systemsettings : KDE System Settings app
+# plasma-nm : NetworkManager integration (network tray, VPN UI)
+# plasma-pa : Audio volume controls for PipeWire/PulseAudio
+# kscreen : Display configuration + monitor hotplug handling
+# kde-gtk-config : Configure GTK theme/fonts under KDE
+# breeze-gtk : Breeze theme for GTK apps (visual consistency)
 pacman -S --needed \
   plasma-desktop \
   plasma-workspace \
@@ -503,14 +534,16 @@ pacman -S --needed \
 #### KDE Plasma (Optionals)
 You can select what you need.
 ```bash
-# Bluetooth tray + pairing UI: bluedevil
-# Laptop power modes (balanced/performance/powersave): power-profiles-daemon
-# Extra Plasma widgets/applets (more features, more stuff): kdeplasma-addons
-# KDE System Monitor app (optional if you use htop/Mission Center): plasma-systemmonitor
-# Browser media controls + integration: plasma-browser-integration
-# KDE software center (can add background notifier): discover
-# KDE Remote Desktop server/client bits (krdpserver): krdp
-# KDE printer management UI: print-manager
+# bluedevil : Bluetooth tray + pairing UI
+# power-profiles-daemon : Laptop power modes (balanced/performance/powersave)
+# kdeplasma-addons : Extra Plasma widgets/applets (more features, more stuff)
+# plasma-systemmonitor : KDE System Monitor app (optional if you use htop/Mission Center)
+# plasma-browser-integration : Browser media controls + integration
+# discover : KDE software center (can add background notifier)
+# krdp : KDE Remote Desktop server/client bits (krdpserver)
+# print-manager : KDE printer management UI
+# appmenu-gtk-module : AppMenu GTK module
+# libdbusmenu-glib : DBus menu integration
 pacman -S --needed \
   bluedevil \
   power-profiles-daemon \
@@ -520,8 +553,10 @@ pacman -S --needed \
   discover \
   krdp \
   print-manager \
+  appmenu-gtk-module \
+  libdbusmenu-glib
 
-  systemctl enable power-profiles-daemon
+systemctl enable power-profiles-daemon
 
 # Optional: Encrypted “vault” folders integration: plasma-vault
 # pacman -S --needed plasma-vault
@@ -531,19 +566,20 @@ pacman -S --needed \
 
 #### Desktop Apps
 ````bash
-# File manager: dolphin
-# Git/Share/extra Dolphin integrations: dolphin-plugins
-# Terminal: konsole
-# GUI text editor: kate
-# PDF/EPUB viewer: okular
-# Image viewer: gwenview
-# Screenshot tool: spectacle
-# Archive manager GUI: ark
-# SMB/SFTP/etc. support inside Dolphin/KIO: kio-extras
-# Video thumbnails in Dolphin: ffmpegthumbs
-# Document/image thumbnail plugins: kdegraphics-thumbnailers
-# Disk usage GUI: filelight
-# Calculator: kcalc
+# dolphin : File manager
+# dolphin-plugins : Git/Share/extra Dolphin integrations
+# konsole : Terminal
+# kate : GUI text editor
+# okular : PDF/EPUB viewer
+# gwenview : Image viewer
+# spectacle : Screenshot tool
+# ark : Archive manager GUI
+# gparted : Partition editor GUI
+# kio-extras : SMB/SFTP/etc. support inside Dolphin/KIO
+# ffmpegthumbs : Video thumbnails in Dolphin
+# kdegraphics-thumbnailers : Document/image thumbnail plugins
+# filelight : Disk usage GUI
+# kcalc : Calculator
 pacman -S --needed \
   dolphin \
   dolphin-plugins \
@@ -553,6 +589,7 @@ pacman -S --needed \
   gwenview \
   spectacle \
   ark \
+  gparted \
   kio-extras \
   ffmpegthumbs \
   kdegraphics-thumbnailers \
@@ -569,7 +606,7 @@ pacman -S --needed \
   - Plasma core: `plasma-desktop`, `plasma-workspace`, `plasma-wayland-session`, `kwin`, `systemsettings`
   - Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
   - Optional Plasma extras: `bluedevil`, `power-profiles-daemon`, `kdeplasma-addons`, `plasma-systemmonitor`, `plasma-browser-integration`, `discover`, `krdp`, `print-manager`
-  - Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `filelight`, `kcalc`
+  - Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `gparted`, `filelight`, `kcalc`
   - Thumbnails/integration: `kio-extras`, `ffmpegthumbs`, `kdegraphics-thumbnailers`
 </details>
 
@@ -698,11 +735,11 @@ sudo pacman -S \
 
 CachyOS Packages
 ```bash
-# CachyOS defaults/tweaks: cachyos-settings
-# AppMenu GTK module: appmenu-gtk-module
-# DBus menu integration: libdbusmenu-glib
-# Gaming-oriented meta package: cachyos-gaming-meta
-# Welcome/info app: cachyos-hello
+# cachyos-settings : CachyOS defaults/tweaks
+# appmenu-gtk-module : AppMenu GTK module
+# libdbusmenu-glib : DBus menu integration
+# cachyos-gaming-meta : Gaming-oriented meta package
+# cachyos-hello : Welcome/info app
 sudo pacman -S \
   cachyos-settings \
   appmenu-gtk-module \
@@ -730,36 +767,36 @@ sudo pacman -Qqn | sudo pacman -S -
 ```bash
 ## Core CLI + utilities
 # nc: TCP/UDP swiss-army knife: openbsd-netcat
-# image convert/resize/identify CLI tools: imagemagick
+# imagemagick : image convert/resize/identify CLI tools
 yay -S --needed \
   openbsd-netcat \
   imagemagick
 
 ## Filesystem / network integration
-# virtual filesystem layer (trash, mtp, gphoto2, etc.): gvfs
-# SMB/CIFS browsing in Dolphin (Windows shares): gvfs-smb
+# gvfs : virtual filesystem layer (trash, mtp, gphoto2, etc.)
+# gvfs-smb : SMB/CIFS browsing in Dolphin (Windows shares)
 yay -S --needed \
   gvfs \
   gvfs-smb
 
 ## Power / laptop bits
-# backlight/brightness control (laptops): brightnessctl
+# brightnessctl : backlight/brightness control (laptops)
 yay -S --needed brightnessctl
 
 ## Audio / media / creative
-# media player (handles basically everything): vlc
-# image editor: gimp
-# screen recording + streaming: obs-studio
+# vlc : media player (handles basically everything)
+# gimp : image editor
+# obs-studio : screen recording + streaming
 yay -S --needed \
   vlc \
   gimp \
   obs-studio
 
 ## Desktop apps
-# web browser: firefox
-# office suite (latest branch; big but useful): libreoffice-fresh
-# email client (Electron-based): mailspring
-# VS Code (official build; AUR): visual-studio-code-bin
+# firefox : web browser
+# libreoffice-fresh : office suite (latest branch; big but useful)
+# mailspring : email client (Electron-based)
+# visual-studio-code-bin : VS Code (official build; AUR)
 yay -S --needed \
   firefox \
   libreoffice-fresh \
@@ -769,12 +806,12 @@ yay -S --needed \
   fatfetch
 
 ## Gaming stack
-# Feral gamemode (CPU governor/priority tweaks): gamemode
-# Steam client: steam
-# game launcher (Wine/Proton management): lutris
-# Vulkan/OpenGL performance overlay: mangohud
-# GUI to configure MangoHud: goverlay
-# Proton-GE builds (AUR) for better game compatibility: proton-ge-custom-bin
+# gamemode : Feral gamemode (CPU governor/priority tweaks)
+# steam : Steam client
+# lutris : game launcher (Wine/Proton management)
+# mangohud : Vulkan/OpenGL performance overlay
+# goverlay : GUI to configure MangoHud
+# proton-ge-custom-bin : Proton-GE builds (AUR) for better game compatibility
 yay -S --needed \
   gamemode \
   steam \
@@ -784,25 +821,25 @@ yay -S --needed \
   proton-ge-custom-bin
 
 ## Flatpak
-# Flatpak runtime + app management: flatpak
+# flatpak : Flatpak runtime + app management
 yay -S flatpak
 
 ## Fonts
-# Google Noto base fonts: noto-fonts
-# Noto for Chinese/Japanese/Korean: noto-fonts-cjk
-# Noto Color Emoji: noto-fonts-emoji
-# extra Noto families: noto-fonts-extra
-# solid fallback font set: ttf-dejavu
-# metric-compatible with Arial/Times/Courier: ttf-liberation
-# dev-friendly monospace: ttf-jetbrains-mono
-# monospace with ligatures: ttf-fira-code
-# Ubuntu UI font family: ttf-ubuntu-font-family
-# crisp bitmap-ish console font: terminus-font
-# Adobe Source Sans: adobe-source-sans-fonts
-# Adobe Source Serif: adobe-source-serif-fonts
-# Adobe Source Code Pro: adobe-source-code-pro-fonts
-# icon glyphs patched into many fonts (large install): nerd-fonts
-# Microsoft core fonts (AUR; licensing caveats): ttf-ms-fonts
+# noto-fonts : Google Noto base fonts
+# noto-fonts-cjk : Noto for Chinese/Japanese/Korean
+# noto-fonts-emoji : Noto Color Emoji
+# noto-fonts-extra : extra Noto families
+# ttf-dejavu : solid fallback font set
+# ttf-liberation : metric-compatible with Arial/Times/Courier
+# ttf-jetbrains-mono : dev-friendly monospace
+# ttf-fira-code : monospace with ligatures
+# ttf-ubuntu-font-family : Ubuntu UI font family
+# terminus-font : crisp bitmap-ish console font
+# adobe-source-sans-fonts : Adobe Source Sans
+# adobe-source-serif-fonts : Adobe Source Serif
+# adobe-source-code-pro-fonts : Adobe Source Code Pro
+# nerd-fonts : icon glyphs patched into many fonts (large install)
+# ttf-ms-fonts : Microsoft core fonts (AUR; licensing caveats)
 yay -S --needed \
   noto-fonts \
   noto-fonts-cjk \
@@ -841,14 +878,14 @@ yay -S --needed \
 🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware.
 
 ```bash
-# NVIDIA DKMS driver (kernel modules): nvidia-dkms
-# NVIDIA userspace libraries + tools: nvidia-utils
-# 32-bit NVIDIA libs (Steam/Proton): lib32-nvidia-utils
-# NVIDIA X11 settings GUI: nvidia-settings
-# OpenCL ICD loader: ocl-icd
-# NVIDIA OpenCL implementation: opencl-nvidia
-# query OpenCL platforms/devices: clinfo
-# CUDA toolkit/runtime: cuda
+# nvidia-dkms : NVIDIA DKMS driver (kernel modules)
+# nvidia-utils : NVIDIA userspace libraries + tools
+# lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
+# nvidia-settings : NVIDIA X11 settings GUI
+# ocl-icd : OpenCL ICD loader
+# opencl-nvidia : NVIDIA OpenCL implementation
+# clinfo : query OpenCL platforms/devices
+# cuda : CUDA toolkit/runtime
 yay -S --needed \
   nvidia-dkms \
   nvidia-utils \
@@ -1047,7 +1084,7 @@ pyenv which python
 ```
 
 ### Flatpak Apps
-Install this in the logg-in session.
+Can't ssh this, install this in the logg-in session.
 ```bash
 flatpak install -y flathub \
   org.gnome.baobab \

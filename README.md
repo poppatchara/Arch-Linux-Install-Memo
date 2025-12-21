@@ -179,9 +179,6 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/s
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_cache UUID="${root_uuid}" /mnt/home/pop/.cache
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_downloads UUID="${root_uuid}" /mnt/home/pop/Downloads
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
-
-# Fix permission
-#chown -R pop:pop /mnt/home/pop
 ```
 
 </details>
@@ -304,6 +301,11 @@ echo "Create user, and set password"
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
 passwd $user
 ```
+```bash
+# If you created optional subvolumes earlier, take ownership of the home.
+chown -R pop:pop /mnt/home/pop
+```
+
   Enable wheel sudo in `sudoers`
   We wont automate this.
 ```bash

@@ -874,6 +874,8 @@ yay -S --needed \
 
 ### Nvidia Driver
 🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware.
+refer to Arch Wiki for the correct driver package.
+https://wiki.archlinux.org/title/NVIDIA
 
 ```bash
 # nvidia-dkms : NVIDIA DKMS driver (kernel modules)
@@ -885,7 +887,7 @@ yay -S --needed \
 # clinfo : query OpenCL platforms/devices
 # cuda : CUDA toolkit/runtime
 yay -S --needed \
-  nvidia-dkms \
+  nvidia-open-dkms \
   nvidia-utils \
   lib32-nvidia-utils \
   nvidia-settings \
@@ -898,7 +900,7 @@ yay -S --needed \
 <details>
   <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
 
-  - Driver (DKMS): `nvidia-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
+  - Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
   - OpenCL: `ocl-icd`, `opencl-nvidia`, `clinfo`
   - CUDA toolkit/runtime: `cuda`
 </details>
@@ -952,7 +954,7 @@ Operation = Install
 Operation = Upgrade
 Operation = Remove
 Type = Package
-Target = nvidia-dkms
+Target = nvidia-open-dkms
 Target = linux-cachyos
 Target = linux-cachyos-eevdf
 Target = linux

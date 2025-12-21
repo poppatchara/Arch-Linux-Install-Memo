@@ -425,14 +425,12 @@ EOF
 
 🧠 Networking note (choose one approach):
 - `NetworkManager` (common on desktops/laptops): enable `NetworkManager` (and optionally `iwd` for Wi‑Fi backend).
-- `systemd-networkd` + `systemd-resolved` (common on servers/minimal): enable those, skip `NetworkManager` and `dhcpcd`.
 
 ### Extra packages (optional)
 ```bash
 # core system tools & CLI utilities: util-linux inetutils usbutils rsync htop bat zip unzip p7zip
 # iwd : wifi
 # mDNS: avahi nss-mdns
-# dhcpcd : DHCP
 # audio tools & firmware: alsa-utils sof-firmware easyeffects
 # Bluetooth support: bluez bluez-utils
 # cups : printing system
@@ -442,7 +440,6 @@ pacman -Syu --needed \
   util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
   iwd \
   avahi nss-mdns \
-  dhcpcd \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
   cups \
@@ -456,7 +453,7 @@ pacman -Syu --needed \
   - Basics: `htop`, `inetutils`, `usbutils`, `rsync`, `util-linux`
   - Archives: `zip`, `unzip`, `p7zip`
   - CLI quality-of-life: `bat`
-  - Networking (pick what you use): `iwd`, `dhcpcd`, `avahi`, `nss-mdns`
+  - Networking (pick what you use): `iwd`, `avahi`, `nss-mdns`
   - Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
   - Bluetooth: `bluez`, `bluez-utils`
   - Printing: `cups`
@@ -471,7 +468,6 @@ systemctl enable NetworkManager
 
 # Optional Wi‑Fi tooling (only enable if you actually use it)
 # systemctl enable iwd
-# systemctl enable dhcpcd
 
 # Everything else (pick what you need)
 systemctl enable bluetooth

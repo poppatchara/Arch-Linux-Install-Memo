@@ -181,7 +181,7 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/s
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
 
 # Fix permission
-#chowm -R pop:pop /mnt/home/pop
+#chown -R pop:pop /mnt/home/pop
 ```
 
 </details>

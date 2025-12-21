@@ -905,20 +905,12 @@ yay -S --needed \
 
 #### Add DRM kernel module
 
-Use Perl to ensure these kernel parameters are present in Limine `CMDLINE` (idempotent for both `/boot/limine/limine.conf` and `/boot/limine.conf` if it exists):
+You should have /boot/limine.conf created automatically by now.
+Go in and add nvidia config to `cndline:` sections.
+You may leave the fallback or the one use use for safemode out.
+
 ```bash
-for conf in /boot/limine/limine.conf /boot/limine.conf; do
-  [ -f "$conf" ] || continue                                   # skip if file does not exist
-  sudo perl -pi -e '
-    s/^CMDLINE:\s*(.*)$/do {
-      my $line  = $1;
-      my $extra = " nvidia-drm.modeset=1 nvidia-drm.fbdev=1";  # flags to append
-      # Only append if both flags are not already present
-      $line .= $extra unless $line =~ /\bnvidia-drm\.modeset=1\b/ && $line =~ /\bnvidia-drm\.fbdev=1\b/;
-      "CMDLINE: $line"
-    }/e;
-  ' "$conf"
-done
+nvidia-drm.modeset=1 nvidia-drm.fbdev=1
 ```
 
 In `/etc/mkinitcpio.conf`, ensure NVIDIA modules are included and the generic `kms` hook is removed:

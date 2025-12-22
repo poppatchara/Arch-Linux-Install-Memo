@@ -820,12 +820,14 @@ yay -S --needed \
 # goverlay : GUI to configure MangoHud
 # proton-ge-custom-bin : Proton-GE builds (AUR) for better game compatibility
 yay -S --needed \
-  gamemode \
+  gamemode lib32-gamemode \
   steam \
   lutris \
-  mangohud \
+  mangohud lib32-mangohud \
   goverlay \
   proton-ge-custom-bin
+
+sudo usermod -aG gamemode $USER
 
 ## Flatpak
 # flatpak : Flatpak runtime + app management

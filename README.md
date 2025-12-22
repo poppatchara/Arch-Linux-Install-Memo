@@ -310,7 +310,7 @@ passwd $user
 ```
 ```bash
 # If you created optional subvolumes earlier, take ownership of the home.
-chown -R pop:pop /mnt/home/pop
+chown -R pop:pop /home/pop
 ```
 
 **Enable wheel sudo in `sudoers`**

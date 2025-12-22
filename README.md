@@ -5,19 +5,28 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 Not the best way or most correct way. Just the way I like.
 
 ## Contents
-1. [Assumptions](#assumptions)
-2. [Live ISO Prep](#live-iso-prep)
-3. [Partition & Format](#partition--format)
-4. [Btrfs Subvolumes & Mounts](#btrfs-subvolumes--mounts)
-5. [Base Install](#base-install)
-6. [Chroot Configuration](#chroot-configuration)
-7. [Limine Bootloader](#limine-bootloader)
-8. [Services & QoL](#services--qol)
-9. [Desktop Stack](#desktop-stack)
-10. [Snapper](#snapper)
-11. [Trim & Reboot](#trim--reboot)
-12. [Post-Install Ideas](#post-install-ideas)
-13. [Credits & Thanks](#credits--thanks)
+1. [Updates](#updates)
+2. [Assumptions](#assumptions)
+3. [Live ISO Prep](#live-iso-prep)
+4. [Partition & Format](#partition--format)
+5. [Btrfs Subvolumes & Mounts](#btrfs-subvolumes--mounts)
+6. [Base Install](#base-install)
+7. [Chroot Configuration](#chroot-configuration)
+8. [Limine Bootloader](#limine-bootloader)
+9. [Services & QoL](#services--qol)
+10. [Desktop Stack](#desktop-stack)
+11. [Snapper](#snapper)
+12. [Reboot](#reboot)
+13. [Post-Install Ideas](#post-install-ideas)
+14. [Credits & Thanks](#credits--thanks)
+
+---
+
+## Updates
+
+### 2025-12-22
+- I’m going back to `linux-zen` (and may try `xanmod` or `tkg`). I noticed a very small but annoying stutter in KDE Plasma when resizing windows; it may have been present on the vanilla kernel too and I just never noticed it.
+- I’ll keep the CachyOS section for now in case anyone finds it useful. I’ll come back with my findings after more testing.
 
 ---
 
@@ -108,7 +117,7 @@ sudo pacman -Syy
 ### 1. My Partition layout
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
-| `/dev/nvme0n1p1` | 2-4 GB| EFI System (type `ef00`) | Mounted at `/boot` |
+| `/dev/nvme0n1p1` | 2-4 GB | EFI System (type `ef00`) | Mounted at `/boot` |
 | `/dev/nvme0n1p2` | Remainder | Linux filesystem (`8300`) | Btrfs root |
 | `/dev/nvme0n1p3` | About half or equal your RAM size | Linux swap | Swap |
 
@@ -137,7 +146,7 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 - Subvolumes here are named `@something` by convention; `@` is mounted as `/` later.
 - `compress=zstd:1,noatime` is a common baseline; tune for your workload.
 - If you don’t care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
-- I have Downloads, .cache, and Git isolated. These usually get big and I don't want to snapsho them. 
+- I have Downloads, `.cache`, and Git isolated. These usually get big and I don’t want to snapshot them.
 
 ### 3.1 Create Subvolumes and Mounts
 ```bash
@@ -153,8 +162,8 @@ btrfs subvolume create /mnt/@root
 btrfs subvolume create /mnt/@srv
 
 # OPTIONAL: extra subvolumes
-# I find these folders usually grow large on my system and they changes quite often. So I opted to not snapshot them.
-# You can skip these. Espically home/Git, thats my place for all git repos. 
+# I find these folders usually grow large on my system and they change quite often, so I opted not to snapshot them.
+# You can skip these. Especially `home/Git` — that’s my place for all git repos.
 
 #btrfs subvolume create /mnt/@home_cache
 #btrfs subvolume create /mnt/@home_downloads
@@ -172,7 +181,7 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/r
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/srv
 
 # If you created optional subvolumes, mount them.
-# I'm the only user of this machine, so I will mount it directly to my home. 
+# I'm the only user of this machine, so I will mount it directly to my home.
 # You will need to come up with symlink solution for multiusers.
 
 #mkdir -p /mnt/mnt/homes
@@ -180,8 +189,6 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/s
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_downloads UUID="${root_uuid}" /mnt/home/pop/Downloads
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
 ```
-
-</details>
 
 ### 3.2 Swap, ESP and fstab
 ```bash
@@ -211,13 +218,13 @@ fi
 
 # Prepare vconsole
 # ter-116n, ter-120n, ter-124n, ter-32n
-# or use nay others you like
+# or use any others you like
 cat <<'EOF' > /mnt/etc/vconsole.conf
 KEYMAP=us
 FONT=ter-120n
 EOF
 
-# Installations
+# Install packages
 pacstrap -K /mnt \
   base base-devel \
   linux linux-headers linux-firmware "${cpu}-ucode" \
@@ -288,12 +295,12 @@ EOF
 ```
 
 ### 5.3 Users and sudo
-  Root Password
+**Root password**
 ```bash
 echo "Setting Root Password"
 passwd
 ```
-  Create User and Passeord
+**Create user and password**
 ```bash
 # change username
 user=pop
@@ -306,11 +313,11 @@ passwd $user
 chown -R pop:pop /mnt/home/pop
 ```
 
-  Enable wheel sudo in `sudoers`
-  We wont automate this.
+**Enable wheel sudo in `sudoers`**
+We won’t automate this.
 ```bash
 # Open and uncomment: %wheel ALL=(ALL) ALL
-EDITOR=vim visudo   
+EDITOR=vim visudo
 ```
 
 ### 5.4 mkinitcpio
@@ -336,7 +343,7 @@ mkinitcpio -P
 ### 6.1 Install Limine binaries (ESP mounted at `/boot`)
 ```bash
 # Limine Bootloader
-pacman -S --needed limine 
+pacman -S --needed limine
 mkdir -p /boot/EFI/limine /boot/limine
 cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
 
@@ -626,7 +633,9 @@ reboot
 
 ---
 
-## Login to your new system using your user account
+## Post-Install Ideas
+
+Log in to your new system using your user account.
 
 ### YAY package manager
 ```bash
@@ -661,7 +670,7 @@ sudo pacman -Syu snapper
 #### Create Snapper Configs
 You can omit `/home` snapping if you prefer (e.g., for large media folders).
 ```bash
-# We need tobe root for this part
+# We need to be root for this part
 sudo su
 ```
 ```bash
@@ -680,7 +689,7 @@ yay -S \
   limine-snapper-sync \
   limine-mkinitcpio-hook \
   snap-pac
-  
+
 cp /etc/limine-snapper-sync.conf /etc/default/limine
 # trigger sync
 sudo limine-snapper-sync
@@ -907,9 +916,9 @@ yay -S --needed \
 
 #### Add DRM kernel module
 
-You should have /boot/limine.conf created automatically by now.
-Go in and add nvidia config to `cndline:` sections.
-You may leave the fallback or the one use use for safemode out.
+You should have `/boot/limine/limine.conf` created automatically by now.
+Edit it and add the NVIDIA params to the `CMDLINE:` lines.
+You can leave out the fallback entry, or keep it as a safe mode option.
 
 ```bash
 nvidia-drm.modeset=1 nvidia-drm.fbdev=1
@@ -1076,7 +1085,7 @@ pyenv which python
 ```
 
 ### Flatpak Apps
-Can't ssh this, install this in the logg-in session.
+Can’t do this over SSH; install this in the logged-in session.
 ```bash
 flatpak install -y flathub \
   org.gnome.baobab \
@@ -1096,7 +1105,7 @@ flatpak install -y flathub \
   com.cassidyjames.butler \
   com.adobe.Reader \
   net.davidotek.pupgui2 \
-  com.vysp3r.ProtonPlus 
+  com.vysp3r.ProtonPlus
 ```
 
 ---

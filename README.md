@@ -398,7 +398,7 @@ DEFAULT_ENTRY=Arch Linux
     KERNEL_PATH: boot():/limine/vmlinuz-linux
     MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
     MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 ${ucode_img}_iommu=on iommu=pt
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
 
 /Arch Linux (fallback)
     PROTOCOL: linux
@@ -408,6 +408,14 @@ DEFAULT_ENTRY=Arch Linux
 EOF
 
 cat /boot/limine/limine.conf
+```
+
+Add zswap setting to initrd
+```bash
+echo lz4 >> /etc/initramfs-tools/modules 
+echo lz4_compress >> /etc/initramfs-tools/modules 
+echo zsmalloc >> /etc/initramfs-tools/modules 
+update-initramfs -u
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files

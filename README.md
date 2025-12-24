@@ -490,9 +490,9 @@ systemctl enable NetworkManager
 
 # Everything else (pick what you need)
 systemctl enable bluetooth
-systemctl enable cups
-systemctl enable avahi-daemon
-systemctl enable acpid
+# systemctl enable cups
+# systemctl enable avahi-daemon
+# systemctl enable acpid
 systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer

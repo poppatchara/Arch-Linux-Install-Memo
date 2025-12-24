@@ -998,52 +998,8 @@ EOF
 
 ---
 
-## Fish terminal
-🎣 Goal: install the Fish shell, make it your default interactive shell, and drop in a small starter config you can edit later.
-
-### Install Fish and make it your login shell
-```bash
-# Install Fish from the official repos
-sudo pacman -S --needed fish
-
-# Ensure fish is listed as a valid login shell (only appends if missing)
-grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
-
-# Make fish the default shell for your current user
-chsh -s /usr/bin/fish "$USER"
-```
-
-### Minimal Fish config (optional)
-```bash
-mkdir -p ~/.config/fish
-cat <<'EOF' > ~/.config/fish/config.fish
-# Example Fish config — adjust to taste.
-
-# Editors/pager
-set -gx EDITOR vim
-set -gx PAGER less
-
-# Key bindings (comment this out if you prefer default bindings)
-fish_vi_key_bindings
-
-# Common aliases
-alias ll='ls -lh --color=auto'
-alias la='ls -A'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-
-# Fasrfetch, because
-fastfetch
-EOF
-```
-
-After this, open a new terminal or log out/log back in to start using Fish by default.
-
----
-
 ## pyenv
-🐍 Goal: install `pyenv` so you can manage multiple Python versions per‑user, and wire it into your shell (Fish in this example).
+🐍 Goal: install `pyenv` so you can manage multiple Python versions per‑user, and wire it into your shell.
 
 ### Install build dependencies and pyenv
 ```bash
@@ -1054,10 +1010,11 @@ sudo pacman -S --needed base-devel openssl zlib xz tk readline sqlite libffi bzi
 git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ```
 
-### Shell integration (Fish)
+### Shell integration (bash/zsh)
 ```bash
-mkdir -p ~/.config/fish
-conf="$HOME/.config/fish/config.fish"
+shell_name="$(basename "${SHELL:-bash}")"
+conf="$HOME/.bashrc"
+if [ "$shell_name" = "zsh" ]; then conf="$HOME/.zshrc"; fi
 touch "$conf"
 
 # Add pyenv init block (idempotent)
@@ -1065,9 +1022,9 @@ if ! grep -qF 'PYENV_ROOT' "$conf"; then
   cat <<'EOF' >> "$conf"
 
 # pyenv
-set -gx PYENV_ROOT $HOME/.pyenv
-fish_add_path $PYENV_ROOT/bin
-pyenv init - | source
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
 EOF
 fi
 ```
@@ -1108,6 +1065,18 @@ flatpak install -y flathub \
   com.adobe.Reader \
   net.davidotek.pupgui2 \
   com.vysp3r.ProtonPlus
+```
+
+### Theme
+🎨 These are my personal favorites — use them as a starting point and change anything you don’t like.
+
+KDE settings path: **System Settings → Appearance**.
+
+My usual picks:
+```bash
+# Whitesur KDE + GTK
+cd ~/Downloads \
+git clone https://github.com/vinceliuice/WhiteSur-kde.git
 ```
 
 ---

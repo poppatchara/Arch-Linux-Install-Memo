@@ -416,7 +416,7 @@ su
 echo lz4 >> /etc/initramfs-tools/modules 
 echo lz4_compress >> /etc/initramfs-tools/modules 
 echo zsmalloc >> /etc/initramfs-tools/modules 
-update-initramfs -u
+mkinitpico -P
 exit
 ```
 

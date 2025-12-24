@@ -221,7 +221,7 @@ fi
 # or use any others you like
 cat <<'EOF' > /mnt/etc/vconsole.conf
 KEYMAP=us
-FONT=ter-120n
+FONT=ter-124n
 EOF
 
 # Install packages

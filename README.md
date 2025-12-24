@@ -412,10 +412,12 @@ cat /boot/limine/limine.conf
 
 Add zswap setting to initrd
 ```bash
+su
 echo lz4 >> /etc/initramfs-tools/modules 
 echo lz4_compress >> /etc/initramfs-tools/modules 
 echo zsmalloc >> /etc/initramfs-tools/modules 
 update-initramfs -u
+exit
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
@@ -808,14 +810,14 @@ yay -S --needed \
   obs-studio
 
 ## Desktop apps
-# firefox : web browser
+# firefox chromium brave-bin: web browser
 # libreoffice-fresh : office suite (latest branch; big but useful)
 # mailspring : email client (Electron-based)
 # visual-studio-code-bin : VS Code (official build; AUR)
 yay -S --needed \
-  firefox \
+  firefox chromium brave-bin\
   libreoffice-fresh \
-  mailspring \
+  mailspring-bin \
   visual-studio-code-bin \
   filezilla \
   fatfetch
@@ -1002,6 +1004,13 @@ cat <<'EOF' >> ~/.config/kwalletrc
 [Wallet]
 Enabled=false
 EOF
+```
+
+Clear package manager caches
+```bash
+yay -Syu
+sudo paccache -r
+yay -Yc
 ```
 
 ---

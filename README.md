@@ -1089,11 +1089,117 @@ flatpak install -y flathub \
 
 KDE settings path: **System Settings → Appearance**.
 
-My usual picks:
+DE Themes:
 ```bash
-# Whitesur KDE + GTK
-cd ~/Downloads \
-git clone https://github.com/vinceliuice/WhiteSur-kde.git
+# Whitesur KDE
+repo=~/Desktop/theme 
+git clone https://github.com/vinceliuice/WhiteSur-kde.git $repo
+cd $repo
+./install.sh
+cd sddm && sudo ./install.sh  # sddm
+rm -rf $repo && cd ~
+
+# Whitesur GTK
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/WhiteSur-gtk-theme.git $repo
+cd $repo
+./install.sh
+sudo flatpak override --filesystem=xdg-config/gtk-3.0 && sudo flatpak override --filesystem=xdg-config/gtk-4.0
+rm -rf $repo && cd ~
+
+# Mojave GTK
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Mojave-gtk-theme.git $repo
+cd $repo
+./install.sh -l -g
+rm -rf $repo && cd ~
+
+# Orchis KDE
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Orchis-kde.git $repo
+cd $repo
+./install.sh
+cd sddm && sudo ./install.sh  # sddm
+rm -rf $repo && cd ~
+
+# Orchis GTK
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Orchis-theme.git $repo
+cd $repo
+./install.sh
+rm -rf $repo && cd ~
+
+# Colloid KDE
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Colloid-kde.git $repo
+cd $repo
+./install.sh
+cd sddm/6.0 && sudo ./install.sh
+rm -rf $repo && cd ~
+
+# Qogir KDE
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Qogir-kde.git $repo
+cd $repo
+./install.sh
+cd sddm && sudo ./install.sh  # sddm
+rm -rf $repo && cd ~
+
+# MacTahoe KDE
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/MacTahoe-kde.git $repo
+cd $repo
+./install.sh
+cd sddm && sudo ./install.sh  # sddm
+rm -rf $repo && cd ~
+
+# Vinyl
+yay -Syu
+yay -S --needed base-devel vinyl
+
+
+```
+
+Icon Themes with some cursors:
+```bash
+# Tela-circle-icon-theme
+repo=~/Desktop/icons
+git clone https://github.com/vinceliuice/Tela-circle-icon-theme.git $repo
+cd $repo
+./install.sh standard black blue nord
+rm -rf $repo && cd ~
+
+# Tela-icon-theme
+repo=~/Desktop/icons
+git clone https://github.com/vinceliuice/Tela-icon-theme.git $repo
+cd $repo
+./install.sh standard black blue nord
+rm -rf $repo && cd ~
+
+# Colloid-icon-theme
+repo=~/Desktop/icons
+git clone https://github.com/vinceliuice/Colloid-icon-theme.git $repo
+cd $repo
+./install.sh
+cd cursor && sudo ./install.sh    # cursors
+rm -rf $repo && cd ~
+
+# Fluent-icon-theme
+repo=~/Desktop/icons
+git clone https://github.com/vinceliuice/Fluent-icon-theme.git $repo
+cd $repo
+./install.sh
+cd cursor && sudo ./install.sh    # cursors
+rm -rf $repo && cd ~
+
+# Qogir-icon-theme
+repo=~/Desktop/icons
+git clone https://github.com/vinceliuice/Qogir-icon-theme.git $repo
+cd $repo
+./install.sh
+cd cursor && sudo ./install.sh    # cursors
+rm -rf $repo && cd ~
+
 ```
 
 ---

@@ -24,6 +24,9 @@ Not the best way or most correct way. Just the way I like.
 
 ## Updates
 
+### 2025-12-26
+- Narrowed the KDE stutter down to themes: Whitesur, Orchis, and Colloid caused the issue on my machine. Qogir, Darkly, and Vinyl do not stutter here. This may vary by hardware, so test on your setup.
+
 ### 2025-12-22
 - I’m going back to `linux-zen` (and may try `xanmod` or `tkg`). I noticed a very small but annoying stutter in KDE Plasma when resizing windows; it may have been present on the vanilla kernel too and I just never noticed it.
 - I’ll keep the CachyOS section for now in case anyone finds it useful. I’ll come back with my findings after more testing.
@@ -1086,6 +1089,8 @@ flatpak install -y flathub \
 
 ### Theme
 🎨 These are my personal favorites — use them as a starting point and change anything you don’t like.
+
+Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn’t. Hardware may change results, so try a few before settling.
 
 KDE settings path: **System Settings → Appearance**.
 

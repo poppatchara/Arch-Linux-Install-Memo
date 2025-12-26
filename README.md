@@ -15,12 +15,22 @@ Not the best way or most correct way. Just the way I like.
 8. [Limine Bootloader](#limine-bootloader)
 9. [Services & QoL](#services--qol)
 10. [Desktop Stack](#desktop-stack)
-11. [Snapper](#snapper)
-12. [Reboot](#reboot)
-13. [Post-Install Ideas](#post-install-ideas)
-14. [Credits & Thanks](#credits--thanks)
-
----
+11. [Reboot](#reboot)
+12. [Post-Install Ideas](#post-install-ideas)
+    - [YAY package manager](#yay-package-manager)
+    - [Snapper](#snapper)
+    - [Extra Packages for Limine](#extra-packages-for-limine)
+    - [CachyOS Kernels](#cachyos-kernels)
+    - [CachyOS Packages](#cachyos-packages)
+    - [Update all packages to CachyOS Optimized](#update-all-packages-to-cachyos-optimized)
+    - [Extra Packages and fonts](#extra-packages-and-fonts)
+    - [Nvidia Driver](#nvidia-driver)
+    - [Disable KWallet prompts](#disable-kwallet-prompts-optional)
+    - [Clear package manager caches](#clear-package-manager-caches)
+13. [pyenv](#pyenv)
+14. [Flatpak Apps](#flatpak-apps)
+15. [Theme](#theme)
+16. [Credits & Thanks](#credits--thanks)
 
 ## Updates
 
@@ -31,7 +41,6 @@ Not the best way or most correct way. Just the way I like.
 - I’m going back to `linux-zen` (and may try `xanmod` or `tkg`). I noticed a very small but annoying stutter in KDE Plasma when resizing windows; it may have been present on the vanilla kernel too and I just never noticed it.
 - I’ll keep the CachyOS section for now in case anyone finds it useful. I’ll come back with my findings after more testing.
 
----
 
 ## Assumptions
 🧩 This memo is written as a linear “do this, then that” install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
@@ -43,7 +52,6 @@ Not the best way or most correct way. Just the way I like.
 - Timezone `Asia/Bangkok`; hostname defaults to `arch`.
 - EFI System Partition (ESP) already exists as the first partition; swap is the last partition to simplify potential resizing.
 
----
 
 ## Live ISO Prep
 🧰 Goal: make package installs fast/repeatable in the live environment (pacman config + mirrors) before you partition/format. On the Arch ISO you are usually `root` already; `sudo` is fine to keep the same commands for later.
@@ -112,7 +120,6 @@ rm -f "$tmpfile"
 sudo pacman -Syy
 ```
 
----
 
 ## Partition & Format
 💽 Create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don’t wipe the wrong device.
@@ -140,7 +147,6 @@ root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ```
 
----
 
 ## Btrfs Subvolumes & Mounts
 🧱 Goal: create a subvolume layout that plays nicely with snapshot tools (e.g., Snapper) and keeps “churny” paths isolated (logs/cache). This is a personal layout; feel free to add/remove subvolumes depending on what you plan to snapshot.
@@ -206,7 +212,6 @@ mkdir -p /mnt/etc
 genfstab -U /mnt > /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
----
 
 ## Base Install
 📦 Goal: install a bootable base system onto `/mnt` (kernel, firmware, networking, editors, etc.), then switch into it with `arch-chroot`. If you prefer fewer packages, trim this list, but keep `base`, a kernel, `linux-firmware`, and whatever you need for networking and your filesystem.
@@ -338,7 +343,6 @@ perl -pi -e '
 # Rebuild initramfs with the new mkinitcpio configuration
 mkinitcpio -P
 ```
----
 
 ## Limine Bootloader
 🚀 Goal: install Limine to the EFI System Partition and generate a `limine.conf` that boots your Arch kernel/initramfs from Btrfs by UUID. The key idea is to keep Limine’s config and the kernel artifacts together under `/boot/limine`.
@@ -413,7 +417,7 @@ EOF
 cat /boot/limine/limine.conf
 ```
 
-Add zswap setting to initrd
+#### Add zswap setting to initrd (optional)
 ```bash
 su
 echo lz4 >> /etc/initramfs-tools/modules 
@@ -440,7 +444,6 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 EOF
 ```
 
----
 
 ## Services & QoL
 ⚙️ Goal: enable the essential background services you want on every boot (networking, printing, bluetooth, etc.). Pick a networking stack and enable only what you actually use to avoid service conflicts.
@@ -500,7 +503,6 @@ systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer
 ```
----
 
 ## Desktop Stack
 🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you’ll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don’t want many of the KDE apps, you can skip the Desktop Apps section.
@@ -582,6 +584,27 @@ systemctl enable power-profiles-daemon
 # pacman -S --needed kdeconnect
 ```
 
+#### KWallet (optional, for secret storage like VS Code)
+```bash
+# kwallet : KDE wallet backend + secret service provider
+# kwalletmanager : GUI to inspect/manage wallets
+# kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
+pacman -S --needed \
+  kwallet \
+  kwalletmanager \
+  kwallet-pam
+
+# Add PAM hooks for SDDM so the wallet unlocks with your session.
+# If you use a different display manager, add pam_kwallet5 there instead.
+if ! grep -q pam_kwallet5 /etc/pam.d/sddm; then
+  sudo tee -a /etc/pam.d/sddm >/dev/null <<'EOF'
+auth       optional pam_kwallet5.so
+session    optional pam_kwallet5.so auto_start
+EOF
+fi
+```
+- After logging in, open System Settings → KDE Wallet and ensure a wallet exists (Blowfish is fine). This keeps VS Code and other apps from nagging when storing secrets.
+
 #### Desktop Apps
 ````bash
 # dolphin : File manager
@@ -628,7 +651,6 @@ pacman -S --needed \
   - Thumbnails/integration: `kio-extras`, `ffmpegthumbs`, `kdegraphics-thumbnailers`
 </details>
 
----
 
 ## Reboot
 🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
@@ -644,7 +666,6 @@ swapoff -a
 reboot
 ```
 
----
 
 ## Post-Install Ideas
 
@@ -714,7 +735,6 @@ yay -S --needed \
   snapper-gui-git \
   snapper-tools
 ```
----
 
 ### CachyOS Kernels
 🐆 If you want CachyOS’ tuned kernels/userspace, add their repo and install the kernel packages. This is optional and changes your system away from “pure Arch”, so it’s a good idea to keep a package list backup first.
@@ -753,7 +773,7 @@ sudo pacman -S \
   - `linux-cachyos-eevdf`, `linux-cachyos-eevdf-headers`: alternative CachyOS kernel variant + headers
 </details>
 
-CachyOS Packages
+### CachyOS Packages
 ```bash
 # cachyos-settings : CachyOS defaults/tweaks
 # appmenu-gtk-module : AppMenu GTK module
@@ -777,61 +797,47 @@ sudo pacman -S \
   - `appmenu-gtk-module`, `libdbusmenu-glib`: appmenu/DBus menu integration
 </details>
 
-Update all packages to CachyOS Optimized
+### Update all packages to CachyOS Optimized
 ```bash
 sudo pacman -Qqn | sudo pacman -S -
 ```
 
 ### Extra Packages and fonts
-🧺 Personal “daily driver” package list. Treat it as a pick-list; some items overlap with earlier sections and some are heavy (office suite, IDE, Steam).
+🧺 Personal “daily driver” pick list. Install only what you want.
+
+#### Core CLI + utilities
 ```bash
-## Core CLI + utilities
-# nc: TCP/UDP swiss-army knife: openbsd-netcat
-# imagemagick : image convert/resize/identify CLI tools
-yay -S --needed \
-  openbsd-netcat \
-  imagemagick
+yay -S --needed openbsd-netcat imagemagick
+```
 
-## Filesystem / network integration
-# gvfs : virtual filesystem layer (trash, mtp, gphoto2, etc.)
-# gvfs-smb : SMB/CIFS browsing in Dolphin (Windows shares)
-yay -S --needed \
-  gvfs \
-  gvfs-smb
+#### Filesystem / network integration
+```bash
+yay -S --needed gvfs gvfs-smb
+```
 
-## Power / laptop bits
-# brightnessctl : backlight/brightness control (laptops)
+#### Power / laptop bits
+```bash
 yay -S --needed brightnessctl
+```
 
-## Audio / media / creative
-# vlc : media player (handles basically everything)
-# gimp : image editor
-# obs-studio : screen recording + streaming
-yay -S --needed \
-  vlc \
-  gimp \
-  obs-studio
+#### Audio / media / creative
+```bash
+yay -S --needed vlc gimp obs-studio
+```
 
-## Desktop apps
-# firefox chromium brave-bin: web browser
-# libreoffice-fresh : office suite (latest branch; big but useful)
-# mailspring : email client (Electron-based)
-# visual-studio-code-bin : VS Code (official build; AUR)
+#### Desktop apps
+```bash
 yay -S --needed \
-  firefox chromium brave-bin\
+  firefox chromium brave-bin \
   libreoffice-fresh \
   mailspring-bin \
   visual-studio-code-bin \
   filezilla \
   fatfetch
+```
 
-## Gaming stack
-# gamemode : Feral gamemode (CPU governor/priority tweaks)
-# steam : Steam client
-# lutris : game launcher (Wine/Proton management)
-# mangohud : Vulkan/OpenGL performance overlay
-# goverlay : GUI to configure MangoHud
-# proton-ge-custom-bin : Proton-GE builds (AUR) for better game compatibility
+#### Gaming stack
+```bash
 yay -S --needed \
   gamemode lib32-gamemode \
   steam \
@@ -839,29 +845,16 @@ yay -S --needed \
   mangohud lib32-mangohud \
   goverlay \
   proton-ge-custom-bin
-
 sudo usermod -aG gamemode $USER
+```
 
-## Flatpak
-# flatpak : Flatpak runtime + app management
+#### Flatpak runtime
+```bash
 yay -S flatpak
+```
 
-## Fonts
-# noto-fonts : Google Noto base fonts
-# noto-fonts-cjk : Noto for Chinese/Japanese/Korean
-# noto-fonts-emoji : Noto Color Emoji
-# noto-fonts-extra : extra Noto families
-# ttf-dejavu : solid fallback font set
-# ttf-liberation : metric-compatible with Arial/Times/Courier
-# ttf-jetbrains-mono : dev-friendly monospace
-# ttf-fira-code : monospace with ligatures
-# ttf-ubuntu-font-family : Ubuntu UI font family
-# terminus-font : crisp bitmap-ish console font
-# adobe-source-sans-fonts : Adobe Source Sans
-# adobe-source-serif-fonts : Adobe Source Serif
-# adobe-source-code-pro-fonts : Adobe Source Code Pro
-# nerd-fonts : icon glyphs patched into many fonts (large install)
-# ttf-ms-fonts : Microsoft core fonts (AUR; licensing caveats)
+#### Fonts
+```bash
 yay -S --needed \
   noto-fonts \
   noto-fonts-cjk \
@@ -878,7 +871,6 @@ yay -S --needed \
   adobe-source-code-pro-fonts \
   nerd-fonts \
   ttf-ms-fonts
-
 ```
 
 <details>
@@ -1000,7 +992,8 @@ sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak
 ```
 Then reboot
 
-Disable annoying kwallet
+### Disable KWallet prompts (optional)
+This disables the KDE Secret Service backend; apps like VS Code, Git credential helpers, and browsers won’t retain secrets. Skip this if you followed the KWallet setup above.
 ```bash
 mkdir -p ~/.config
 cat <<'EOF' >> ~/.config/kwalletrc
@@ -1009,14 +1002,13 @@ Enabled=false
 EOF
 ```
 
-Clear package manager caches
+### Clear package manager caches
 ```bash
 yay -Syu
 sudo paccache -r
 yay -Yc
 ```
 
----
 
 ## pyenv
 🐍 Goal: install `pyenv` so you can manage multiple Python versions per‑user, and wire it into your shell.
@@ -1063,7 +1055,7 @@ python --version
 pyenv which python
 ```
 
-### Flatpak Apps
+## Flatpak Apps
 Can’t do this over SSH; install this in the logged-in session.
 ```bash
 flatpak install -y flathub \
@@ -1087,14 +1079,14 @@ flatpak install -y flathub \
   com.vysp3r.ProtonPlus
 ```
 
-### Theme
+## Theme
 🎨 These are my personal favorites — use them as a starting point and change anything you don’t like.
 
 Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn’t. Hardware may change results, so try a few before settling.
 
 KDE settings path: **System Settings → Appearance**.
 
-DE Themes:
+### DE Themes
 ```bash
 # Whitesur KDE
 repo=~/Desktop/theme 
@@ -1165,7 +1157,7 @@ yay -S --needed base-devel vinyl
 
 ```
 
-Icon Themes with some cursors:
+### Icon themes & cursors
 ```bash
 # Tela-circle-icon-theme
 repo=~/Desktop/icons
@@ -1207,7 +1199,6 @@ rm -rf $repo && cd ~
 
 ```
 
----
 
 ## Credits & Thanks
 🙏 Huge thanks to the authors/maintainers of these guides and notes that helped shape parts of this memo:

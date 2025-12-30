@@ -24,6 +24,7 @@ Not the best way or most correct way. Just the way I like.
     - [CachyOS Packages](#cachyos-packages)
     - [Update all packages to CachyOS Optimized](#update-all-packages-to-cachyos-optimized)
     - [Extra Packages and fonts](#extra-packages-and-fonts)
+    - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
     - [Nvidia Driver](#nvidia-driver)
     - [Disable KWallet prompts](#disable-kwallet-prompts-optional)
     - [Clear package manager caches](#clear-package-manager-caches)
@@ -419,12 +420,19 @@ cat /boot/limine/limine.conf
 
 #### Add zswap setting to initrd (optional)
 ```bash
-su
-echo lz4 >> /etc/initramfs-tools/modules 
-echo lz4_compress >> /etc/initramfs-tools/modules 
-echo zsmalloc >> /etc/initramfs-tools/modules 
-mkinitpico -P
-exit
+# Add zswap modules to mkinitcpio.conf (idempotent)
+sudo perl -0777 -i.bak -pe '
+  s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
+    my @mods = grep { length } split " ", $1;
+    my %seen; @mods = grep { !$seen{$_}++ } @mods;
+    for my $add (qw(lz4 lz4_compress zsmalloc)) {
+      push @mods, $add unless $seen{$add}++;
+    }
+    "MODULES=(" . join(" ", @mods) . ")"
+  }mge;
+' /etc/mkinitcpio.conf
+sudo mkinitcpio -P
+grep -E '^MODULES=' /etc/mkinitcpio.conf
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
@@ -888,10 +896,44 @@ yay -S --needed \
   - Fonts: `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `noto-fonts-extra`, `ttf-dejavu`, `ttf-liberation`, `ttf-jetbrains-mono`, `ttf-fira-code`, `ttf-ubuntu-font-family`, `terminus-font`, `adobe-source-sans-fonts`, `adobe-source-serif-fonts`, `adobe-source-code-pro-fonts`, `nerd-fonts`, `ttf-ms-fonts`
 </details>
 
+### SPDIF audio dropout / sleep
+🔊 Some SPDIF receivers/DACs go to sleep after a few idle seconds, so the first 1-3 seconds of the next sound get eaten while the link wakes up. Two tweaks that keep the SPDIF clock alive:
+
+1) Disable codec autosuspend (system-wide)
+```bash
+sudo tee /etc/modprobe.d/alsa-no-powersave.conf >/dev/null <<'EOF'
+options snd_hda_intel power_save=0 power_save_controller=N
+EOF
+```
+Reboot for this to take effect.
+
+2) Stop WirePlumber from suspending the sink (per-user)
+```bash
+mkdir -p ~/.config/wireplumber/main.lua.d
+cat <<'EOF' > ~/.config/wireplumber/main.lua.d/51-spdif-nosuspend.lua
+alsa_monitor.rules = alsa_monitor.rules or {}
+
+table.insert(alsa_monitor.rules, {
+  matches = {
+    { { "node.name", "matches", "alsa_output.*" } },
+  },
+  apply_properties = {
+    ["session.suspend-timeout-seconds"] = 0
+  }
+})
+EOF
+
+systemctl --user restart wireplumber
+```
+Change the match if you only want this on a specific output. With autosuspend off and WirePlumber keeping the sink alive, SPDIF should stop dropping the first few seconds of audio.
+
 ### Nvidia Driver
-🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware.
-refer to Arch Wiki for the correct driver package.
-https://wiki.archlinux.org/title/NVIDIA
+🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware: https://wiki.archlinux.org/title/NVIDIA
+
+Pick one path below (match to your GPU/needs).
+
+#### Option A: `nvidia-open` (590xx, repo driver)
+> **Note:** The current Nvidia driver (590xx series) does not have a proprietary `nvidia-dkms` package in the official repositories, so `nvidia-open-dkms` is used instead. The downside is that GSP firmware cannot be disabled in the open driver (see Arch Wiki).
 
 ```bash
 # nvidia-dkms : NVIDIA DKMS driver (kernel modules)
@@ -900,6 +942,7 @@ https://wiki.archlinux.org/title/NVIDIA
 # nvidia-settings : NVIDIA X11 settings GUI
 # ocl-icd : OpenCL ICD loader
 # opencl-nvidia : NVIDIA OpenCL implementation
+# lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
 # clinfo : query OpenCL platforms/devices
 # cuda : CUDA toolkit/runtime
 yay -S --needed \
@@ -907,18 +950,61 @@ yay -S --needed \
   nvidia-utils \
   lib32-nvidia-utils \
   nvidia-settings \
+  libxnvctrl \
   ocl-icd \
   opencl-nvidia \
+  lib32-opencl-nvidia \
   clinfo \
   cuda
 ```
 
+#### Option B: Proprietary 580xx (AUR)
+Use this if you want the proprietary stack or run into issues with the 590xx open driver.
+```bash
+yay -S --needed \
+  nvidia-580xx-dkms \
+  nvidia-580xx-utils \
+  lib32-nvidia-580xx-utils \
+  nvidia-580xx-settings \
+  opencl-nvidia-580xx \
+  lib32-opencl-nvidia-580xx \
+  libxnvctrl-580xx \
+  ocl-icd \
+  clinfo \
+  cuda
+```
+
+Extra stuffs for gaming
+```bash
+yay -S --needed \
+  libva-utils \
+  vdpauinfo \
+  vulkan-tools \
+  libva-nvidia-driver \
+  dxvk \
+  vkd3d \
+  shaderc \
+  spirv-tools
+```
+
+Some launch option for Steam/Proton (use in Steam launch option)
+```bash
+  PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
+```
+
+Set Shader Cache Size
+```bash
+mkdir ~/.nv
+echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
+```
+
+
 <details>
   <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
 
-  - Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
-  - OpenCL: `ocl-icd`, `opencl-nvidia`, `clinfo`
-  - CUDA toolkit/runtime: `cuda`
+  - Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-580xx-*` for Option B)
+  - OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-580xx` variants for Option B)
+  - CUDA toolkit/runtime: `cuda` (works with both options)
 </details>
 
 #### Add DRM kernel module
@@ -974,7 +1060,7 @@ Target = nvidia-open-dkms
 Target = linux-cachyos
 Target = linux-cachyos-eevdf
 Target = linux
-# Adjust line(6) above to match your driver, e.g. Target=nvidia-470xx-dkms
+# Adjust line(6) above to match your driver, e.g. Target=nvidia-580xx-dkms (Option B) or Target=nvidia-470xx-dkms
 # Change line(7) above, if you are not using the regular kernel For example, Target=linux-lts
 
 [Action]

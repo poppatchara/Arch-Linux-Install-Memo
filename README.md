@@ -29,6 +29,7 @@ Not the best way or most correct way. Just the way I like.
     - [Nvidia Driver](#nvidia-driver)
     - [Disable KWallet prompts](#disable-kwallet-prompts-optional)
     - [Clear package manager caches](#clear-package-manager-caches)
+
 13. [pyenv](#pyenv)
 14. [Flatpak Apps](#flatpak-apps)
 15. [Theme](#theme)
@@ -48,6 +49,7 @@ Not the best way or most correct way. Just the way I like.
 ## Assumptions
 
 🧩 This memo is written as a linear “do this, then that” install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
+
 - Arch ISO already written to USB (any recent release).
 - I SSH into the live ISO from another machine (root password set with `passwd`, IP from `ip a`), purely for copy/paste convenience.
 - Secure Boot disabled, UEFI mode enabled.
@@ -78,6 +80,7 @@ perl -0777 -pi -e '
 s/^#\[(multilib)\]\n#(Include\s*=\s*\/etc\/pacman\.d\/mirrorlist)(\n)/[\1]\n\2\3/mg
 ' "$conf"
 pacman -Syy
+
 ```
 
 ### 0.2 Refresh mirror list 🌐
@@ -126,6 +129,7 @@ sudo cp "$tmpfile" "$mirrorfile"
 rm -f "$tmpfile"
 
 sudo pacman -Syy
+
 ```
 
 ## Partition & Format
@@ -145,6 +149,7 @@ You can use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
 ### 2. Format and capture UUIDs
 
 **CAUTION:** double-check your device paths (e.g. `/dev/nvme0n1p2`) before formatting.
+
 ```bash
 
 # Change the disk path to match yours!!!
@@ -157,6 +162,7 @@ mkswap /dev/nvme0n1p3
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+
 ```
 
 ## Btrfs Subvolumes & Mounts
@@ -164,6 +170,7 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 🧱 Goal: create a subvolume layout that plays nicely with snapshot tools (e.g., Snapper) and keeps “churny” paths isolated (logs/cache). This is a personal layout; feel free to add/remove subvolumes depending on what you plan to snapshot.
 
 📝 Notes:
+
 - Subvolumes here are named `@something` by convention; `@` is mounted as `/` later.
 - `compress=zstd:1,noatime` is a common baseline; tune for your workload.
 - If you don’t care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
@@ -192,6 +199,7 @@ btrfs subvolume create /mnt/@srv
 # You can skip these. Especially `home/Git` — that’s my place for all git repos.
 
 #btrfs subvolume create /mnt/@home_cache
+
 #btrfs subvolume create /mnt/@home_downloads
 #btrfs subvolume create /mnt/@home_git
 
@@ -214,9 +222,12 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/s
 # You will need to come up with symlink solution for multiusers.
 
 #mkdir -p /mnt/mnt/homes
+
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_cache UUID="${root_uuid}" /mnt/home/pop/.cache
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_downloads UUID="${root_uuid}" /mnt/home/pop/Downloads
+
 #mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
+
 ```
 
 ### 3.2 Swap, ESP and fstab
@@ -236,6 +247,7 @@ swapon UUID="${swap_uuid}"
 mkdir -p /mnt/etc
 genfstab -U /mnt > /mnt/etc/fstab
 cat /mnt/etc/fstab
+
 ```
 
 ## Base Install
@@ -258,6 +270,7 @@ fi
 # ter-116n, ter-120n, ter-124n, ter-32n
 
 # or use any others you like
+
 cat <<'EOF' > /mnt/etc/vconsole.conf
 KEYMAP=us
 FONT=ter-124n
@@ -278,26 +291,29 @@ pacstrap -K /mnt \
 # copy pacman config
 
 cp /etc/pacman.conf /mnt/etc/pacman.conf
+
 ```
 
 <details>
   <summary>📦 Packages being installed (Base Install)</summary>
 
-  - Core system: `base`, `base-devel`
-  - Kernel + firmware: `linux`, `linux-headers`, `linux-firmware`
-  - CPU microcode: `intel-ucode` or `amd-ucode` (chosen via `lscpu`)
-  - Filesystem tools: `btrfs-progs`
-  - Boot/UEFI tools: `efibootmgr`
-  - Networking + SSH: `networkmanager`, `openssh`
-  - Editors + tools: `vim`, `nvim`, `git`, `sudo`, `man`, `curl`, `wget`, `perl`, `inotify-tools`
-  - Audio stack (PipeWire): `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
-  - Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
+- Core system: `base`, `base-devel`
+- Kernel + firmware: `linux`, `linux-headers`, `linux-firmware`
+- CPU microcode: `intel-ucode` or `amd-ucode` (chosen via `lscpu`)
+- Filesystem tools: `btrfs-progs`
+- Boot/UEFI tools: `efibootmgr`
+- Networking + SSH: `networkmanager`, `openssh`
+- Editors + tools: `vim`, `nvim`, `git`, `sudo`, `man`, `curl`, `wget`, `perl`, `inotify-tools`
+- Audio stack (PipeWire): `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
+- Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
+
 </details>
 
 ### 4.2 Then chroot into our setup
 
 ```bash
 arch-chroot /mnt
+
 ```
 
 ## Chroot Configuration
@@ -333,11 +349,13 @@ sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
+
 ```
 
 ### 5.2 Hostname and hosts file
 
 Change `host_name` to your liking.
+
 ```bash
 host_name="arch"
 echo "${host_name}" > /etc/hostname
@@ -346,17 +364,21 @@ cat <<EOF > /etc/hosts
 ::1         localhost
 127.0.1.1   ${host_name}.localdomain ${host_name}
 EOF
+
 ```
 
 ### 5.3 Users and sudo
 
 **Root password**
+
 ```bash
 echo "Setting Root Password"
 passwd
+
 ```
 
 **Create user and password**
+
 ```bash
 
 # change username
@@ -365,6 +387,7 @@ user=pop
 echo "Create user, and set password"
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
 passwd $user
+
 ```
 
 ```bash
@@ -372,20 +395,24 @@ passwd $user
 # If you created optional subvolumes earlier, take ownership of the home.
 
 chown -R pop:pop /home/pop
+
 ```
 
 **Enable wheel sudo in `sudoers`**
 We won’t automate this.
+
 ```bash
 
 # Open and uncomment: %wheel ALL=(ALL) ALL
 
 EDITOR=vim visudo
+
 ```
 
 ### 5.4 mkinitcpio
 
 Set `MODULES`, `BINARIES`, and `HOOKS` for a basic Btrfs initramfs. Enable resume. Adjust the values to your own needs.
+
 ```bash
 perl -pi -e '
   # Ensure btrfs module and `btrfs` binary are included in the initramfs
@@ -399,6 +426,7 @@ perl -pi -e '
 # Rebuild initramfs with the new mkinitcpio configuration
 
 mkinitcpio -P
+
 ```
 
 ## Limine Bootloader
@@ -422,7 +450,8 @@ Some extra for Limine are in AUR, so we will install them later, after we got ya
 <details>
   <summary>🚀 Packages being installed (Limine)</summary>
 
-  - `limine`: Limine UEFI bootloader EFI binaries + templates/config support
+- `limine`: Limine UEFI bootloader EFI binaries + templates/config support
+
 </details>
 
 ### 6.2 Register Limine with the firmware
@@ -432,6 +461,7 @@ efibootmgr --create --disk /dev/nvme0n1 --part 1 \
   --label "Limine Bootloader" \
   --loader '\EFI\limine\BOOTX64.EFI' \
   --unicode
+
 ```
 
 - `--disk /dev/nvme0n1 --part 1` corresponds to `/dev/nvme0n1p1`.
@@ -448,6 +478,7 @@ fi
 cp -v /boot/vmlinuz-linux /boot/limine/
 cp -v /boot/initramfs-linux*.img /boot/limine/
 cp -v "/boot/${ucode_img}.img" /boot/limine/
+
 ```
 
 Repeat after every kernel, initramfs, or microcode update (consider adding a pacman hook later).
@@ -481,6 +512,7 @@ DEFAULT_ENTRY=Arch Linux
 EOF
 
 cat /boot/limine/limine.conf
+
 ```
 
 #### Add zswap setting to initrd (optional)
@@ -501,6 +533,7 @@ sudo perl -0777 -i.bak -pe '
 ' /etc/mkinitcpio.conf
 sudo mkinitcpio -P
 grep -E '^MODULES=' /etc/mkinitcpio.conf
+
 ```
 
 ### 6.5 Pacman hook to redeploy Limine EFI files
@@ -519,6 +552,7 @@ Description = Copy Limine EFI files to the ESP
 When = PostTransaction
 Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 EOF
+
 ```
 
 ## Services & QoL
@@ -526,6 +560,7 @@ EOF
 ⚙️ Goal: enable the essential background services you want on every boot (networking, printing, bluetooth, etc.). Pick a networking stack and enable only what you actually use to avoid service conflicts.
 
 🧠 Networking note (choose one approach):
+
 - `NetworkManager` (common on desktops/laptops): enable `NetworkManager` (and optionally `iwd` for Wi‑Fi backend).
 
 ### Extra packages (optional)
@@ -547,6 +582,7 @@ EOF
 # power & hardware management: acpi acpi_call acpid
 
 # xdg-user-dirs : user directory structure
+
 pacman -Syu --needed \
   util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
   iwd \
@@ -556,20 +592,22 @@ pacman -Syu --needed \
   cups \
   acpi acpi_call acpid \
   xdg-user-dirs
+
 ```
 
 <details>
   <summary>⚙️ Packages being installed (Services &amp; QoL extras)</summary>
 
-  - Basics: `htop`, `inetutils`, `usbutils`, `rsync`, `util-linux`
-  - Archives: `zip`, `unzip`, `p7zip`
-  - CLI quality-of-life: `bat`
-  - Networking (pick what you use): `iwd`, `avahi`, `nss-mdns`
-  - Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
-  - Bluetooth: `bluez`, `bluez-utils`
-  - Printing: `cups`
-  - Power/ACPI: `acpi`, `acpi_call`, `acpid`
-  - Desktop/user dirs: `xdg-user-dirs`
+- Basics: `htop`, `inetutils`, `usbutils`, `rsync`, `util-linux`
+- Archives: `zip`, `unzip`, `p7zip`
+- CLI quality-of-life: `bat`
+- Networking (pick what you use): `iwd`, `avahi`, `nss-mdns`
+- Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
+- Bluetooth: `bluez`, `bluez-utils`
+- Printing: `cups`
+- Power/ACPI: `acpi`, `acpi_call`, `acpid`
+- Desktop/user dirs: `xdg-user-dirs`
+
 </details>
 
 ### Enable services
@@ -597,6 +635,7 @@ systemctl enable bluetooth
 systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer
+
 ```
 
 ## Desktop Stack
@@ -620,6 +659,7 @@ systemctl enable fstrim.timer
 # qt6-wayland : Qt6 Wayland platform plugin
 
 # xorg-xwayland : Runs X11 apps under Wayland
+
 pacman -S --needed \
   sddm \
   sddm-kcm \
@@ -629,6 +669,7 @@ pacman -S --needed \
   xorg-xwayland
 
 systemctl enable sddm
+
 ```
 
 #### KDE Plasma Core
@@ -669,6 +710,7 @@ pacman -S --needed \
 #### KDE Plasma (Optionals)
 
 You can select what you need.
+
 ```bash
 
 # bluedevil : Bluetooth tray + pairing UI
@@ -690,6 +732,7 @@ You can select what you need.
 # appmenu-gtk-module : AppMenu GTK module
 
 # libdbusmenu-glib : DBus menu integration
+
 pacman -S --needed \
   bluedevil \
   power-profiles-daemon \
@@ -739,6 +782,7 @@ auth       optional pam_kwallet5.so
 session    optional pam_kwallet5.so auto_start
 EOF
 fi
+
 ```
 
 - After logging in, open System Settings → KDE Wallet and ensure a wallet exists (Blowfish is fine). This keeps VS Code and other apps from nagging when storing secrets.
@@ -774,6 +818,7 @@ fi
 # filelight : Disk usage GUI
 
 # kcalc : Calculator
+
 pacman -S --needed \
   dolphin \
   dolphin-plugins \
@@ -795,13 +840,14 @@ pacman -S --needed \
 <details>
   <summary>🖥️ Packages being installed (KDE Plasma desktop)</summary>
 
-  - Display manager: `sddm`, `sddm-kcm`
-  - Portals/Wayland helpers: `xdg-desktop-portal`, `xdg-desktop-portal-kde`, `qt6-wayland`, `xorg-xwayland`
-  - Plasma core: `plasma-desktop`, `plasma-workspace`, `plasma-wayland-session`, `kwin`, `systemsettings`
-  - Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
-  - Optional Plasma extras: `bluedevil`, `power-profiles-daemon`, `kdeplasma-addons`, `plasma-systemmonitor`, `plasma-browser-integration`, `discover`, `krdp`, `print-manager`
-  - Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `gparted`, `filelight`, `kcalc`
-  - Thumbnails/integration: `kio-extras`, `ffmpegthumbs`, `kdegraphics-thumbnailers`
+- Display manager: `sddm`, `sddm-kcm`
+- Portals/Wayland helpers: `xdg-desktop-portal`, `xdg-desktop-portal-kde`, `qt6-wayland`, `xorg-xwayland`
+- Plasma core: `plasma-desktop`, `plasma-workspace`, `plasma-wayland-session`, `kwin`, `systemsettings`
+- Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
+- Optional Plasma extras: `bluedevil`, `power-profiles-daemon`, `kdeplasma-addons`, `plasma-systemmonitor`, `plasma-browser-integration`, `discover`, `krdp`, `print-manager`
+- Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `gparted`, `filelight`, `kcalc`
+- Thumbnails/integration: `kio-extras`, `ffmpegthumbs`, `kdegraphics-thumbnailers`
+
 </details>
 
 ## Reboot
@@ -812,13 +858,16 @@ pacman -S --needed \
 
 ```bash
 exit
+
 ```
 
 Then:
+
 ```bash
 umount -R /mnt
 swapoff -a
 reboot
+
 ```
 
 ## Post-Install Ideas
@@ -831,13 +880,15 @@ Log in to your new system using your user account.
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd ..
 rm -rf yay
+
 ```
 
 <details>
   <summary>🧰 Packages being installed (bootstrap AUR helper)</summary>
 
-  - `git`: fetch the `yay` PKGBUILD repo
-  - `base-devel`: required toolchain for building AUR packages via `makepkg`
+- `git`: fetch the `yay` PKGBUILD repo
+- `base-devel`: required toolchain for building AUR packages via `makepkg`
+
 </details>
 
 ### Snapper
@@ -846,30 +897,35 @@ rm -rf yay
 
 ```bash
 sudo pacman -Syu snapper
+
 ```
 
 <details>
   <summary>📸 Packages being installed (Snapper + optional Limine integration)</summary>
 
-  - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
-  - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
-  - (AUR) `limine-snapper-sync`: keep Limine config/entries aligned with snapshots
-  - (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
+- `snapper`: manage Btrfs snapshots (create/list/rollback policies)
+- `snap-pac`: pacman hooks to auto-create snapshots around package transactions
+- (AUR) `limine-snapper-sync`: keep Limine config/entries aligned with snapshots
+- (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
+
 </details>
 
 #### Create Snapper Configs
 
 You can omit `/home` snapping if you prefer (e.g., for large media folders).
+
 ```bash
 
 # We need to be root for this part
 
 sudo su
+
 ```
 
 ```bash
 snapper -c root create-config /
 snapper -c home create-config /home
+
 ```
 
 ```bash
@@ -877,6 +933,7 @@ snapper -c home create-config /home
 # Exit root
 
 exit
+
 ```
 
 ### Extra Packages for Limine
@@ -895,6 +952,7 @@ cp /etc/limine-snapper-sync.conf /etc/default/limine
 # trigger sync
 
 sudo limine-snapper-sync
+
 ```
 
 ```bash
@@ -902,6 +960,7 @@ yay -S --needed \
   btrfs-assistant \
   snapper-gui-git \
   snapper-tools
+
 ```
 
 ### CachyOS Kernels
@@ -909,9 +968,11 @@ yay -S --needed \
 🐆 If you want CachyOS’ tuned kernels/userspace, add their repo and install the kernel packages. This is optional and changes your system away from “pure Arch”, so it’s a good idea to keep a package list backup first.
 
 Backup pacman config
+
 ```bash
 sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
 pacman -Qqe > ~/pkglist.pre-cachy.txt
+
 ```
 
 Add CachyOS repos (automated way)
@@ -923,6 +984,7 @@ tar xvf cachyos-repo.tar.xz && cd cachyos-repo
 sudo ./cachyos-repo.sh
 
 sudo pacman -Syu
+
 ```
 
 Install CachyOS kernels
@@ -932,16 +994,19 @@ Install CachyOS kernels
 # CachyOS EEVDF kernel + headers
 
 # Default CachyOS kernel + headers
+
 sudo pacman -S \
   linux-cachyos-eevdf linux-cachyos-eevdf-headers \
   linux-cachyos linux-cachyos-headers
+
 ```
 
 <details>
   <summary>🐆 Packages being installed (CachyOS kernels)</summary>
 
-  - `linux-cachyos`, `linux-cachyos-headers`: CachyOS kernel + headers
-  - `linux-cachyos-eevdf`, `linux-cachyos-eevdf-headers`: alternative CachyOS kernel variant + headers
+- `linux-cachyos`, `linux-cachyos-headers`: CachyOS kernel + headers
+- `linux-cachyos-eevdf`, `linux-cachyos-eevdf-headers`: alternative CachyOS kernel variant + headers
+
 </details>
 
 ### CachyOS Packages
@@ -964,21 +1029,24 @@ sudo pacman -S \
   libdbusmenu-glib \
   cachyos-gaming-meta \
   cachyos-hello
+
 ```
 
 <details>
   <summary>🐆 Packages being installed (CachyOS extras)</summary>
 
-  - `cachyos-settings`: CachyOS defaults/tweaks
-  - `cachyos-gaming-meta`: gaming-oriented meta package
-  - `cachyos-hello`: welcome/info app
-  - `appmenu-gtk-module`, `libdbusmenu-glib`: appmenu/DBus menu integration
+- `cachyos-settings`: CachyOS defaults/tweaks
+- `cachyos-gaming-meta`: gaming-oriented meta package
+- `cachyos-hello`: welcome/info app
+- `appmenu-gtk-module`, `libdbusmenu-glib`: appmenu/DBus menu integration
+
 </details>
 
 ### Update all packages to CachyOS Optimized
 
 ```bash
 sudo pacman -Qqn | sudo pacman -S -
+
 ```
 
 ### Extra Packages and fonts
@@ -989,24 +1057,28 @@ sudo pacman -Qqn | sudo pacman -S -
 
 ```bash
 yay -S --needed openbsd-netcat imagemagick
+
 ```
 
 #### Filesystem / network integration
 
 ```bash
 yay -S --needed gvfs gvfs-smb
+
 ```
 
 #### Power / laptop bits
 
 ```bash
 yay -S --needed brightnessctl
+
 ```
 
 #### Audio / media / creative
 
 ```bash
 yay -S --needed vlc gimp obs-studio
+
 ```
 
 #### Desktop apps
@@ -1019,6 +1091,7 @@ yay -S --needed \
   visual-studio-code-bin \
   filezilla \
   fatfetch
+
 ```
 
 #### Gaming stack
@@ -1032,12 +1105,14 @@ yay -S --needed \
   goverlay \
   proton-ge-custom-bin
 sudo usermod -aG gamemode $USER
+
 ```
 
 #### Flatpak runtime
 
 ```bash
 yay -S flatpak
+
 ```
 
 #### Fonts
@@ -1059,21 +1134,23 @@ yay -S --needed \
   adobe-source-code-pro-fonts \
   nerd-fonts \
   ttf-ms-fonts
+
 ```
 
 <details>
   <summary>🧺 Packages being installed (daily-driver pick list)</summary>
 
-  - Core utilities/tools: `openbsd-netcat`, `imagemagick`
-  - Desktop integration: `gvfs`, `gvfs-smb`
-  - Browsers/mail: `firefox`, `mailspring`
-  - Media/creative: `vlc`, `gimp`, `obs-studio`
-  - Gaming: `steam`, `lutris`, `gamemode`, `mangohud`, `goverlay`, `proton-ge-custom-bin`
-  - System/power: `brightnessctl`
-  - Packaging/platforms: `flatpak`
-  - Editors/IDE: `visual-studio-code-bin`
-  - Office: `libreoffice-fresh`
-  - Fonts: `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `noto-fonts-extra`, `ttf-dejavu`, `ttf-liberation`, `ttf-jetbrains-mono`, `ttf-fira-code`, `ttf-ubuntu-font-family`, `terminus-font`, `adobe-source-sans-fonts`, `adobe-source-serif-fonts`, `adobe-source-code-pro-fonts`, `nerd-fonts`, `ttf-ms-fonts`
+- Core utilities/tools: `openbsd-netcat`, `imagemagick`
+- Desktop integration: `gvfs`, `gvfs-smb`
+- Browsers/mail: `firefox`, `mailspring`
+- Media/creative: `vlc`, `gimp`, `obs-studio`
+- Gaming: `steam`, `lutris`, `gamemode`, `mangohud`, `goverlay`, `proton-ge-custom-bin`
+- System/power: `brightnessctl`
+- Packaging/platforms: `flatpak`
+- Editors/IDE: `visual-studio-code-bin`
+- Office: `libreoffice-fresh`
+- Fonts: `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `noto-fonts-extra`, `ttf-dejavu`, `ttf-liberation`, `ttf-jetbrains-mono`, `ttf-fira-code`, `ttf-ubuntu-font-family`, `terminus-font`, `adobe-source-sans-fonts`, `adobe-source-serif-fonts`, `adobe-source-code-pro-fonts`, `nerd-fonts`, `ttf-ms-fonts`
+
 </details>
 
 ### SPDIF audio dropout / sleep
@@ -1081,15 +1158,18 @@ yay -S --needed \
 🔊 Some SPDIF receivers/DACs go to sleep after a few idle seconds, so the first 1-3 seconds of the next sound get eaten while the link wakes up. Two tweaks that keep the SPDIF clock alive:
 
 1) Disable codec autosuspend (system-wide)
+
 ```bash
 sudo tee /etc/modprobe.d/alsa-no-powersave.conf >/dev/null <<'EOF'
 options snd_hda_intel power_save=0 power_save_controller=N
 EOF
+
 ```
 
 Reboot for this to take effect.
 
-2) Stop WirePlumber from suspending the sink (per-user)
+1) Stop WirePlumber from suspending the sink (per-user)
+
 ```bash
 mkdir -p ~/.config/wireplumber/main.lua.d
 cat <<'EOF' > ~/.config/wireplumber/main.lua.d/51-spdif-nosuspend.lua
@@ -1106,13 +1186,14 @@ table.insert(alsa_monitor.rules, {
 EOF
 
 systemctl --user restart wireplumber
+
 ```
 
 Change the match if you only want this on a specific output. With autosuspend off and WirePlumber keeping the sink alive, SPDIF should stop dropping the first few seconds of audio.
 
 ### Nvidia Driver
 
-🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware: https://wiki.archlinux.org/title/NVIDIA
+🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware: <https://wiki.archlinux.org/title/NVIDIA>
 
 Pick one path below (match to your GPU/needs).
 
@@ -1151,11 +1232,13 @@ yay -S --needed \
   lib32-opencl-nvidia \
   clinfo \
   cuda
+
 ```
 
 #### Option B: Proprietary 580xx (AUR)
 
 Use this if you want the proprietary stack or run into issues with the 590xx open driver.
+
 ```bash
 yay -S --needed \
   nvidia-580xx-dkms \
@@ -1168,9 +1251,11 @@ yay -S --needed \
   ocl-icd \
   clinfo \
   cuda
+
 ```
 
 Extra stuffs for gaming
+
 ```bash
 yay -S --needed \
   libva-utils \
@@ -1181,25 +1266,31 @@ yay -S --needed \
   vkd3d \
   shaderc \
   spirv-tools
+
 ```
 
 Some launch option for Steam/Proton (use in Steam launch option)
+
 ```bash
   PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
+
 ```
 
 Set Shader Cache Size
+
 ```bash
 mkdir ~/.nv
 echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
+
 ```
 
 <details>
   <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
 
-  - Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-580xx-*` for Option B)
-  - OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-580xx` variants for Option B)
-  - CUDA toolkit/runtime: `cuda` (works with both options)
+- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-580xx-*` for Option B)
+- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-580xx` variants for Option B)
+- CUDA toolkit/runtime: `cuda` (works with both options)
+
 </details>
 
 #### Add DRM kernel module
@@ -1210,9 +1301,11 @@ You can leave out the fallback entry, or keep it as a safe mode option.
 
 ```bash
 nvidia-drm.modeset=1 nvidia-drm.fbdev=1
+
 ```
 
 In `/etc/mkinitcpio.conf`, ensure NVIDIA modules are included and the generic `kms` hook is removed:
+
 ```bash
 
 sudo perl -0777 -i.bak -pe '
@@ -1240,9 +1333,11 @@ sudo mkinitcpio -P
 # Verify
 
 grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
+
 ```
 
 Add a NVIDIA pacman hook so DKMS/initramfs are rebuilt automatically when kernels or the driver are updated:
+
 ```bash
 
 # ensure hooks directory exists
@@ -1273,11 +1368,14 @@ When = PostTransaction
 NeedsTargets
 Exec = /bin/sh -c 'while read -r trg; do case $trg in linux) exit 0; esac; done; /usr/bin/mkinitcpio -P'
 EOF
+
 ```
 
 Disable old Limine config since a new config has been generated by limine-entry-tool
+
 ```bash
 sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak
+
 ```
 
 Then reboot
@@ -1285,12 +1383,14 @@ Then reboot
 ### Disable KWallet prompts (optional)
 
 This disables the KDE Secret Service backend; apps like VS Code, Git credential helpers, and browsers won’t retain secrets. Skip this if you followed the KWallet setup above.
+
 ```bash
 mkdir -p ~/.config
 cat <<'EOF' >> ~/.config/kwalletrc
 [Wallet]
 Enabled=false
 EOF
+
 ```
 
 ### Clear package manager caches
@@ -1299,6 +1399,7 @@ EOF
 yay -Syu
 sudo paccache -r
 yay -Yc
+
 ```
 
 ## pyenv
@@ -1316,6 +1417,7 @@ sudo pacman -S --needed base-devel openssl zlib xz tk readline sqlite libffi bzi
 # Clone pyenv into your home directory
 
 git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+
 ```
 
 ### Shell integration (bash/zsh)
@@ -1338,6 +1440,7 @@ export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 EOF
 fi
+
 ```
 
 ### Use pyenv to install a Python version
@@ -1357,11 +1460,13 @@ pyenv global 3.12.2
 
 python --version
 pyenv which python
+
 ```
 
 ## Flatpak Apps
 
 Can’t do this over SSH; install this in the logged-in session.
+
 ```bash
 flatpak install -y flathub \
   org.gnome.baobab \
@@ -1382,6 +1487,7 @@ flatpak install -y flathub \
   com.adobe.Reader \
   net.davidotek.pupgui2 \
   com.vysp3r.ProtonPlus
+
 ```
 
 ## Theme
@@ -1398,7 +1504,7 @@ KDE settings path: **System Settings → Appearance**.
 
 # Whitesur KDE
 
-repo=~/Desktop/theme 
+repo=~/Desktop/theme
 git clone https://github.com/vinceliuice/WhiteSur-kde.git $repo
 cd $repo
 ./install.sh
@@ -1525,7 +1631,8 @@ rm -rf $repo && cd ~
 ## Credits & Thanks
 
 🙏 Huge thanks to the authors/maintainers of these guides and notes that helped shape parts of this memo:
-- `fstab` notes: https://gist.github.com/mjkstra/96ce7a5689d753e7a6bdd92cdc169bae#fstab
-- Arch install walkthrough/reference: https://github.com/silentz/arch-linux-install-guide
-- Chroot exit + reboot checklist: https://gist.github.com/yovko/512326b904d120f3280c163abfbcb787#exit-from-chroot-and-reboot
-- NVIDIA driver guide: https://github.com/korvahannu/arch-nvidia-drivers-installation-guide
+
+- `fstab` notes: <https://gist.github.com/mjkstra/96ce7a5689d753e7a6bdd92cdc169bae#fstab>
+- Arch install walkthrough/reference: <https://github.com/silentz/arch-linux-install-guide>
+- Chroot exit + reboot checklist: <https://gist.github.com/yovko/512326b904d120f3280c163abfbcb787#exit-from-chroot-and-reboot>
+- NVIDIA driver guide: <https://github.com/korvahannu/arch-nvidia-drivers-installation-guide>

@@ -1,6 +1,6 @@
-# Arch Linux + Btrfs + CachyOS Kernels + KDE Plasma + Limine + Nvidia Driver
+# Arch Linux + Btrfs + linux-zen + GRUB + KDE Plasma + Nvidia Driver
 
-Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop, Limine bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
+Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop, GRUB bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
 
 Not the best way or most correct way. Just the way I like.
 
@@ -13,46 +13,22 @@ Not the best way or most correct way. Just the way I like.
 5. [Btrfs Subvolumes & Mounts](#btrfs-subvolumes--mounts)
 6. [Base Install](#base-install)
 7. [Chroot Configuration](#chroot-configuration)
-8. [Limine Bootloader](#limine-bootloader)
+8. [GRUB Bootloader](#grub-bootloader)
 9. [Services & QoL](#services--qol)
 10. [Desktop Stack](#desktop-stack)
 11. [Reboot](#reboot)
 12. [Post-Install Ideas](#post-install-ideas)
-    - [YAY package manager](#yay-package-manager)
-    - [Snapper](#snapper)
-    - [Extra Packages for Limine](#extra-packages-for-limine)
-    - [CachyOS Kernels](#cachyos-kernels)
-    - [CachyOS Packages](#cachyos-packages)
-    - [Update all packages to CachyOS Optimized](#update-all-packages-to-cachyos-optimized)
-    - [Extra Packages and fonts](#extra-packages-and-fonts)
-    - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
-    - [Nvidia Driver](#nvidia-driver)
-    - [Disable KWallet prompts](#disable-kwallet-prompts-optional)
-    - [Clear package manager caches](#clear-package-manager-caches)
-
-13. [pyenv](#pyenv)
-14. [Flatpak Apps](#flatpak-apps)
-15. [Theme](#theme)
-16. [Credits & Thanks](#credits--thanks)
 
 ## Updates
 
 ### 2026-03-21
 
-- Created a GRUB-based variant: [Arch Linux_Zen_Grub_Brtfs.md](Arch Linux_Zen_Grub_Brtfs.md). Uses `linux-zen`, GRUB bootloader, and Btrfs `/boot` subvolume for snapshots. No CachyOS repos.
-
-### 2025-12-26
-
-- Narrowed the KDE stutter down to themes: Whitesur, Orchis, and Colloid caused the issue on my machine. Qogir, Darkly, and Vinyl do not stutter here. This may vary by hardware, so test on your setup.
-
-### 2025-12-22
-
-- I'm going back to `linux-zen` (and may try `xanmod` or `tkg`). I noticed a very small but annoying stutter in KDE Plasma when resizing windows; it may have been present on the vanilla kernel too and I just never noticed it.
-- I'll keep the CachyOS section for now in case anyone finds it useful. I'll come back with my findings after more testing.
+- Creating this GRUB-based variant because Limine cannot be installed on a Btrfs `/boot` subvolume. I want `/boot` on Btrfs so it can be included in snapshots.
+- This guide drops CachyOS kernels and uses `linux-zen` instead.
 
 ## Assumptions
 
-🧩 This memo is written as a linear “do this, then that” install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
+🧩 This memo is written as a linear "do this, then that" install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
 
 - Arch ISO already written to USB (any recent release).
 - I SSH into the live ISO from another machine (root password set with `passwd`, IP from `ip a`), purely for copy/paste convenience.
@@ -138,47 +114,68 @@ sudo pacman -Syy
 
 ## Partition & Format
 
-💽 Create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don’t wipe the wrong device.
+💽 Create a minimal GPT layout (ESP + Btrfs root + swap) and capture stable UUIDs for later bootloader and `fstab` configuration. Before running format commands, sanity-check your target disk with `lsblk -f` so you don't wipe the wrong device.
 
 ### 1. My Partition layout
 
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
 | `/dev/nvme0n1p1` | 2-4 GB | EFI System (type `ef00`) | Mounted at `/boot` |
-| `/dev/nvme0n1p2` | Remainder | Linux filesystem (`8300`) | Btrfs root |
-| `/dev/nvme0n1p3` | About half or equal your RAM size | Linux swap | Swap |
+| `/dev/nvme0n1p2` | About half or equal your RAM size | Linux swap | Swap |
+| `/dev/nvme0n1p3` | Remainder | Linux filesystem (`8300`) | Btrfs root |
 
 You can use `cfdisk /dev/nvme0n1` (GPT) to build or adjust the layout.
 
+**Using cfdisk:**
+
+1. Run `cfdisk /dev/nvme0n1`
+2. Create partition 1: New → 2-4G → Type → EFI System (p1)
+3. Create partition 2: New → (swap size) → Type → Linux swap (p2)
+4. Create partition 3: New → (remainder) → Type → Linux filesystem (p3)
+5. Write → type `yes` → Quit
+
+### 1.1 Format EFI partition (optional, single-boot only) ⚠️
+
+**Only format the EFI partition if this is a fresh single-boot install.** If you are dual-booting (e.g., Windows already installed), **skip this step** to preserve the existing ESP and Windows bootloader.
+
+```bash
+
+# WARNING: This will erase all data on the EFI partition!
+# Do NOT run this if you have Windows or another OS on the same ESP.
+
+mkfs.fat -F32 -n EFI /dev/nvme0n1p1
+
+```
+
 ### 2. Format and capture UUIDs
 
-**CAUTION:** double-check your device paths (e.g. `/dev/nvme0n1p2`) before formatting.
+**CAUTION:** double-check your device paths (e.g. `/dev/nvme0n1p3`) before formatting.
 
 ```bash
 
 # Change the disk path to match yours!!!
 
-mkfs.btrfs -f -L ArchLinuxFS /dev/nvme0n1p2
-mkswap /dev/nvme0n1p3
+mkfs.btrfs -f -L ArchLinuxFS /dev/nvme0n1p3
+mkswap /dev/nvme0n1p2
 
 # Store UUID for later scripts.
 
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
+root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 
 ```
 
 ## Btrfs Subvolumes & Mounts
 
-🧱 Goal: create a subvolume layout that plays nicely with snapshot tools (e.g., Snapper) and keeps “churny” paths isolated (logs/cache). This is a personal layout; feel free to add/remove subvolumes depending on what you plan to snapshot.
+🧱 Goal: create a subvolume layout that plays nicely with snapshot tools (e.g., Snapper) and keeps "churny" paths isolated (logs/cache). This is a personal layout; feel free to add/remove subvolumes depending on what you plan to snapshot.
 
 📝 Notes:
 
 - Subvolumes here are named `@something` by convention; `@` is mounted as `/` later.
 - `compress=zstd:1,noatime` is a common baseline; tune for your workload.
-- If you don’t care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
-- I have Downloads, `.cache`, and Git isolated. These usually get big and I don’t want to snapshot them.
+- If you don't care about isolating `/var/log` or `/var/cache`, you can skip those subvolumes and mounts.
+- I have Downloads, `.cache`, and Git isolated. These usually get big and I don't want to snapshot them.
 
 ### 3.1 Create Subvolumes and Mounts
 
@@ -194,18 +191,13 @@ btrfs subvolume create /mnt/@var
 btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@root
-btrfs subvolume create /mnt/@srv
+btrfs subvolume create /mnt/@boot
 
 # OPTIONAL: extra subvolumes
 
 # I find these folders usually grow large on my system and they change quite often, so I opted not to snapshot them.
 
-# You can skip these. Especially `home/Git` — that’s my place for all git repos.
-
-#btrfs subvolume create /mnt/@home_cache
-
-#btrfs subvolume create /mnt/@home_downloads
-#btrfs subvolume create /mnt/@home_git
+# You can skip these. Especially `home/Git` — that's my place for all git repos.
 
 # remount as btrfs subvolumes
 
@@ -217,30 +209,21 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@var  UUID="${root_uuid}" /mnt/v
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /mnt/var/log
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/root
-mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/srv
+mount --mkdir -o compress=zstd:1,noatime,subvol=@boot UUID="${root_uuid}" /mnt/boot
 
 # If you created optional subvolumes, mount them.
-
-# I'm the only user of this machine, so I will mount it directly to my home.
-
-# You will need to come up with symlink solution for multiusers.
-
-#mkdir -p /mnt/mnt/homes
-
-#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_cache UUID="${root_uuid}" /mnt/home/pop/.cache
-#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_downloads UUID="${root_uuid}" /mnt/home/pop/Downloads
-
-#mount --mkdir -o compress=zstd:1,noatime,subvol=@home_git UUID="${root_uuid}" /mnt/home/pop/Git
 
 ```
 
 ### 3.2 Swap, ESP and fstab
 
+📝 **Note:** The ESP (FAT32) is mounted at `/boot/EFI`, while `/boot` itself resides on the Btrfs subvolume. This keeps kernel/initramfs files snapshot-able on Btrfs while GRUB writes to the FAT32 ESP at `/boot/EFI`.
+
 ```bash
 
-# Mount ESP at /boot
+# Mount ESP at /boot/EFI (Btrfs /boot subvolume is already mounted)
 
-mount --mkdir UUID="${esp_uuid}" /mnt/boot
+mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 
 # Enable swap
 
@@ -284,7 +267,7 @@ EOF
 
 pacstrap -K /mnt \
   base base-devel \
-  linux linux-headers linux-firmware "${cpu}-ucode" \
+  linux linux-headers linux-zen linux-zen-headers linux-firmware "${cpu}-ucode" \
   efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs\
   networkmanager openssh \
   vim nvim git sudo man curl wget perl \
@@ -295,6 +278,7 @@ pacstrap -K /mnt \
 # copy pacman config
 
 cp /etc/pacman.conf /mnt/etc/pacman.conf
+cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 
 ```
 
@@ -302,7 +286,7 @@ cp /etc/pacman.conf /mnt/etc/pacman.conf
   <summary>📦 Packages being installed (Base Install)</summary>
 
 - Core system: `base`, `base-devel`
-- Kernel + firmware: `linux`, `linux-headers`, `linux-firmware`
+- Kernel + firmware: `linux-zen`, `linux-zen-headers`, `linux-firmware`
 - CPU microcode: `intel-ucode` or `amd-ucode` (chosen via `lscpu`)
 - Filesystem tools: `btrfs-progs`
 - Boot/UEFI tools: `efibootmgr`
@@ -360,15 +344,19 @@ echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 
 Change `host_name` to your liking.
 
+📝 **Note:** Pick a hostname that identifies this machine (e.g., `arch`, `desktop`, `workstation`, or any name you prefer). Keep it short and lowercase.
+
 ```bash
 host_name="arch"
+```
+
+```bash
 echo "${host_name}" > /etc/hostname
 cat <<EOF > /etc/hosts
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   ${host_name}.localdomain ${host_name}
 EOF
-
 ```
 
 ### 5.3 Users and sudo
@@ -383,27 +371,20 @@ passwd
 
 **Create user and password**
 
+📝 **Note:** Change `user=pop` to your desired username.
+
 ```bash
-
-# change username
-
 user=pop
+```
+
+```bash
 echo "Create user, and set password"
 useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
 passwd $user
-
-```
-
-```bash
-
-# If you created optional subvolumes earlier, take ownership of the home.
-
-chown -R pop:pop /home/pop
-
 ```
 
 **Enable wheel sudo in `sudoers`**
-We won’t automate this.
+We won't automate this.
 
 ```bash
 
@@ -433,99 +414,77 @@ mkinitcpio -P
 
 ```
 
-## Limine Bootloader
+## GRUB Bootloader
 
-🚀 Goal: install Limine to the EFI System Partition and generate a `limine.conf` that boots your Arch kernel/initramfs from Btrfs by UUID. The key idea is to keep Limine’s config and the kernel artifacts together under `/boot/limine`.
+🚀 Goal: install GRUB to the EFI System Partition and generate a `grub.cfg` that boots your Arch kernel/initramfs from Btrfs by UUID. GRUB will be installed to `/boot/EFI` (the FAT32 ESP), while kernel and initramfs files live on the Btrfs `/boot` subvolume.
 
-### 6.1 Install Limine binaries (ESP mounted at `/boot`)
+### 6.1 Clean up EFI boot entries (optional)
+
+📝 **Note:** On a fresh install or if you no longer need other boot entries (e.g., Windows Boot Manager), you can remove old EFI boot entries to clean up your UEFI boot menu. **Do not do this if you want to keep other OS boot options.**
 
 ```bash
 
-# Limine Bootloader
+# View current EFI boot entries
 
-pacman -S --needed limine
-mkdir -p /boot/EFI/limine /boot/limine
-cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
+efibootmgr -v
+
+# Delete unwanted boot entries (replace XXXX with the boot number, e.g., 0001, 0002)
+
+efibootmgr --delete-bootnum --bootnum XXXX
 
 ```
 
-Some extra for Limine are in AUR, so we will install them later, after we got yay installed.
+📝 **Tip:** Keep only the GRUB entry. You can identify entries by their label (e.g., "Windows Boot Manager", "GRUB").
 
-<details>
-  <summary>🚀 Packages being installed (Limine)</summary>
-
-- `limine`: Limine UEFI bootloader EFI binaries + templates/config support
-
-</details>
-
-### 6.2 Register Limine with the firmware
+### 6.2 Install GRUB packages
 
 ```bash
-efibootmgr --create --disk /dev/nvme0n1 --part 1 \
-  --label "Limine Bootloader" \
-  --loader '\EFI\limine\BOOTX64.EFI' \
-  --unicode
+
+# GRUB and required tools
+
+pacman -S --needed grub efibootmgr dosfstools
+
+# Install GRUB to the EFI System Partition
+
+grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 
 ```
 
-- `--disk /dev/nvme0n1 --part 1` corresponds to `/dev/nvme0n1p1`.
-- Limine interprets `boot():/` as “the partition containing `limine.conf`”.
+### 6.3 Configure GRUB cmdline
 
-### 6.3 Copy kernels, initramfs, and microcode into `/boot/limine`
-
-```bash
-ucode_img="intel-ucode"
-if lscpu | grep -qi amd; then
-  ucode_img="amd-ucode"
-fi
-
-cp -v /boot/vmlinuz-linux /boot/limine/
-cp -v /boot/initramfs-linux*.img /boot/limine/
-cp -v "/boot/${ucode_img}.img" /boot/limine/
-
-```
-
-Repeat after every kernel, initramfs, or microcode update (consider adding a pacman hook later).
-
-### 6.4 Generate `/boot/limine/limine.conf`
+📝 **Note:** Set up kernel parameters in `/etc/default/grub` for Btrfs root, resume (hibernation), and optional zswap support.
 
 ```bash
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+
+# Detect CPU and get UUIDs
+
 ucode_img="intel"
-if lscpu | grep -qi amd; then
-  ucode_img="amd"
-fi
+lscpu | grep -qi amd && ucode_img="amd"
+swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 
-cat <<EOF | tee /boot/limine/limine.conf >/dev/null
-TIMEOUT=3
-DEFAULT_ENTRY=Arch Linux
+# Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line
 
-/Arch Linux
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
-    MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
 
-/Arch Linux (fallback)
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
-EOF
+# Add the new line (shell expands variables before writing)
 
-cat /boot/limine/limine.conf
+echo "GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" >> /etc/default/grub
+
+# Verify the change
+
+grep "^GRUB_CMDLINE_LINUX_DEFAULT=" /etc/default/grub
 
 ```
 
-#### Add zswap setting to initrd (optional)
+📝 **Tip:** If you don't want zswap, remove the `zswap.*` parameters from the cmdline.
+
+### 6.3.1 Add zswap modules to initramfs (optional)
 
 ```bash
 
 # Add zswap modules to mkinitcpio.conf (idempotent)
 
-sudo perl -0777 -i.bak -pe '
+perl -0777 -i.bak -pe '
   s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
     my @mods = grep { length } split " ", $1;
     my %seen; @mods = grep { !$seen{$_}++ } @mods;
@@ -535,27 +494,44 @@ sudo perl -0777 -i.bak -pe '
     "MODULES=(" . join(" ", @mods) . ")"
   }mge;
 ' /etc/mkinitcpio.conf
-sudo mkinitcpio -P
-grep -E '^MODULES=' /etc/mkinitcpio.conf
+
+# Rebuild initramfs
+
+mkinitcpio -P
+
+# Verify
+
+grep -E "^MODULES=" /etc/mkinitcpio.conf
 
 ```
 
-### 6.5 Pacman hook to redeploy Limine EFI files
+### 6.4 Generate GRUB configuration
 
 ```bash
-sudo mkdir -p /etc/pacman.d/hooks
-sudo tee /etc/pacman.d/hooks/99-limine.hook >/dev/null <<'EOF'
-[Trigger]
-Operation = Install
-Operation = Upgrade
-Type      = Package
-Target    = limine
 
-[Action]
-Description = Copy Limine EFI files to the ESP
-When = PostTransaction
-Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
-EOF
+# Generate grub.cfg
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+```
+
+### 6.4 Enable os-prober (optional, for dual-boot)
+
+📝 **Note:** If you have Windows or another Linux installation on the same machine, enable `os-prober` to detect and add them to the GRUB menu.
+
+```bash
+
+# Install os-prober
+
+pacman -S --needed os-prober
+
+# Enable os-prober in GRUB config
+
+echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
+
+# Regenerate GRUB config
+
+grub-mkconfig -o /boot/grub/grub.cfg
 
 ```
 
@@ -644,24 +620,18 @@ systemctl enable fstrim.timer
 
 ## Desktop Stack
 
-🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you’ll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don’t want many of the KDE apps, you can skip the Desktop Apps section.
+🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you'll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don't want many of the KDE apps, you can skip the Desktop Apps section.
 
 ### KDE Plasma & apps
 
 #### KDE Core
 
 ```bash
-
 # sddm : Display/login manager (graphical login screen)
-
 # sddm-kcm : System Settings module to configure SDDM
-
-# xdg-desktop-portal : “Portal” framework (file picker, screen share, sandbox app integration)
-
+# xdg-desktop-portal : "Portal" framework (file picker, screen share, sandbox app integration)
 # xdg-desktop-portal-kde : KDE backend for portals (needed for Wayland screen share, Flatpak, etc.)
-
 # qt6-wayland : Qt6 Wayland platform plugin
-
 # xorg-xwayland : Runs X11 apps under Wayland
 
 pacman -S --needed \
@@ -673,29 +643,19 @@ pacman -S --needed \
   xorg-xwayland
 
 systemctl enable sddm
-
 ```
 
 #### KDE Plasma Core
 
 ```bash
-
 # plasma-desktop : The Plasma desktop shell (panels, launcher, desktop UI)
-
 # plasma-workspace : Core workspace components (session bits, shell integration, essentials)
-
 # kwin : KDE window manager + compositor (Wayland/X11)
-
 # systemsettings : KDE System Settings app
-
 # plasma-nm : NetworkManager integration (network tray, VPN UI)
-
 # plasma-pa : Audio volume controls for PipeWire/PulseAudio
-
 # kscreen : Display configuration + monitor hotplug handling
-
 # kde-gtk-config : Configure GTK theme/fonts under KDE
-
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
 pacman -S --needed \
@@ -708,7 +668,6 @@ pacman -S --needed \
   kscreen \
   kde-gtk-config \
   breeze-gtk
-
 ```
 
 #### KDE Plasma (Optionals)
@@ -716,25 +675,15 @@ pacman -S --needed \
 You can select what you need.
 
 ```bash
-
 # bluedevil : Bluetooth tray + pairing UI
-
 # power-profiles-daemon : Laptop power modes (balanced/performance/powersave)
-
 # kdeplasma-addons : Extra Plasma widgets/applets (more features, more stuff)
-
 # plasma-systemmonitor : KDE System Monitor app (optional if you use htop/Mission Center)
-
 # plasma-browser-integration : Browser media controls + integration
-
 # discover : KDE software center (can add background notifier)
-
 # krdp : KDE Remote Desktop server/client bits (krdpserver)
-
 # print-manager : KDE printer management UI
-
 # appmenu-gtk-module : AppMenu GTK module
-
 # libdbusmenu-glib : DBus menu integration
 
 pacman -S --needed \
@@ -751,24 +700,18 @@ pacman -S --needed \
 
 systemctl enable power-profiles-daemon
 
-# Optional: Encrypted “vault” folders integration: plasma-vault
-
+# Optional: Encrypted "vault" folders integration: plasma-vault
 # pacman -S --needed plasma-vault
 
 # Optional: Phone integration (kdeconnectd service): kdeconnect
-
 # pacman -S --needed kdeconnect
-
 ```
 
 #### KWallet (optional, for secret storage like VS Code)
 
 ```bash
-
 # kwallet : KDE wallet backend + secret service provider
-
 # kwalletmanager : GUI to inspect/manage wallets
-
 # kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
 pacman -S --needed \
@@ -777,7 +720,6 @@ pacman -S --needed \
   kwallet-pam
 
 # Add PAM hooks for SDDM so the wallet unlocks with your session.
-
 # If you use a different display manager, add pam_kwallet5 there instead.
 
 if ! grep -q pam_kwallet5 /etc/pam.d/sddm; then
@@ -786,42 +728,29 @@ auth       optional pam_kwallet5.so
 session    optional pam_kwallet5.so auto_start
 EOF
 fi
-
 ```
 
 - After logging in, open System Settings → KDE Wallet and ensure a wallet exists (Blowfish is fine). This keeps VS Code and other apps from nagging when storing secrets.
 
 #### Desktop Apps
 
-````bash
-
+```bash
 # dolphin : File manager
-
 # dolphin-plugins : Git/Share/extra Dolphin integrations
-
 # konsole : Terminal
-
 # kate : GUI text editor
-
 # okular : PDF/EPUB viewer
-
 # gwenview : Image viewer
-
 # spectacle : Screenshot tool
-
 # ark : Archive manager GUI
-
 # gparted : Partition editor GUI
-
 # kio-extras : SMB/SFTP/etc. support inside Dolphin/KIO
-
 # ffmpegthumbs : Video thumbnails in Dolphin
-
 # kdegraphics-thumbnailers : Document/image thumbnail plugins
-
 # filelight : Disk usage GUI
-
 # kcalc : Calculator
+# btop : System monitor (alternative to htop)
+# fastfetch : System info tool (neofetch alternative)
 
 pacman -S --needed \
   dolphin \
@@ -837,9 +766,10 @@ pacman -S --needed \
   ffmpegthumbs \
   kdegraphics-thumbnailers \
   filelight \
-  kcalc
-
-````
+  kcalc \
+  btop \
+  fastfetch
+```
 
 <details>
   <summary>🖥️ Packages being installed (KDE Plasma desktop)</summary>
@@ -856,7 +786,7 @@ pacman -S --needed \
 
 ## Reboot
 
-🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
+🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it's worth quickly checking `/mnt/etc/fstab` and that GRUB is properly installed.
 
 ### Exit chroot and reboot
 
@@ -874,9 +804,176 @@ reboot
 
 ```
 
-## Post-Install Ideas
+## Post-Install
 
 Log in to your new system using your user account.
+
+### Create XDG user directories
+
+```bash
+
+# Create standard user folders (Desktop, Documents, Downloads, etc.)
+
+xdg-user-dirs-update
+
+```
+
+## SSH Setup
+
+🔐 Goal: set up SSH key-based authentication for secure remote access to your new system. We were using password login for the live ISO; now let's configure proper SSH keys.
+
+### Generate SSH key pair (on your client machine)
+
+```bash
+
+# On your client machine (not the Arch system), generate an Ed25519 key
+
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Or use RSA 4096-bit if Ed25519 is not supported
+
+# ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+
+```
+
+### Copy SSH key to Arch system
+
+```bash
+
+# From your client machine, copy the public key to your Arch system
+# Replace 'pop' with your username and 'arch' with your hostname/IP
+
+ssh-copy-id -i ~/.ssh/id_ed25519.pub pop@arch
+
+# Or manually copy if ssh-copy-id is not available
+
+cat ~/.ssh/id_ed25519.pub | ssh pop@arch "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+
+```
+
+### SSH client config (on your client machine)
+
+```bash
+
+# Edit ~/.ssh/config on your client machine
+
+cat >> ~/.ssh/config <<'EOF'
+
+# Arch Linux desktop
+
+Host arch
+    HostName 192.168.1.100
+    User pop
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    ForwardAgent yes
+    ForwardX11 yes
+EOF
+
+```
+
+📝 **Note:** Change `HostName` to your Arch system's actual IP address.
+
+### SSH Security Hardening
+
+🔒 Secure your SSH server by disabling password authentication and root login.
+
+```bash
+
+# Edit /etc/ssh/sshd_config
+
+sudo tee -a /etc/ssh/sshd_config <<'EOF'
+
+# SSH Security Settings
+
+# Disable root login
+PermitRootLogin no
+
+# Disable password authentication (keys only)
+PasswordAuthentication no
+
+# Disable empty passwords
+PermitEmptyPasswords no
+
+# Disable challenge-response authentication
+ChallengeResponseAuthentication no
+
+# Use SSH protocol 2 only
+Protocol 2
+
+# Limit max authentication attempts
+MaxAuthTries 3
+
+# Set login grace time (60 seconds)
+LoginGraceTime 60
+
+# Disable X11 forwarding if not needed (optional)
+# X11Forwarding no
+
+# Enable strict mode
+StrictModes yes
+
+# Disable host-based authentication
+HostbasedAuthentication no
+IgnoreRhosts yes
+
+# Set client alive interval for idle timeout (optional)
+ClientAliveInterval 300
+ClientAliveCountMax 2
+EOF
+
+```
+
+#### Optional: Change SSH port (security through obscurity)
+
+```bash
+
+# Change SSH port from default 22 to a custom port (e.g., 2222)
+
+sudo sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
+
+# Update firewall if using one
+
+# sudo ufw allow 2222/tcp
+
+```
+
+📝 **Note:** Remember to specify the port when connecting: `ssh -p 2222 arch`
+
+#### Optional: Allow only specific users
+
+```bash
+
+# Add to /etc/ssh/sshd_config
+
+echo "AllowUsers pop" | sudo tee -a /etc/ssh/sshd_config
+
+```
+
+#### Restart SSH service
+
+```bash
+
+# After making changes, restart SSHD
+
+sudo systemctl restart sshd
+
+# Verify SSH is running
+
+sudo systemctl status sshd
+
+```
+
+#### Test before disconnecting!
+
+⚠️ **Important:** Before closing your current SSH session, open a new terminal and test that you can connect with your key:
+
+```bash
+ssh arch
+
+```
+
+If it works, you're all set. If not, you still have the active session to fix any issues.
 
 ### YAY package manager
 
@@ -897,22 +994,35 @@ rm -rf yay
 
 ### Snapper
 
-📸 Goal: set up snapshot management for Btrfs so you can roll back system changes. `snapper` itself is in the official repos; the Limine integration shown below uses AUR packages (requires an AUR helper such as `yay`, installed above).
+📸 Goal: set up snapshot management for Btrfs so you can roll back system changes.
 
 ```bash
-sudo pacman -Syu snapper
+yay -Suy --needed snapper grub-btrfs btrfs-assistant snap-pac snap-pac-grub snapper-gui-git snapper-tools
 
 ```
 
 <details>
-  <summary>📸 Packages being installed (Snapper + optional Limine integration)</summary>
+  <summary>📸 Packages being installed (Snapper + GRUB integration)</summary>
 
 - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
+- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
+- `btrfs-assistant`: GUI for Btrfs management
 - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
-- (AUR) `limine-snapper-sync`: keep Limine config/entries aligned with snapshots
-- (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
+- `snap-pac-grub`: update GRUB after snapshot operations
+- `snapper-gui-git`: GUI for snapper snapshot management (AUR)
+- `snapper-tools`: additional snapper utilities (AUR)
 
 </details>
+
+#### Enable grub-btrfs service
+
+```bash
+
+# grub-btrfs will auto-generate GRUB entries for snapshots
+
+sudo systemctl enable --now grub-btrfsd
+
+```
 
 #### Create Snapper Configs
 
@@ -928,6 +1038,7 @@ sudo su
 
 ```bash
 snapper -c root create-config /
+snapper -c boot create-config /boot
 snapper -c home create-config /home
 
 ```
@@ -940,122 +1051,9 @@ exit
 
 ```
 
-### Extra Packages for Limine
-
-```bash
-
-# Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
-
-yay -S \
-  limine-snapper-sync \
-  limine-mkinitcpio-hook \
-  snap-pac
-
-cp /etc/limine-snapper-sync.conf /etc/default/limine
-
-# trigger sync
-
-sudo limine-snapper-sync
-
-```
-
-```bash
-yay -S --needed \
-  btrfs-assistant \
-  snapper-gui-git \
-  snapper-tools
-
-```
-
-### CachyOS Kernels
-
-🐆 If you want CachyOS’ tuned kernels/userspace, add their repo and install the kernel packages. This is optional and changes your system away from “pure Arch”, so it’s a good idea to keep a package list backup first.
-
-Backup pacman config
-
-```bash
-sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
-pacman -Qqe > ~/pkglist.pre-cachy.txt
-
-```
-
-Add CachyOS repos (automated way)
-
-```bash
-cd ~
-curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-tar xvf cachyos-repo.tar.xz && cd cachyos-repo
-sudo ./cachyos-repo.sh
-
-sudo pacman -Syu
-
-```
-
-Install CachyOS kernels
-
-```bash
-
-# CachyOS EEVDF kernel + headers
-
-# Default CachyOS kernel + headers
-
-sudo pacman -S \
-  linux-cachyos-eevdf linux-cachyos-eevdf-headers \
-  linux-cachyos linux-cachyos-headers
-
-```
-
-<details>
-  <summary>🐆 Packages being installed (CachyOS kernels)</summary>
-
-- `linux-cachyos`, `linux-cachyos-headers`: CachyOS kernel + headers
-- `linux-cachyos-eevdf`, `linux-cachyos-eevdf-headers`: alternative CachyOS kernel variant + headers
-
-</details>
-
-### CachyOS Packages
-
-```bash
-
-# cachyos-settings : CachyOS defaults/tweaks
-
-# appmenu-gtk-module : AppMenu GTK module
-
-# libdbusmenu-glib : DBus menu integration
-
-# cachyos-gaming-meta : Gaming-oriented meta package
-
-# cachyos-hello : Welcome/info app
-
-sudo pacman -S \
-  cachyos-settings \
-  appmenu-gtk-module \
-  libdbusmenu-glib \
-  cachyos-gaming-meta \
-  cachyos-hello
-
-```
-
-<details>
-  <summary>🐆 Packages being installed (CachyOS extras)</summary>
-
-- `cachyos-settings`: CachyOS defaults/tweaks
-- `cachyos-gaming-meta`: gaming-oriented meta package
-- `cachyos-hello`: welcome/info app
-- `appmenu-gtk-module`, `libdbusmenu-glib`: appmenu/DBus menu integration
-
-</details>
-
-### Update all packages to CachyOS Optimized
-
-```bash
-sudo pacman -Qqn | sudo pacman -S -
-
-```
-
 ### Extra Packages and fonts
 
-🧺 Personal “daily driver” pick list. Install only what you want.
+🧺 Personal "daily driver" pick list. Install only what you want.
 
 #### Core CLI + utilities
 
@@ -1085,10 +1083,16 @@ yay -S --needed vlc gimp obs-studio
 
 ```
 
+#### JavaScript/TypeScript runtimes
+
+```bash
+yay -S --needed nodejs npm bun
+```
+
 #### Desktop apps
 
 ```bash
-yay -S --needed \
+yay -S --needed --noconfirm\
   firefox chromium brave-bin \
   libreoffice-fresh \
   mailspring-bin \
@@ -1122,40 +1126,16 @@ yay -S flatpak
 #### Fonts
 
 ```bash
-yay -S --needed \
+yay -S --needed --noconfirm\
   noto-fonts \
-  noto-fonts-cjk \
   noto-fonts-emoji \
-  noto-fonts-extra \
   ttf-dejavu \
-  ttf-liberation \
-  ttf-jetbrains-mono \
-  ttf-fira-code \
   ttf-ubuntu-font-family \
   terminus-font \
-  adobe-source-sans-fonts \
-  adobe-source-serif-fonts \
-  adobe-source-code-pro-fonts \
   nerd-fonts \
   ttf-ms-fonts
 
 ```
-
-<details>
-  <summary>🧺 Packages being installed (daily-driver pick list)</summary>
-
-- Core utilities/tools: `openbsd-netcat`, `imagemagick`
-- Desktop integration: `gvfs`, `gvfs-smb`
-- Browsers/mail: `firefox`, `mailspring`
-- Media/creative: `vlc`, `gimp`, `obs-studio`
-- Gaming: `steam`, `lutris`, `gamemode`, `mangohud`, `goverlay`, `proton-ge-custom-bin`
-- System/power: `brightnessctl`
-- Packaging/platforms: `flatpak`
-- Editors/IDE: `visual-studio-code-bin`
-- Office: `libreoffice-fresh`
-- Fonts: `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `noto-fonts-extra`, `ttf-dejavu`, `ttf-liberation`, `ttf-jetbrains-mono`, `ttf-fira-code`, `ttf-ubuntu-font-family`, `terminus-font`, `adobe-source-sans-fonts`, `adobe-source-serif-fonts`, `adobe-source-code-pro-fonts`, `nerd-fonts`, `ttf-ms-fonts`
-
-</details>
 
 ### SPDIF audio dropout / sleep
 
@@ -1172,7 +1152,7 @@ EOF
 
 Reboot for this to take effect.
 
-1) Stop WirePlumber from suspending the sink (per-user)
+2) Stop WirePlumber from suspending the sink (per-user)
 
 ```bash
 mkdir -p ~/.config/wireplumber/main.lua.d
@@ -1207,22 +1187,14 @@ Pick one path below (match to your GPU/needs).
 
 ```bash
 
-# nvidia-dkms : NVIDIA DKMS driver (kernel modules)
-
+# nvidia-open-dkms : NVIDIA DKMS driver (kernel modules)
 # nvidia-utils : NVIDIA userspace libraries + tools
-
 # lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
-
 # nvidia-settings : NVIDIA X11 settings GUI
-
 # ocl-icd : OpenCL ICD loader
-
 # opencl-nvidia : NVIDIA OpenCL implementation
-
 # lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
-
 # clinfo : query OpenCL platforms/devices
-
 # cuda : CUDA toolkit/runtime
 
 yay -S --needed \
@@ -1299,9 +1271,7 @@ echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
 
 #### Add DRM kernel module
 
-You should have `/boot/limine/limine.conf` created automatically by now.
-Edit it and add the NVIDIA params to the `CMDLINE:` lines.
-You can leave out the fallback entry, or keep it as a safe mode option.
+Edit `/etc/default/grub` and add the NVIDIA params to `GRUB_CMDLINE_LINUX_DEFAULT`:
 
 ```bash
 nvidia-drm.modeset=1 nvidia-drm.fbdev=1
@@ -1357,9 +1327,8 @@ Operation = Upgrade
 Operation = Remove
 Type = Package
 Target = nvidia-open-dkms
-Target = linux-cachyos
-Target = linux-cachyos-eevdf
 Target = linux
+Target = linux-zen
 
 # Adjust line(6) above to match your driver, e.g. Target=nvidia-580xx-dkms (Option B) or Target=nvidia-470xx-dkms
 
@@ -1375,18 +1344,17 @@ EOF
 
 ```
 
-Disable old Limine config since a new config has been generated by limine-entry-tool
+Then regenerate GRUB config and reboot:
 
 ```bash
-sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak
+grub-mkconfig -o /boot/grub/grub.cfg
+reboot
 
 ```
 
-Then reboot
-
 ### Disable KWallet prompts (optional)
 
-This disables the KDE Secret Service backend; apps like VS Code, Git credential helpers, and browsers won’t retain secrets. Skip this if you followed the KWallet setup above.
+This disables the KDE Secret Service backend; apps like VS Code, Git credential helpers, and browsers won't retain secrets. Skip this if you followed the KWallet setup above.
 
 ```bash
 mkdir -p ~/.config
@@ -1469,7 +1437,7 @@ pyenv which python
 
 ## Flatpak Apps
 
-Can’t do this over SSH; install this in the logged-in session.
+Can't do this over SSH; install this in the logged-in session.
 
 ```bash
 flatpak install -y flathub \
@@ -1496,9 +1464,9 @@ flatpak install -y flathub \
 
 ## Theme
 
-🎨 These are my personal favorites — use them as a starting point and change anything you don’t like.
+🎨 These are my personal favorites — use them as a starting point and change anything you don't like.
 
-Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn’t. Hardware may change results, so try a few before settling.
+Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn't. Hardware may change results, so try a few before settling.
 
 KDE settings path: **System Settings → Appearance**.
 
@@ -1576,24 +1544,11 @@ cd $repo
 cd sddm && sudo ./install.sh  # sddm
 rm -rf $repo && cd ~
 
-# Vinyl
-
-yay -Syu
-yay -S --needed base-devel vinyl
-
 ```
 
 ### Icon themes & cursors
 
 ```bash
-
-# Tela-circle-icon-theme
-
-repo=~/Desktop/icons
-git clone https://github.com/vinceliuice/Tela-circle-icon-theme.git $repo
-cd $repo
-./install.sh standard black blue nord
-rm -rf $repo && cd ~
 
 # Tela-icon-theme
 

@@ -637,6 +637,7 @@ systemctl enable fstrim.timer
 pacman -S --needed \
   sddm \
   sddm-kcm \
+  qt5-declarative \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
   qt6-wayland \

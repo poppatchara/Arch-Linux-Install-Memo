@@ -26,6 +26,14 @@ Not the best way or most correct way. Just the way I like.
 - Creating this GRUB-based variant because Limine cannot be installed on a Btrfs `/boot` subvolume. I want `/boot` on Btrfs so it can be included in snapshots.
 - This guide drops CachyOS kernels and uses `linux-zen` instead.
 
+### 2026-05-16
+
+- Removed `qt5-declarative` from SDDM mandatory install — optional for Qt5 themes only; Plasma 6 defaults to Qt6.
+- `plasma-wayland-session` merged into `plasma-workspace`; no separate package needed.
+- NVIDIA Option B: `nvidia-580xx-*` no longer exists in AUR; replaced with `nvidia-590xx-*`.
+- Removed duplicate `fatfetch` (typo for `fastfetch`).
+- Fixed NVIDIA hook typo: `initcpio` → `initramfs`.
+
 ## Assumptions
 
 🧩 This memo is written as a linear "do this, then that" install. If you deviate (different disk name, multiple disks, LUKS, existing Windows ESP, etc.), adjust the affected commands and double-check mounts/UUIDs before continuing.
@@ -637,7 +645,6 @@ systemctl enable fstrim.timer
 pacman -S --needed \
   sddm \
   sddm-kcm \
-  qt5-declarative \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
   qt6-wayland \
@@ -777,7 +784,7 @@ pacman -S --needed \
 
 - Display manager: `sddm`, `sddm-kcm`
 - Portals/Wayland helpers: `xdg-desktop-portal`, `xdg-desktop-portal-kde`, `qt6-wayland`, `xorg-xwayland`
-- Plasma core: `plasma-desktop`, `plasma-workspace`, `plasma-wayland-session`, `kwin`, `systemsettings`
+- Plasma core: `plasma-desktop`, `plasma-workspace` (includes Wayland session), `kwin`, `systemsettings`
 - Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
 - Optional Plasma extras: `bluedevil`, `power-profiles-daemon`, `kdeplasma-addons`, `plasma-systemmonitor`, `plasma-browser-integration`, `discover`, `krdp`, `print-manager`
 - Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `gparted`, `filelight`, `kcalc`
@@ -1099,7 +1106,6 @@ yay -S --needed --noconfirm\
   mailspring-bin \
   visual-studio-code-bin \
   filezilla \
-  fatfetch
 
 ```
 
@@ -1212,19 +1218,19 @@ yay -S --needed \
 
 ```
 
-#### Option B: Proprietary 580xx (AUR)
+#### Option B: Proprietary 590xx (AUR)
 
 Use this if you want the proprietary stack or run into issues with the 590xx open driver.
 
 ```bash
 yay -S --needed \
-  nvidia-580xx-dkms \
-  nvidia-580xx-utils \
-  lib32-nvidia-580xx-utils \
-  nvidia-580xx-settings \
-  opencl-nvidia-580xx \
-  lib32-opencl-nvidia-580xx \
-  libxnvctrl-580xx \
+  nvidia-590xx-dkms \
+  nvidia-590xx-utils \
+  lib32-nvidia-590xx-utils \
+  nvidia-590xx-settings \
+  opencl-nvidia-590xx \
+  lib32-opencl-nvidia-590xx \
+  libxnvctrl-590xx \
   ocl-icd \
   clinfo \
   cuda
@@ -1264,8 +1270,8 @@ echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
 <details>
   <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
 
-- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-580xx-*` for Option B)
-- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-580xx` variants for Option B)
+- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-590xx-*` for Option B)
+- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-590xx` variants for Option B)
 - CUDA toolkit/runtime: `cuda` (works with both options)
 
 </details>
@@ -1331,12 +1337,12 @@ Target = nvidia-open-dkms
 Target = linux
 Target = linux-zen
 
-# Adjust line(6) above to match your driver, e.g. Target=nvidia-580xx-dkms (Option B) or Target=nvidia-470xx-dkms
+# Adjust line(6) above to match your driver, e.g. Target=nvidia-590xx-dkms (Option B) or Target=nvidia-470xx-dkms
 
 # Change line(7) above, if you are not using the regular kernel For example, Target=linux-lts
 
 [Action]
-Description = Update Nvidia module in initcpio
+Description = Update Nvidia module in initramfs
 Depends = mkinitcpio
 When = PostTransaction
 NeedsTargets

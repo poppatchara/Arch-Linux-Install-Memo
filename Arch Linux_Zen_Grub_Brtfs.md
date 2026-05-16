@@ -28,11 +28,14 @@ Not the best way or most correct way. Just the way I like.
 
 ### 2026-05-16
 
-- Removed `qt5-declarative` from SDDM mandatory install — optional for Qt5 themes only; Plasma 6 defaults to Qt6.
+- Replaced `sddm` + `sddm-kcm` with `plasma-login-manager` (Plasma 6.6+ native login manager, SDDM replacement).
+- Removed `qt5-declarative` from login manager block -- only needed for Qt5 SDDM themes, irrelevant for Plasma Login Manager.
 - `plasma-wayland-session` merged into `plasma-workspace`; no separate package needed.
 - NVIDIA Option B: `nvidia-580xx-*` no longer exists in AUR; replaced with `nvidia-590xx-*`.
 - Removed duplicate `fatfetch` (typo for `fastfetch`).
-- Fixed NVIDIA hook typo: `initcpio` → `initramfs`.
+- Fixed NVIDIA hook typo: `initcpio` -> `initramfs`.
+- KWallet PAM hooks updated: `/etc/pam.d/sddm` -> `/etc/pam.d/plasmalogin`.
+- Added note on theme section: SDDM theme installs not applicable when using Plasma Login Manager.
 
 ## Assumptions
 
@@ -628,29 +631,27 @@ systemctl enable fstrim.timer
 
 ## Desktop Stack
 
-🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you'll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don't want many of the KDE apps, you can skip the Desktop Apps section.
+🖥️ Goal: install KDE Plasma + Plasma Login Manager and the integration pieces you'll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don't want many of the KDE apps, you can skip the Desktop Apps section.
 
 ### KDE Plasma & apps
 
 #### KDE Core
 
 ```bash
-# sddm : Display/login manager (graphical login screen)
-# sddm-kcm : System Settings module to configure SDDM
+# plasma-login-manager : KDE native login manager (Plasma 6.6+, replaces SDDM)
 # xdg-desktop-portal : "Portal" framework (file picker, screen share, sandbox app integration)
 # xdg-desktop-portal-kde : KDE backend for portals (needed for Wayland screen share, Flatpak, etc.)
 # qt6-wayland : Qt6 Wayland platform plugin
 # xorg-xwayland : Runs X11 apps under Wayland
 
 pacman -S --needed \
-  sddm \
-  sddm-kcm \
+  plasma-login-manager \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
   qt6-wayland \
   xorg-xwayland
 
-systemctl enable sddm
+systemctl enable plasmalogin
 ```
 
 #### KDE Plasma Core
@@ -727,11 +728,11 @@ pacman -S --needed \
   kwalletmanager \
   kwallet-pam
 
-# Add PAM hooks for SDDM so the wallet unlocks with your session.
+# Add PAM hooks for Plasma Login Manager so the wallet unlocks with your session.
 # If you use a different display manager, add pam_kwallet5 there instead.
 
-if ! grep -q pam_kwallet5 /etc/pam.d/sddm; then
-  sudo tee -a /etc/pam.d/sddm >/dev/null <<'EOF'
+if ! grep -q pam_kwallet5 /etc/pam.d/plasmalogin; then
+  sudo tee -a /etc/pam.d/plasmalogin >/dev/null <<'EOF'
 auth       optional pam_kwallet5.so
 session    optional pam_kwallet5.so auto_start
 EOF
@@ -782,7 +783,7 @@ pacman -S --needed \
 <details>
   <summary>🖥️ Packages being installed (KDE Plasma desktop)</summary>
 
-- Display manager: `sddm`, `sddm-kcm`
+- Display manager: `plasma-login-manager`
 - Portals/Wayland helpers: `xdg-desktop-portal`, `xdg-desktop-portal-kde`, `qt6-wayland`, `xorg-xwayland`
 - Plasma core: `plasma-desktop`, `plasma-workspace` (includes Wayland session), `kwin`, `systemsettings`
 - Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
@@ -1476,6 +1477,8 @@ flatpak install -y flathub \
 Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn't. Hardware may change results, so try a few before settling.
 
 KDE settings path: **System Settings → Appearance**.
+
+> **Note:** SDDM theme install scripts below work for SDDM. If using `plasma-login-manager` (the Plasma 6.6+ default), skip the SDDM theme installs -- Plasma Login Manager uses Plasma's own theming system via System Settings -> Login Screen.
 
 ### DE Themes
 

@@ -28,6 +28,7 @@ Not the best way or most correct way. Just the way I like.
 
 ### 2026-06-07
 
+- **Plasma Login Manager PAM:** Fixed login screen authentication failure. Added mandatory `/etc/pam.d/plasmalogin` creation step with full PAM config (Arch Wiki verified). Old guide only appended `pam_kwallet5` lines to a non-existent file → login always failed with `Authentication for user "" failed`.
 - GPU: Auto-detect vendor (NVIDIA/Intel/AMD) via `lspci`. Only install NVIDIA driver if dGPU present; iGPU systems skip automatically.
 - NVIDIA: Replaced proprietary Option B with single `nvidia-open-dkms` (610.x). All NVIDIA blocks wrapped in `if [ "$gpu_vendor" = "nvidia" ]`.
 - Repo restructure: Added README front page, renamed Limine variant to `Arch Linux_Limine_CachyOS.md`.
@@ -724,6 +725,27 @@ systemctl enable power-profiles-daemon
 # pacman -S --needed kdeconnect
 ```
 
+#### Plasma Login Manager PAM configuration
+
+**Mandatory:** `plasma-login-manager` does not ship a default PAM config file. You must create `/etc/pam.d/plasmalogin` or login will fail (authentication for user `""`).
+
+```bash
+# Create the PAM config file for Plasma Login Manager.
+# This is required -- without it, login screen cannot authenticate.
+
+sudo tee /etc/pam.d/plasmalogin <<'EOF'
+#%PAM-1.0
+auth       sufficient   pam_succeed_if.so user ingroup nopasswdlogin
+auth       include      system-login
+account    include      system-login
+session    include      system-login
+session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+password   include      system-login
+EOF
+```
+
+> **Why:** `include system-login` pulls in `pam_unix.so` which actually checks your password. Without this file, PLM has no authentication chain → login always fails.
+
 #### KWallet (optional, for secret storage like VS Code)
 
 ```bash
@@ -735,17 +757,9 @@ pacman -S --needed \
   kwallet \
   kwalletmanager \
   kwallet-pam
-
-# Add PAM hooks for Plasma Login Manager so the wallet unlocks with your session.
-# If you use a different display manager, add pam_kwallet5 there instead.
-
-if ! grep -q pam_kwallet5 /etc/pam.d/plasmalogin; then
-  sudo tee -a /etc/pam.d/plasmalogin >/dev/null <<'EOF'
-auth       optional pam_kwallet5.so
-session    optional pam_kwallet5.so auto_start
-EOF
-fi
 ```
+
+> **Auto-unlock requirements:** Wallet password must match login password, must use **blowfish** encryption (not GPG), wallet name must be `kdewallet`. See [KDE Wallet ArchWiki](https://wiki.archlinux.org/title/KDE_Wallet#Unlock_KDE_Wallet_automatically_on_login).
 
 - After logging in, open System Settings → KDE Wallet and ensure a wallet exists (Blowfish is fine). This keeps VS Code and other apps from nagging when storing secrets.
 

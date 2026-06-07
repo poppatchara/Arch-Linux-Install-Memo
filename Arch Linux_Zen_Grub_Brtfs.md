@@ -26,6 +26,13 @@ Not the best way or most correct way. Just the way I like.
 - Creating this GRUB-based variant because Limine cannot be installed on a Btrfs `/boot` subvolume. I want `/boot` on Btrfs so it can be included in snapshots.
 - This guide drops CachyOS kernels and uses `linux-zen` instead.
 
+### 2026-06-07
+
+- NVIDIA: Replaced proprietary Option B (590xx AUR) with single open driver recommendation (`nvidia-open-dkms`). Arch now defaults to open kernel modules (610.x series).
+- Repo restructure: Added README front page, renamed Limine variant to `Arch Linux_Limine_CachyOS.md`.
+- Bumped Python pyenv install from 3.12 → 3.13.2.
+- Added SDDM post-migration cleanup section (disable sddm, enable plasmalogin, remove user).
+
 ### 2026-05-16
 
 - Replaced `sddm` + `sddm-kcm` with `plasma-login-manager` (Plasma 6.6+ native login manager, SDDM replacement).
@@ -1198,17 +1205,12 @@ Change the match if you only want this on a specific output. With autosuspend of
 
 ### Nvidia Driver
 
-🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware: <https://wiki.archlinux.org/title/NVIDIA>
+🟩 Arch Linux now defaults to open kernel modules for NVIDIA. Use `nvidia-open-dkms` — it's in the official repos and auto-updates to the latest version (currently 610.x).
 
-Pick one path below (match to your GPU/needs).
-
-#### Option A: `nvidia-open` (590xx, repo driver)
-
-> **Note:** The current Nvidia driver (590xx series) does not have a proprietary `nvidia-dkms` package in the official repositories, so `nvidia-open-dkms` is used instead. The downside is that GSP firmware cannot be disabled in the open driver (see Arch Wiki).
+> **Note:** `nvidia-open-dkms` is recommended for `linux-zen` and other non-vanilla kernels. For the vanilla `linux` kernel, use `nvidia-open` instead. GSP firmware cannot be disabled in the open driver (see Arch Wiki).
 
 ```bash
-
-# nvidia-open-dkms : NVIDIA DKMS driver (kernel modules)
+# nvidia-open-dkms : NVIDIA open kernel modules - module sources (DKMS)
 # nvidia-utils : NVIDIA userspace libraries + tools
 # lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
 # nvidia-settings : NVIDIA X11 settings GUI
@@ -1229,25 +1231,7 @@ yay -S --needed \
   lib32-opencl-nvidia \
   clinfo \
   cuda
-
 ```
-
-#### Option B: Proprietary 590xx (AUR)
-
-Use this if you want the proprietary stack or run into issues with the 590xx open driver.
-
-```bash
-yay -S --needed \
-  nvidia-590xx-dkms \
-  nvidia-590xx-utils \
-  lib32-nvidia-590xx-utils \
-  nvidia-590xx-settings \
-  opencl-nvidia-590xx \
-  lib32-opencl-nvidia-590xx \
-  libxnvctrl-590xx \
-  ocl-icd \
-  clinfo \
-  cuda
 
 ```
 
@@ -1282,11 +1266,11 @@ echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
 ```
 
 <details>
-  <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
+  <summary>🟩 Packages being installed (NVIDIA Open DKMS + CUDA/OpenCL)</summary>
 
-- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-590xx-*` for Option B)
-- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-590xx` variants for Option B)
-- CUDA toolkit/runtime: `cuda` (works with both options)
+- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
+- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo`
+- CUDA toolkit/runtime: `cuda`
 
 </details>
 
@@ -1351,9 +1335,9 @@ Target = nvidia-open-dkms
 Target = linux
 Target = linux-zen
 
-# Adjust line(6) above to match your driver, e.g. Target=nvidia-590xx-dkms (Option B) or Target=nvidia-470xx-dkms
+# Adjust line(6) above to match your driver, e.g. Target=nvidia-dkms for proprietary or Target=nvidia-470xx-dkms for legacy GPUs
 
-# Change line(7) above, if you are not using the regular kernel For example, Target=linux-lts
+# Change line(7) above, if you are not using the vanilla kernel. For example, Target=linux-zen
 
 [Action]
 Description = Update Nvidia module in initramfs

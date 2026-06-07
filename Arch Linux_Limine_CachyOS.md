@@ -1,6 +1,6 @@
 # Arch Linux + Btrfs + CachyOS Kernels + KDE Plasma + Limine + Nvidia Driver
 
-Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop, Limine bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
+Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop (with Plasma Login Manager), Limine bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
 
 Not the best way or most correct way. Just the way I like.
 
@@ -26,7 +26,7 @@ Not the best way or most correct way. Just the way I like.
     - [Update all packages to CachyOS Optimized](#update-all-packages-to-cachyos-optimized)
     - [Extra Packages and fonts](#extra-packages-and-fonts)
     - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
-    - [Nvidia Driver](#nvidia-driver)
+    - [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
     - [Disable KWallet prompts](#disable-kwallet-prompts-optional)
     - [Clear package manager caches](#clear-package-manager-caches)
 
@@ -40,6 +40,14 @@ Not the best way or most correct way. Just the way I like.
 ### 2026-03-21
 
 - Created a GRUB-based variant: [Arch Linux_Zen_Grub_Brtfs.md](Arch Linux_Zen_Grub_Brtfs.md). Uses `linux-zen`, GRUB bootloader, and Btrfs `/boot` subvolume for snapshots. No CachyOS repos.
+
+### 2026-06-07
+
+- GPU: Auto-detect vendor (NVIDIA/Intel/AMD) via `lspci`. Only install NVIDIA driver if dGPU present; iGPU systems skip automatically.
+- NVIDIA: Replaced proprietary Option B with single `nvidia-open-dkms` (610.x). All NVIDIA blocks wrapped in `if [ "$gpu_vendor" = "nvidia" ]`.
+- Desktop: Replaced SDDM with `plasma-login-manager` (Plasma 6.6+ native login manager). Added SDDM cleanup section.
+- Typo: `fatfetch` → `fastfetch`.
+- Python: Bumped pyenv install from 3.12 → 3.13.2.
 
 ### 2025-12-26
 
@@ -644,58 +652,40 @@ systemctl enable fstrim.timer
 
 ## Desktop Stack
 
-🖥️ Goal: install KDE Plasma + a display manager (SDDM) and the integration pieces you’ll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don’t want many of the KDE apps, you can skip the Desktop Apps section.
+🖥️ Goal: install KDE Plasma + Plasma Login Manager and the integration pieces you'll want on a typical desktop (portals, NetworkManager applet, audio, thumbnails). If you don't want many of the KDE apps, you can skip the Desktop Apps section.
 
 ### KDE Plasma & apps
 
 #### KDE Core
 
 ```bash
-
-# sddm : Display/login manager (graphical login screen)
-
-# sddm-kcm : System Settings module to configure SDDM
-
-# xdg-desktop-portal : “Portal” framework (file picker, screen share, sandbox app integration)
-
+# plasma-login-manager : KDE native login manager (Plasma 6.6+, replaces SDDM)
+# xdg-desktop-portal : "Portal" framework (file picker, screen share, sandbox app integration)
 # xdg-desktop-portal-kde : KDE backend for portals (needed for Wayland screen share, Flatpak, etc.)
-
 # qt6-wayland : Qt6 Wayland platform plugin
-
 # xorg-xwayland : Runs X11 apps under Wayland
 
 pacman -S --needed \
-  sddm \
-  sddm-kcm \
+  plasma-login-manager \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
   qt6-wayland \
   xorg-xwayland
 
-systemctl enable sddm
-
+systemctl enable plasmalogin
 ```
 
 #### KDE Plasma Core
 
 ```bash
-
 # plasma-desktop : The Plasma desktop shell (panels, launcher, desktop UI)
-
 # plasma-workspace : Core workspace components (session bits, shell integration, essentials)
-
 # kwin : KDE window manager + compositor (Wayland/X11)
-
 # systemsettings : KDE System Settings app
-
 # plasma-nm : NetworkManager integration (network tray, VPN UI)
-
 # plasma-pa : Audio volume controls for PipeWire/PulseAudio
-
 # kscreen : Display configuration + monitor hotplug handling
-
 # kde-gtk-config : Configure GTK theme/fonts under KDE
-
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
 pacman -S --needed \
@@ -708,7 +698,6 @@ pacman -S --needed \
   kscreen \
   kde-gtk-config \
   breeze-gtk
-
 ```
 
 #### KDE Plasma (Optionals)
@@ -764,11 +753,8 @@ systemctl enable power-profiles-daemon
 #### KWallet (optional, for secret storage like VS Code)
 
 ```bash
-
 # kwallet : KDE wallet backend + secret service provider
-
 # kwalletmanager : GUI to inspect/manage wallets
-
 # kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
 pacman -S --needed \
@@ -776,20 +762,30 @@ pacman -S --needed \
   kwalletmanager \
   kwallet-pam
 
-# Add PAM hooks for SDDM so the wallet unlocks with your session.
+# Add PAM hooks for Plasma Login Manager so the wallet unlocks with your session.
 
-# If you use a different display manager, add pam_kwallet5 there instead.
-
-if ! grep -q pam_kwallet5 /etc/pam.d/sddm; then
-  sudo tee -a /etc/pam.d/sddm >/dev/null <<'EOF'
+if ! grep -q pam_kwallet5 /etc/pam.d/plasmalogin; then
+  sudo tee -a /etc/pam.d/plasmalogin >/dev/null <<'EOF'
 auth       optional pam_kwallet5.so
 session    optional pam_kwallet5.so auto_start
 EOF
 fi
-
 ```
 
 - After logging in, open System Settings → KDE Wallet and ensure a wallet exists (Blowfish is fine). This keeps VS Code and other apps from nagging when storing secrets.
+
+#### Clean up SDDM (post-migration)
+
+After confirming Plasma Login Manager works, remove SDDM and its user:
+
+```bash
+sudo systemctl disable sddm
+sudo systemctl enable plasmalogin
+
+# Remove SDDM package and user
+sudo pacman -Rns sddm sddm-kcm
+sudo userdel -r sddm
+```
 
 #### Desktop Apps
 
@@ -844,9 +840,9 @@ pacman -S --needed \
 <details>
   <summary>🖥️ Packages being installed (KDE Plasma desktop)</summary>
 
-- Display manager: `sddm`, `sddm-kcm`
+- Display manager: `plasma-login-manager`
 - Portals/Wayland helpers: `xdg-desktop-portal`, `xdg-desktop-portal-kde`, `qt6-wayland`, `xorg-xwayland`
-- Plasma core: `plasma-desktop`, `plasma-workspace`, `plasma-wayland-session`, `kwin`, `systemsettings`
+- Plasma core: `plasma-desktop`, `plasma-workspace` (includes Wayland session), `kwin`, `systemsettings`
 - Plasma integration: `plasma-nm`, `plasma-pa`, `kscreen`, `kde-gtk-config`, `breeze-gtk`
 - Optional Plasma extras: `bluedevil`, `power-profiles-daemon`, `kdeplasma-addons`, `plasma-systemmonitor`, `plasma-browser-integration`, `discover`, `krdp`, `print-manager`
 - Desktop apps: `dolphin`, `dolphin-plugins`, `konsole`, `kate`, `okular`, `gwenview`, `spectacle`, `ark`, `gparted`, `filelight`, `kcalc`
@@ -1094,7 +1090,7 @@ yay -S --needed \
   mailspring-bin \
   visual-studio-code-bin \
   filezilla \
-  fatfetch
+  fastfetch
 
 ```
 
@@ -1195,162 +1191,148 @@ systemctl --user restart wireplumber
 
 Change the match if you only want this on a specific output. With autosuspend off and WirePlumber keeping the sink alive, SPDIF should stop dropping the first few seconds of audio.
 
-### Nvidia Driver
+### GPU Driver (Automatic Detection)
 
-🟩 This is a rough checklist for an NVIDIA DKMS setup. Exact package names and kernel module steps depend on your GPU generation and kernel choice, so verify against the Arch Wiki for your hardware: <https://wiki.archlinux.org/title/NVIDIA>
+🟩 Arch Linux now defaults to open kernel modules for NVIDIA. This section auto-detects your GPU and installs the appropriate driver.
 
-Pick one path below (match to your GPU/needs).
-
-#### Option A: `nvidia-open` (590xx, repo driver)
-
-> **Note:** The current Nvidia driver (590xx series) does not have a proprietary `nvidia-dkms` package in the official repositories, so `nvidia-open-dkms` is used instead. The downside is that GSP firmware cannot be disabled in the open driver (see Arch Wiki).
+- **NVIDIA dGPU** → Installs `nvidia-open-dkms` + full userspace stack
+- **Intel/AMD iGPU** → No extra driver needed (kernel drivers included in base install)
 
 ```bash
+# Detect GPU vendor
 
-# nvidia-dkms : NVIDIA DKMS driver (kernel modules)
+gpu_vendor=""
+if lspci | grep -qi nvidia; then
+  gpu_vendor="nvidia"
+elif lspci | grep -qi "intel.*graphic\|intel.*display\|intel.*UHD\|intel.*Iris\|intel.*Arc"; then
+  gpu_vendor="intel"
+elif lspci | grep -qi "amd.*graphic\|amd.*radeon\|amd.*advanced"; then
+  gpu_vendor="amd"
+fi
 
-# nvidia-utils : NVIDIA userspace libraries + tools
-
-# lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
-
-# nvidia-settings : NVIDIA X11 settings GUI
-
-# ocl-icd : OpenCL ICD loader
-
-# opencl-nvidia : NVIDIA OpenCL implementation
-
-# lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
-
-# clinfo : query OpenCL platforms/devices
-
-# cuda : CUDA toolkit/runtime
-
-yay -S --needed \
-  nvidia-open-dkms \
-  nvidia-utils \
-  lib32-nvidia-utils \
-  nvidia-settings \
-  libxnvctrl \
-  ocl-icd \
-  opencl-nvidia \
-  lib32-opencl-nvidia \
-  clinfo \
-  cuda
-
+echo "Detected GPU vendor: ${gpu_vendor:-unknown}"
 ```
 
-#### Option B: Proprietary 580xx (AUR)
+#### NVIDIA dGPU (if detected)
 
-Use this if you want the proprietary stack or run into issues with the 590xx open driver.
+> **Note:** `nvidia-open-dkms` is recommended for CachyOS and other non-vanilla kernels. For the vanilla `linux` kernel, use `nvidia-open` instead. GSP firmware cannot be disabled in the open driver (see Arch Wiki).
 
 ```bash
-yay -S --needed \
-  nvidia-580xx-dkms \
-  nvidia-580xx-utils \
-  lib32-nvidia-580xx-utils \
-  nvidia-580xx-settings \
-  opencl-nvidia-580xx \
-  lib32-opencl-nvidia-580xx \
-  libxnvctrl-580xx \
-  ocl-icd \
-  clinfo \
-  cuda
+if [ "$gpu_vendor" = "nvidia" ]; then
+  echo "Installing NVIDIA open driver..."
 
+  # nvidia-open-dkms : NVIDIA open kernel modules - module sources (DKMS)
+  # nvidia-utils : NVIDIA userspace libraries + tools
+  # lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
+  # nvidia-settings : NVIDIA X11 settings GUI
+  # ocl-icd : OpenCL ICD loader
+  # opencl-nvidia : NVIDIA OpenCL implementation
+  # lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
+  # clinfo : query OpenCL platforms/devices
+  # cuda : CUDA toolkit/runtime
+
+  yay -S --needed \
+    nvidia-open-dkms \
+    nvidia-utils \
+    lib32-nvidia-utils \
+    nvidia-settings \
+    libxnvctrl \
+    ocl-icd \
+    opencl-nvidia \
+    lib32-opencl-nvidia \
+    clinfo \
+    cuda
+fi
 ```
 
-Extra stuffs for gaming
+Extra stuffs for gaming (NVIDIA only):
 
 ```bash
-yay -S --needed \
-  libva-utils \
-  vdpauinfo \
-  vulkan-tools \
-  libva-nvidia-driver \
-  dxvk \
-  vkd3d \
-  shaderc \
-  spirv-tools
-
+if [ "$gpu_vendor" = "nvidia" ]; then
+  yay -S --needed \
+    libva-utils \
+    vdpauinfo \
+    vulkan-tools \
+    libva-nvidia-driver \
+    dxvk \
+    vkd3d \
+    shaderc \
+    spirv-tools
+fi
 ```
 
-Some launch option for Steam/Proton (use in Steam launch option)
+Some launch option for Steam/Proton (use in Steam launch option, NVIDIA only):
 
 ```bash
-  PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
-
+# PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
 ```
 
-Set Shader Cache Size
+Set Shader Cache Size (NVIDIA only):
 
 ```bash
-mkdir ~/.nv
-echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
-
+if [ "$gpu_vendor" = "nvidia" ]; then
+  mkdir -p ~/.nv
+  echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
+fi
 ```
 
 <details>
-  <summary>🟩 Packages being installed (NVIDIA DKMS + CUDA/OpenCL)</summary>
+  <summary>🟩 Packages being installed (NVIDIA Open DKMS + CUDA/OpenCL)</summary>
 
-- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings` (swap to `nvidia-580xx-*` for Option B)
-- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo` (use `*-580xx` variants for Option B)
-- CUDA toolkit/runtime: `cuda` (works with both options)
+- Driver (DKMS): `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`, `nvidia-settings`
+- OpenCL: `ocl-icd`, `opencl-nvidia`, `lib32-opencl-nvidia`, `clinfo`
+- CUDA toolkit/runtime: `cuda`
 
 </details>
 
-#### Add DRM kernel module
+#### Add DRM kernel module (NVIDIA only)
 
-You should have `/boot/limine/limine.conf` created automatically by now.
-Edit it and add the NVIDIA params to the `CMDLINE:` lines.
-You can leave out the fallback entry, or keep it as a safe mode option.
+Only run this section if an NVIDIA GPU was detected.
+
+You should have `/boot/limine/limine.conf` created automatically by now. Edit it and add the NVIDIA params to the `CMDLINE:` lines. You can leave out the fallback entry, or keep it as a safe mode option.
 
 ```bash
+# Only if GPU is NVIDIA
 nvidia-drm.modeset=1 nvidia-drm.fbdev=1
-
 ```
 
 In `/etc/mkinitcpio.conf`, ensure NVIDIA modules are included and the generic `kms` hook is removed:
 
 ```bash
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo perl -0777 -i.bak -pe '
+    # Ensure NVIDIA modules exist in MODULES=()
+    s{^(?!\\s*#)\\s*MODULES=\\(([^)]*)\\)\\s*$}{
+      my @mods = grep { length } split " ", $1;          # split on whitespace
+      my %seen; @mods = grep { !$seen{$_}++ } @mods;     # de-dup, keep order
+      for my $add (qw(nvidia nvidia_modeset nvidia_uvm nvidia_drm)) {
+        push @mods, $add unless $seen{$add}++;
+      }
+      "MODULES=(" . join(" ", @mods) . ")"
+    }mge;
 
-sudo perl -0777 -i.bak -pe '
-  # Ensure NVIDIA modules exist in MODULES=()
-  s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
-    my @mods = grep { length } split " ", $1;          # split on whitespace
-    my %seen; @mods = grep { !$seen{$_}++ } @mods;     # de-dup, keep order
-    for my $add (qw(nvidia nvidia_modeset nvidia_uvm nvidia_drm)) {
-      push @mods, $add unless $seen{$add}++;
-    }
-    "MODULES=(" . join(" ", @mods) . ")"
-  }mge;
+    # Remove kms from HOOKS=() (if present)
+    s{^(?!\\s*#)\\s*HOOKS=\\(([^)]*)\\)\\s*$}{
+      my @hooks = grep { length && $_ ne "kms" } split " ", $1;
+      "HOOKS=(" . join(" ", @hooks) . ")"
+    }mge;
+  ' /etc/mkinitcpio.conf
 
-  # Remove kms from HOOKS=() (if present)
-  s{^(?!\s*#)\s*HOOKS=\(([^)]*)\)\s*$}{
-    my @hooks = grep { length && $_ ne "kms" } split " ", $1;
-    "HOOKS=(" . join(" ", @hooks) . ")"
-  }mge;
-' /etc/mkinitcpio.conf
+  # Rebuild initramfs
+  sudo mkinitcpio -P
 
-# Rebuild initramfs
-
-sudo mkinitcpio -P
-
-# Verify
-
-grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
-
+  # Verify
+  grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
+fi
 ```
 
 Add a NVIDIA pacman hook so DKMS/initramfs are rebuilt automatically when kernels or the driver are updated:
 
 ```bash
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo mkdir -p /etc/pacman.d/hooks/
 
-# ensure hooks directory exists
-
-sudo mkdir -p /etc/pacman.d/hooks/
-
-# hook: rebuild NVIDIA initramfs on updates
-
-sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
+  sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
 [Trigger]
 Operation = Install
 Operation = Upgrade
@@ -1361,28 +1343,30 @@ Target = linux-cachyos
 Target = linux-cachyos-eevdf
 Target = linux
 
-# Adjust line(6) above to match your driver, e.g. Target=nvidia-580xx-dkms (Option B) or Target=nvidia-470xx-dkms
+# Adjust line(6) above to match your driver, e.g. Target=nvidia-dkms for proprietary or Target=nvidia-470xx-dkms for legacy GPUs
 
-# Change line(7) above, if you are not using the regular kernel For example, Target=linux-lts
+# Change line(7) above, if you are not using CachyOS kernels. For example, Target=linux-lts
 
 [Action]
-Description = Update Nvidia module in initcpio
+Description = Update Nvidia module in initramfs
 Depends = mkinitcpio
 When = PostTransaction
 NeedsTargets
 Exec = /bin/sh -c 'while read -r trg; do case $trg in linux) exit 0; esac; done; /usr/bin/mkinitcpio -P'
 EOF
-
+fi
 ```
 
-Disable old Limine config since a new config has been generated by limine-entry-tool
+Then trigger Limine sync (if NVIDIA was installed) and reboot:
 
 ```bash
-sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak
+if [ "$gpu_vendor" = "nvidia" ]; then
+  # Disable old limine.conf since limine-snapper-sync generates a new one
+  sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak 2>/dev/null || true
+fi
 
+reboot
 ```
-
-Then reboot
 
 ### Disable KWallet prompts (optional)
 
@@ -1453,12 +1437,14 @@ fi
 
 # List available Python versions
 
-pyenv install --list | grep " 3\.12"
+pyenv install --list | grep " 3\.13"
 
 # Install a specific version and make it the default for your user
 
-pyenv install 3.12.2
-pyenv global 3.12.2
+# Arch system Python is 3.13+ as of 2025. Use pyenv for your preferred version.
+
+pyenv install 3.13.2
+pyenv global 3.13.2
 
 # Confirm which Python is active
 
@@ -1501,6 +1487,8 @@ flatpak install -y flathub \
 Stutter note: Whitesur, Orchis, and Colloid themes caused window-resize stutter on my system. Qogir, Darkly, and Vinyl didn’t. Hardware may change results, so try a few before settling.
 
 KDE settings path: **System Settings → Appearance**.
+
+> **Note:** SDDM theme install scripts below work for SDDM. If using `plasma-login-manager` (the Plasma 6.6+ default), skip the SDDM theme installs -- Plasma Login Manager uses Plasma's own theming system via System Settings -> Login Screen.
 
 ### DE Themes
 

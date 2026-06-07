@@ -28,7 +28,8 @@ Not the best way or most correct way. Just the way I like.
 
 ### 2026-06-07
 
-- NVIDIA: Replaced proprietary Option B (590xx AUR) with single open driver recommendation (`nvidia-open-dkms`). Arch now defaults to open kernel modules (610.x series).
+- GPU: Auto-detect vendor (NVIDIA/Intel/AMD) via `lspci`. Only install NVIDIA driver if dGPU present; iGPU systems skip automatically.
+- NVIDIA: Replaced proprietary Option B with single `nvidia-open-dkms` (610.x). All NVIDIA blocks wrapped in `if [ "$gpu_vendor" = "nvidia" ]`.
 - Repo restructure: Added README front page, renamed Limine variant to `Arch Linux_Limine_CachyOS.md`.
 - Bumped Python pyenv install from 3.12 → 3.13.2.
 - Added SDDM post-migration cleanup section (disable sddm, enable plasmalogin, remove user).
@@ -1203,66 +1204,89 @@ systemctl --user restart wireplumber
 
 Change the match if you only want this on a specific output. With autosuspend off and WirePlumber keeping the sink alive, SPDIF should stop dropping the first few seconds of audio.
 
-### Nvidia Driver
+### GPU Driver (Automatic Detection)
 
-🟩 Arch Linux now defaults to open kernel modules for NVIDIA. Use `nvidia-open-dkms` — it's in the official repos and auto-updates to the latest version (currently 610.x).
+🟩 Arch Linux now defaults to open kernel modules for NVIDIA. This section auto-detects your GPU and installs the appropriate driver.
+
+- **NVIDIA dGPU** → Installs `nvidia-open-dkms` + full userspace stack
+- **Intel/AMD iGPU** → No extra driver needed (kernel drivers included in base install)
+
+```bash
+# Detect GPU vendor
+
+gpu_vendor=""
+if lspci | grep -qi nvidia; then
+  gpu_vendor="nvidia"
+elif lspci | grep -qi "intel.*graphic\|intel.*display\|intel.*UHD\|intel.*Iris\|intel.*Arc"; then
+  gpu_vendor="intel"
+elif lspci | grep -qi "amd.*graphic\|amd.*radeon\|amd.*advanced"; then
+  gpu_vendor="amd"
+fi
+
+echo "Detected GPU vendor: ${gpu_vendor:-unknown}"
+```
+
+#### NVIDIA dGPU (if detected)
 
 > **Note:** `nvidia-open-dkms` is recommended for `linux-zen` and other non-vanilla kernels. For the vanilla `linux` kernel, use `nvidia-open` instead. GSP firmware cannot be disabled in the open driver (see Arch Wiki).
 
 ```bash
-# nvidia-open-dkms : NVIDIA open kernel modules - module sources (DKMS)
-# nvidia-utils : NVIDIA userspace libraries + tools
-# lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
-# nvidia-settings : NVIDIA X11 settings GUI
-# ocl-icd : OpenCL ICD loader
-# opencl-nvidia : NVIDIA OpenCL implementation
-# lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
-# clinfo : query OpenCL platforms/devices
-# cuda : CUDA toolkit/runtime
+if [ "$gpu_vendor" = "nvidia" ]; then
+  echo "Installing NVIDIA open driver..."
 
-yay -S --needed \
-  nvidia-open-dkms \
-  nvidia-utils \
-  lib32-nvidia-utils \
-  nvidia-settings \
-  libxnvctrl \
-  ocl-icd \
-  opencl-nvidia \
-  lib32-opencl-nvidia \
-  clinfo \
-  cuda
+  # nvidia-open-dkms : NVIDIA open kernel modules - module sources (DKMS)
+  # nvidia-utils : NVIDIA userspace libraries + tools
+  # lib32-nvidia-utils : 32-bit NVIDIA libs (Steam/Proton)
+  # nvidia-settings : NVIDIA X11 settings GUI
+  # ocl-icd : OpenCL ICD loader
+  # opencl-nvidia : NVIDIA OpenCL implementation
+  # lib32-opencl-nvidia : 32-bit OpenCL (for Proton)
+  # clinfo : query OpenCL platforms/devices
+  # cuda : CUDA toolkit/runtime
+
+  yay -S --needed \
+    nvidia-open-dkms \
+    nvidia-utils \
+    lib32-nvidia-utils \
+    nvidia-settings \
+    libxnvctrl \
+    ocl-icd \
+    opencl-nvidia \
+    lib32-opencl-nvidia \
+    clinfo \
+    cuda
+fi
 ```
 
-```
-
-Extra stuffs for gaming
+Extra stuffs for gaming (NVIDIA only):
 
 ```bash
-yay -S --needed \
-  libva-utils \
-  vdpauinfo \
-  vulkan-tools \
-  libva-nvidia-driver \
-  dxvk \
-  vkd3d \
-  shaderc \
-  spirv-tools
-
+if [ "$gpu_vendor" = "nvidia" ]; then
+  yay -S --needed \
+    libva-utils \
+    vdpauinfo \
+    vulkan-tools \
+    libva-nvidia-driver \
+    dxvk \
+    vkd3d \
+    shaderc \
+    spirv-tools
+fi
 ```
 
-Some launch option for Steam/Proton (use in Steam launch option)
+Some launch option for Steam/Proton (use in Steam launch option, NVIDIA only):
 
 ```bash
-  PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
-
+# PROTON_ENABLE_NVAPI=1 DXVK_ASYNC=1 %command%
 ```
 
-Set Shader Cache Size
+Set Shader Cache Size (NVIDIA only):
 
 ```bash
-mkdir ~/.nv
-echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
-
+if [ "$gpu_vendor" = "nvidia" ]; then
+  mkdir -p ~/.nv
+  echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
+fi
 ```
 
 <details>
@@ -1274,58 +1298,54 @@ echo "GLShaderDiskCacheSize=17179869184" > ~/.nv/nvidia-application-profiles-rc
 
 </details>
 
-#### Add DRM kernel module
+#### Add DRM kernel module (NVIDIA only)
+
+Only run this section if an NVIDIA GPU was detected.
 
 Edit `/etc/default/grub` and add the NVIDIA params to `GRUB_CMDLINE_LINUX_DEFAULT`:
 
 ```bash
+# Only if GPU is NVIDIA
 nvidia-drm.modeset=1 nvidia-drm.fbdev=1
-
 ```
 
 In `/etc/mkinitcpio.conf`, ensure NVIDIA modules are included and the generic `kms` hook is removed:
 
 ```bash
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo perl -0777 -i.bak -pe '
+    # Ensure NVIDIA modules exist in MODULES=()
+    s{^(?!\\s*#)\\s*MODULES=\\(([^)]*)\\)\\s*$}{
+      my @mods = grep { length } split " ", $1;          # split on whitespace
+      my %seen; @mods = grep { !$seen{$_}++ } @mods;     # de-dup, keep order
+      for my $add (qw(nvidia nvidia_modeset nvidia_uvm nvidia_drm)) {
+        push @mods, $add unless $seen{$add}++;
+      }
+      "MODULES=(" . join(" ", @mods) . ")"
+    }mge;
 
-sudo perl -0777 -i.bak -pe '
-  # Ensure NVIDIA modules exist in MODULES=()
-  s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
-    my @mods = grep { length } split " ", $1;          # split on whitespace
-    my %seen; @mods = grep { !$seen{$_}++ } @mods;     # de-dup, keep order
-    for my $add (qw(nvidia nvidia_modeset nvidia_uvm nvidia_drm)) {
-      push @mods, $add unless $seen{$add}++;
-    }
-    "MODULES=(" . join(" ", @mods) . ")"
-  }mge;
+    # Remove kms from HOOKS=() (if present)
+    s{^(?!\\s*#)\\s*HOOKS=\\(([^)]*)\\)\\s*$}{
+      my @hooks = grep { length && $_ ne "kms" } split " ", $1;
+      "HOOKS=(" . join(" ", @hooks) . ")"
+    }mge;
+  ' /etc/mkinitcpio.conf
 
-  # Remove kms from HOOKS=() (if present)
-  s{^(?!\s*#)\s*HOOKS=\(([^)]*)\)\s*$}{
-    my @hooks = grep { length && $_ ne "kms" } split " ", $1;
-    "HOOKS=(" . join(" ", @hooks) . ")"
-  }mge;
-' /etc/mkinitcpio.conf
+  # Rebuild initramfs
+  sudo mkinitcpio -P
 
-# Rebuild initramfs
-
-sudo mkinitcpio -P
-
-# Verify
-
-grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
-
+  # Verify
+  grep -E '^(MODULES|HOOKS)=' /etc/mkinitcpio.conf
+fi
 ```
 
 Add a NVIDIA pacman hook so DKMS/initramfs are rebuilt automatically when kernels or the driver are updated:
 
 ```bash
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo mkdir -p /etc/pacman.d/hooks/
 
-# ensure hooks directory exists
-
-sudo mkdir -p /etc/pacman.d/hooks/
-
-# hook: rebuild NVIDIA initramfs on updates
-
-sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
+  sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'EOF'
 [Trigger]
 Operation = Install
 Operation = Upgrade
@@ -1346,15 +1366,17 @@ When = PostTransaction
 NeedsTargets
 Exec = /bin/sh -c 'while read -r trg; do case $trg in linux) exit 0; esac; done; /usr/bin/mkinitcpio -P'
 EOF
-
+fi
 ```
 
-Then regenerate GRUB config and reboot:
+Then regenerate GRUB config (if NVIDIA was installed) and reboot:
 
 ```bash
-grub-mkconfig -o /boot/grub/grub.cfg
-reboot
+if [ "$gpu_vendor" = "nvidia" ]; then
+  grub-mkconfig -o /boot/grub/grub.cfg
+fi
 
+reboot
 ```
 
 ### Disable KWallet prompts (optional)

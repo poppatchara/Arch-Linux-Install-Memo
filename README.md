@@ -6,20 +6,21 @@ Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe 
 
 ---
 
-## 📖 Variants
+## 📖 Guides
 
 | Guide | Bootloader | Kernel | Notes |
 |-------|------------|--------|-------|
 | [**Arch Linux + GRUB + Btrfs**](Arch%20Linux_Zen_Grub_Brtfs.md) ⭐ | GRUB | linux-zen | **Main guide** — includes Snapper, KDE Plasma 6.6+ (Plasma Login Manager), SSH hardening, pyenv |
 | [**Arch Linux + Limine + CachyOS**](Arch%20Linux_Limine_CachyOS.md) | Limine | CachyOS | Alternate bootloader, CachyOS kernels, Limine-specific hooks |
+| [**Fedora 44 KDE (Lean)**](Fedora%20KDE_Lean.md) 🆕 | GRUB (default) | Fedora kernel | **Fedora variant** — minimal KDE, dnf5, RPM Fusion for NVIDIA, Btrfs by default |
 
 ---
 
-## 🧱 Base Setup (Both)
+## 🧱 Base Setup (All Guides)
 - **Partition:** ESP + Btrfs root + swap
 - **Filesystem:** Btrfs with subvolumes (`@`, `@home`, `@var`, `@var_log`, `@var_cache`, `@root`, `@srv`)
 - **Desktop:** KDE Plasma 6.6+ with Plasma Login Manager
-- **GPU:** NVIDIA DKMS (open 590xx or proprietary)
+- **GPU:** Auto-detect vendor (NVIDIA/Intel/AMD) — install only if dGPU present
 
 ---
 

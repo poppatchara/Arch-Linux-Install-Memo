@@ -616,11 +616,14 @@ sudo snapper list
 Enable the systemd timer for automatic hourly snapshots and periodic cleanup.
 
 ```bash
-# Enable the snapper timeline timer
-sudo systemctl enable --now snapper-timer.timer
+# Enable timeline (hourly snapshots)
+sudo systemctl enable --now snapper-timeline.timer
 
-# Cleanup runs as part of the timer. Defaults:
-#   - hourly snapshots: keep last 10
+# Enable cleanup (auto-delete old snapshots by retention policy)
+sudo systemctl enable --now snapper-cleanup.timer
+
+# Default retention (in /etc/snapper/configs/root):
+#   - hourly: keep last 10
 #   - daily: keep last 10
 #   - weekly: keep last 5
 #   - monthly: keep last 5
@@ -631,17 +634,16 @@ sudo systemctl enable --now snapper-timer.timer
 
 ### grub-btrfs: Boot into Snapshots
 
-`grub-btrfs` auto-generates GRUB menu entries for every snapshot so you can boot into them directly for rollback.
+`grub-btrfs` generates GRUB menu entries for every snapshot so you can boot into them directly for rollback.
+
+> **Note:** Fedora's `grub-btrfs` package does not ship a systemd service (`grub-btrfsd`). Run `grub2-mkconfig` manually after snapshots to refresh the GRUB menu.
 
 ```bash
-# Enable the grub-btrfs daemon (updates GRUB when snapshots change)
-sudo systemctl enable --now grub-btrfsd
-
-# Regenerate GRUB to include snapshots in the menu
+# After creating or deleting snapshots, regenerate GRUB
 sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 ```
 
-> After enabling, reboot and look for "Btrfs snapshots of `/`" in the GRUB menu.
+> After running `grub2-mkconfig`, reboot and look for "Btrfs snapshots of `/`" in the GRUB menu.
 
 ### Snapper in Action
 

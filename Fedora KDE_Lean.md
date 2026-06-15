@@ -117,7 +117,7 @@ sudo systemctl enable --now fstrim.timer
 # ssh-copy-id user@fedora
 
 # Harden: disable password auth after key works
-sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sudo systemctl restart sshd
 ```
 
@@ -173,7 +173,7 @@ sudo dnf5 remove -y \
   krfb \
   krdp \
   plasma-discover \
-  print-manager \
+  kde-print-manager \
   bluedevil \
   plasma-firewall \
   flatpak \
@@ -396,7 +396,7 @@ sudo dnf5 clean all
 
 ```bash
 # Install snapper + Btrfs tools
-sudo dnf5 install -y snapper snapper-apper btrfs-assistant
+sudo dnf5 install -y snapper btrfs-assistant
 
 # Create snapper config for root
 sudo snapper -c root create-config /
@@ -404,8 +404,9 @@ sudo snapper -c root create-config /
 # Enable snapper timer
 sudo systemctl enable --now snapper-timer.timer
 
-# Optional: install grub2-snapper-plugin if on GRUB (Fedora default)
-# sudo dnf5 install -y grub2-snapper-plugin
+# Optional: grub-btrfs for GRUB snapshot integration
+# Note: grub2-snapper-plugin is not in Fedora repos; use grub-btrfs + inotify-tools instead
+# sudo dnf5 install -y grub-btrfs inotify-tools
 ```
 
 ## Credits & Thanks

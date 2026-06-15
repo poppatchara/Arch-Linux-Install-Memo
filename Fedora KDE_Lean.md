@@ -30,6 +30,7 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
     - [Flatpak Apps](#flatpak-apps)
     - [pyenv](#pyenv)
     - [Fonts](#fonts)
+    - [Additional Apps](#44-additional-apps)
     - [Theme](#theme)
     - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
     - [Clear caches](#clear-caches)
@@ -137,6 +138,7 @@ sudo dnf5 upgrade --refresh
 ```bash
 sudo dnf5 install -y \
   git vim neovim curl wget htop btop \
+  fastfetch \
   tmux zsh zsh-autosuggestions \
   rsync bat unzip p7zip \
   NetworkManager-tui openssh-server \
@@ -421,7 +423,34 @@ sudo dnf5 install -y \
   terminus-fonts
 ```
 
-### 4.4 Theme
+### 4.4 Additional Apps
+
+📦 Daily-driver apps from the Arch Zen guide, adapted for Fedora. RPM Fusion must be enabled.
+
+```bash
+# Media & creative
+sudo dnf5 install -y vlc ffmpeg obs-studio
+
+# Browsers
+sudo dnf5 install -y firefox chromium
+# Brave: flatpak install --user -y flathub com.brave.Browser
+
+# Messaging
+flatpak install --user -y flathub org.telegram.desktop
+
+# Editor (VSCode — from Microsoft repo)
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
+sudo dnf5 install -y code
+```
+
+> **vim, neovim, curl, wget, git, htop** — already installed in [1.3 Install Base Tools](#13-install-base-tools).
+
+> **localsend** — already in [4.2 Flatpak Apps](#42-flatpak-apps).
+
+> **opencode** — Hermes Agent CLI tool. Install via the Hermes setup workflow (`hermes setup`). Not a system package.
+
+### 4.5 Theme
 
 🎨 KDE settings path: **System Settings → Appearance**.
 
@@ -439,7 +468,7 @@ sudo dnf5 install -y kvantum
 
 > **Note:** Fedora 44 KDE uses Plasma Login Manager by default (Plasma 6.6+). Theme the login screen via System Settings → Login Screen.
 
-### 4.5 SPDIF audio dropout / sleep
+### 4.6 SPDIF audio dropout / sleep
 
 🔊 Same fix as Arch — disable codec autosuspend:
 
@@ -466,7 +495,7 @@ EOF
 systemctl --user restart wireplumber
 ```
 
-### 4.6 Clear caches
+### 4.7 Clear caches
 
 ```bash
 sudo dnf5 clean all

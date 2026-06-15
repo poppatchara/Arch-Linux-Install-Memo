@@ -392,11 +392,11 @@ pyenv global 3.13.2
 ### 4.2 Flatpak Apps
 
 ```bash
-# Add Flathub if not already configured
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+# Add Flathub for your user (no sudo needed)
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Pick what you need
-flatpak install -y flathub \
+flatpak install --user -y flathub \
   io.github.jonmagon.kdiskmark \
   io.missioncenter.MissionCenter \
   io.github.flattool.Warehouse \
@@ -404,6 +404,8 @@ flatpak install -y flathub \
   com.discordapp.Discord \
   com.vysp3r.ProtonPlus
 ```
+
+> **Why `--user`?** System-wide flatpak install (`sudo flatpak install`) triggers a `revokefs-fuse` socket warning. User-scoped installs avoid this entirely and don't require root — perfect for single-user desktops.
 
 ### 4.3 Fonts
 

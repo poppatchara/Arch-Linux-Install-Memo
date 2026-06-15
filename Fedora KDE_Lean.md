@@ -34,6 +34,7 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
     - [pyenv](#pyenv)
     - [Fonts](#fonts)
     - [Additional Apps](#44-additional-apps)
+    - [Firewall — Allow LAN Apps](#firewall--allow-lan-apps)
     - [Theme](#theme)
     - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
     - [Clear caches](#clear-caches)
@@ -487,6 +488,23 @@ sudo dnf5 install -y code
 > **localsend** — already in [4.2 Flatpak Apps](#42-flatpak-apps).
 
 > **opencode** — Hermes Agent CLI tool. Install via the Hermes setup workflow (`hermes setup`). Not a system package.
+
+### Firewall — Allow LAN Apps
+
+`firewalld` is enabled by default on Fedora and blocks incoming LAN connections. Apps like LocalSend, KDE Connect, and LAN file sharing need ports opened.
+
+```bash
+# LocalSend (TCP/UDP 53317 for file transfer + UDP broadcast)
+sudo firewall-cmd --permanent --add-port=53317/tcp
+sudo firewall-cmd --permanent --add-port=53317/udp
+sudo firewall-cmd --reload
+
+# KDE Connect (use the pre-configured service)
+sudo firewall-cmd --permanent --add-service=kdeconnect
+sudo firewall-cmd --reload
+```
+
+> **Troubleshoot:** Stop firewalld temporarily (`sudo systemctl stop firewalld`) to confirm firewall is the issue, then re-enable after adding rules.
 
 ### 4.5 Theme
 

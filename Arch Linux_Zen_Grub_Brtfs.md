@@ -32,6 +32,7 @@ Not the best way or most correct way. Just the way I like.
 - **Cleanup & optimization:** Removed unreferenced packages (`inotify-tools`, `openbsd-netcat`, `vim`, `wget`, `snapper-tools`, `acpi_call`). Consolidated 8 separate `pacman -S` calls in Extra Packages into one. Removed redundant Flatpak disk-usage tools (`baobab`, `kdf`) — `filelight` already covers this. Removed `com.adobe.Reader` (okular handles PDFs).
 - **SSH fixes:** Removed deprecated `Protocol 2` (default since OpenSSH 7.6). Replaced `ChallengeResponseAuthentication` with `KbdInteractiveAuthentication`. Removed `ForwardAgent yes` (security risk — use `ProxyJump` instead).
 - **NVIDIA hook:** Removed misleading "Adjust line(6)" / "Change line(7)" comments — targets already correctly set to `nvidia-open-dkms` + `linux-zen`.
+- **Redundancy fixes:** Removed duplicate `efibootmgr` + `dosfstools` from GRUB section (already in pacstrap). Removed duplicate `base-devel` from pyenv section (already in pacstrap). Fixed duplicate section numbering (two 6.4 → 6.4 + 6.5). Removed redundant Plasma packages (`plasma-workspace`, `kwin`, `systemsettings`, `plasma-nm`, `plasma-pa`) — pulled automatically by `plasma-desktop`. Removed unnecessary `sudo` from Live ISO prep and chroot sections (already root).
 
 ### 2026-06-07
 
@@ -98,10 +99,10 @@ Change `country=` to yours.
 ```bash
 country=Thailand
 mirrorfile="/etc/pacman.d/mirrorlist"
-sudo cp "$mirrorfile" "${mirrorfile}.bak"
+cp "$mirrorfile" "${mirrorfile}.bak"
 
 tmpfile="$(mktemp)"
-sudo awk -v country="$country" '
+awk -v country="$country" '
   { lines[NR] = $0; n = NR }
   END {
     country_re   = "^##[[:space:]]+" country "[[:space:]]*$"
@@ -130,12 +131,12 @@ sudo awk -v country="$country" '
       if (i < cs || i >= ce) print lines[i]
     }
   }
-' "$mirrorfile" > "$tmpfile" || { echo "mirrorlist reorder failed; restoring backup." >&2; sudo cp "${mirrorfile}.bak" "$mirrorfile"; rm -f "$tmpfile"; exit 1; }
+' "$mirrorfile" > "$tmpfile" || { echo "mirrorlist reorder failed; restoring backup." >&2; cp "${mirrorfile}.bak" "$mirrorfile"; rm -f "$tmpfile"; exit 1; }
 
-sudo cp "$tmpfile" "$mirrorfile"
+cp "$tmpfile" "$mirrorfile"
 rm -f "$tmpfile"
 
-sudo pacman -Syy
+pacman -Syy
 
 ```
 
@@ -466,9 +467,9 @@ efibootmgr --delete-bootnum --bootnum XXXX
 
 ```bash
 
-# GRUB and required tools
+# Install GRUB (efibootmgr and dosfstools already in pacstrap)
 
-pacman -S --needed grub efibootmgr dosfstools
+pacman -S --needed grub
 
 # Install GRUB to the EFI System Partition
 
@@ -541,7 +542,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 ```
 
-### 6.4 Enable os-prober (optional, for dual-boot)
+### 6.5 Enable os-prober (optional, for dual-boot)
 
 📝 **Note:** If you have Windows or another Linux installation on the same machine, enable `os-prober` to detect and add them to the GRUB menu.
 
@@ -672,23 +673,13 @@ systemctl enable plasmalogin
 #### KDE Plasma Core
 
 ```bash
-# plasma-desktop : The Plasma desktop shell (panels, launcher, desktop UI)
-# plasma-workspace : Core workspace components (session bits, shell integration, essentials)
-# kwin : KDE window manager + compositor (Wayland/X11)
-# systemsettings : KDE System Settings app
-# plasma-nm : NetworkManager integration (network tray, VPN UI)
-# plasma-pa : Audio volume controls for PipeWire/PulseAudio
+# plasma-desktop : The Plasma desktop shell (pulls plasma-workspace, kwin, systemsettings, plasma-nm, plasma-pa)
 # kscreen : Display configuration + monitor hotplug handling
 # kde-gtk-config : Configure GTK theme/fonts under KDE
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
 pacman -S --needed \
   plasma-desktop \
-  plasma-workspace \
-  kwin \
-  systemsettings \
-  plasma-nm \
-  plasma-pa \
   kscreen \
   kde-gtk-config \
   breeze-gtk
@@ -739,7 +730,7 @@ systemctl enable power-profiles-daemon
 # Create the PAM config file for Plasma Login Manager.
 # This is required -- without it, login screen cannot authenticate.
 
-sudo tee /etc/pam.d/plasmalogin <<'EOF'
+tee /etc/pam.d/plasmalogin <<'EOF'
 #%PAM-1.0
 auth       sufficient   pam_succeed_if.so user ingroup nopasswdlogin
 auth       include      system-login
@@ -774,12 +765,12 @@ pacman -S --needed \
 After confirming Plasma Login Manager works, remove SDDM and its user:
 
 ```bash
-sudo systemctl disable sddm
-sudo systemctl enable plasmalogin
+systemctl disable sddm
+systemctl enable plasmalogin
 
 # Remove SDDM package and user
-sudo pacman -Rns sddm sddm-kcm
-sudo userdel -r sddm
+pacman -Rns sddm sddm-kcm
+userdel -r sddm
 ```
 
 #### Desktop Apps
@@ -1431,8 +1422,9 @@ yay -Yc
 ```bash
 
 # Install common build deps for compiling Python versions
+# (base-devel already installed in base install)
 
-sudo pacman -S --needed base-devel openssl zlib xz tk readline sqlite libffi bzip2
+sudo pacman -S --needed openssl zlib xz tk readline sqlite libffi bzip2
 
 # Clone pyenv into your home directory
 

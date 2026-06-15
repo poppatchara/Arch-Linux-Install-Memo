@@ -26,6 +26,10 @@ Not the best way or most correct way. Just the way I like.
 - Creating this GRUB-based variant because Limine cannot be installed on a Btrfs `/boot` subvolume. I want `/boot` on Btrfs so it can be included in snapshots.
 - This guide drops CachyOS kernels and uses `linux-zen` instead.
 
+### 2026-06-16
+
+- **AUR security hardening:** Following the [June 2026 AUR malware incident](https://archlinux.org/news/active-aur-malicious-packages-incident/), added AUR Security Practices section with PKGBUILD review checklist. Moved all packages available in official repos from `yay` to `pacman`. Only true AUR-only packages remain under `yay`, each clearly marked with 🔒 and a review reminder.
+
 ### 2026-06-07
 
 - **Plasma Login Manager PAM:** Fixed login screen authentication failure. Added mandatory `/etc/pam.d/plasmalogin` creation step with full PAM config (Arch Wiki verified). Old guide only appended `pam_kwallet5` lines to a non-existent file → login always failed with `Authentication for user "" failed`.
@@ -1036,25 +1040,79 @@ rm -rf yay
 
 </details>
 
+### AUR Security Practices 🔒
+
+⚠️ **Important:** The AUR is user-maintained and has had malware incidents (see [Arch Security Notice 2026](https://archlinux.org/news/active-aur-malicious-packages-incident/)). Always review PKGBUILDs before installing.
+
+#### Review PKGBUILD before installing
+
+When installing AUR packages, yay will show the PKGBUILD diff. **Always read it.** Look for:
+
+- Suspicious URLs in `source=` (should point to official project repos/releases)
+- Unexpected commands in `build()` or `package()` functions
+- Curl/wget piping to bash or sh
+- Obfuscated code or base64-encoded strings
+- Network calls to unknown domains
+
+#### Quick security checklist
+
+```bash
+# View PKGBUILD before building (yay does this by default)
+yay -Si <package>
+
+# Or manually clone and review
+git clone https://aur.archlinux.org/<package>.git
+cd <package>
+less PKGBUILD
+
+# Check source URLs
+grep -E 'source=|url=' PKGBUILD
+
+# Look for suspicious patterns
+grep -E 'curl.*\|.*sh|wget.*\|.*bash|eval|base64' PKGBUILD
+```
+
+#### Trust indicators
+
+✅ **Safer:** Packages with many votes, active maintainer, links to official project  
+⚠️ **Caution:** Orphaned packages, new maintainers, generic names  
+❌ **Avoid:** Packages with no source URL, suspicious build scripts
+
+This guide marks AUR packages clearly. Review them before running `yay -S`.
+
 ### Snapper
 
 📸 Goal: set up snapshot management for Btrfs so you can roll back system changes.
 
+#### Official packages (pacman)
+
 ```bash
-yay -Suy --needed snapper grub-btrfs btrfs-assistant snap-pac snap-pac-grub snapper-gui-git snapper-tools
+sudo pacman -S --needed snapper btrfs-assistant
+
+```
+
+#### AUR packages (yay) 🔒
+
+Review PKGBUILDs before installing. These are well-established packages but always verify.
+
+```bash
+yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git snapper-tools
 
 ```
 
 <details>
   <summary>📸 Packages being installed (Snapper + GRUB integration)</summary>
 
+**Official repos:**
 - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
-- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
 - `btrfs-assistant`: GUI for Btrfs management
+
+**AUR (review before installing):**
+- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
 - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
 - `snap-pac-grub`: update GRUB after snapshot operations
-- `snapper-gui-git`: GUI for snapper snapshot management (AUR)
-- `snapper-tools`: additional snapper utilities (AUR)
+- `snapper-gui-git`: GUI for snapper snapshot management
+- `snapper-tools`: additional snapper utilities
 
 </details>
 
@@ -1099,77 +1157,95 @@ exit
 
 🧺 Personal "daily driver" pick list. Install only what you want.
 
-#### Core CLI + utilities
+#### Core CLI + utilities (official)
 
 ```bash
-yay -S --needed openbsd-netcat imagemagick
+sudo pacman -S --needed openbsd-netcat imagemagick
 
 ```
 
-#### Filesystem / network integration
+#### Filesystem / network integration (official)
 
 ```bash
-yay -S --needed gvfs gvfs-smb
+sudo pacman -S --needed gvfs gvfs-smb
 
 ```
 
-#### Power / laptop bits
+#### Power / laptop bits (official)
 
 ```bash
-yay -S --needed brightnessctl
+sudo pacman -S --needed brightnessctl
 
 ```
 
-#### Audio / media / creative
+#### Audio / media / creative (official)
 
 ```bash
-yay -S --needed vlc gimp obs-studio
+sudo pacman -S --needed vlc gimp obs-studio
 
 ```
 
-#### JavaScript/TypeScript runtimes
+#### JavaScript/TypeScript runtimes (official)
 
 ```bash
-yay -S --needed nodejs npm bun
+sudo pacman -S --needed nodejs npm bun
 ```
 
 #### Desktop apps
 
-```bash
-yay -S --needed --noconfirm\
-  firefox chromium brave-bin \
-  libreoffice-fresh \
-  mailspring-bin \
-  visual-studio-code-bin \
-  filezilla \
+**Official repos:**
 
+```bash
+sudo pacman -S --needed \
+  firefox chromium \
+  libreoffice-fresh \
+  filezilla
+```
+
+**AUR (proprietary -bin packages)** 🔒
+
+Review PKGBUILDs before installing. These are official vendor binaries repackaged for Arch.
+
+```bash
+yay -S --needed \
+  brave-bin \
+  mailspring-bin \
+  visual-studio-code-bin
 ```
 
 #### Gaming stack
 
+**Official repos:**
+
 ```bash
-yay -S --needed \
+sudo pacman -S --needed \
   gamemode lib32-gamemode \
   steam \
   lutris \
   mangohud lib32-mangohud \
-  goverlay \
-  proton-ge-custom-bin
+  goverlay
 sudo usermod -aG gamemode $USER
+```
+
+**AUR** 🔒
+
+Review PKGBUILD before installing. Proton-GE is a custom Proton build by GloriousEggroll.
+
+```bash
+yay -S --needed proton-ge-custom-bin
+```
+
+#### Flatpak runtime (official)
+
+```bash
+sudo pacman -S flatpak
 
 ```
 
-#### Flatpak runtime
+#### Fonts (official)
 
 ```bash
-yay -S flatpak
-
-```
-
-#### Fonts
-
-```bash
-yay -S --needed --noconfirm\
+sudo pacman -S --needed \
   noto-fonts \
   noto-fonts-emoji \
   ttf-dejavu \
@@ -1258,7 +1334,7 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   # clinfo : query OpenCL platforms/devices
   # cuda : CUDA toolkit/runtime
 
-  yay -S --needed \
+  sudo pacman -S --needed \
     nvidia-open-dkms \
     nvidia-utils \
     lib32-nvidia-utils \
@@ -1276,7 +1352,7 @@ Extra stuffs for gaming (NVIDIA only):
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  yay -S --needed \
+  sudo pacman -S --needed \
     libva-utils \
     vdpauinfo \
     vulkan-tools \

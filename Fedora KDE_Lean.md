@@ -18,22 +18,30 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
     - [Remove PIM & System Info](#31-remove-pim--system-info)
     - [What @kde-desktop Includes](#what-kde-desktop-includes)
     - [Disable Unneeded Plasma Services](#32-disable-unneeded-plasma-services)
-8. [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
-9. [Post-Install Extras](#post-install-extras)
-    - [RPM Fusion + Third-Party Repos](#rpm-fusion--third-party-repos)
+8. [Third-Party Repositories](#third-party-repositories)
+    - [RPM Fusion](#rpm-fusion)
+    - [Fedora Workstation Third-Party Repos](#fedora-workstation-third-party-repos)
+    - [Terra (HP Anyware / PCoIP)](#terra-hp-anyware--teradici-pcoip-client)
+9. [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
+    - [NVIDIA Driver](#nvidia-driver)
+    - [VA-API (Hardware Video Decode)](#va-api-hardware-video-decode)
+    - [Verify](#verify-after-reboot-nvidia-only)
+10. [Post-Install Extras](#post-install-extras)
     - [Flatpak Apps](#flatpak-apps)
     - [pyenv](#pyenv)
     - [Fonts](#fonts)
     - [Theme](#theme)
     - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
     - [Clear caches](#clear-caches)
-10. [Snapper (optional)](#snapper-optional)
-11. [Credits & Thanks](#credits--thanks)
+11. [Snapper (optional)](#snapper-optional)
+12. [Credits & Thanks](#credits--thanks)
 
 ## Updates
 
 ### 2026-06-16
 
+- **Restructured:** Third-party repos (`RPM Fusion`, `fedora-workstation-repositories`, Terra/PCoIP) now have their own dedicated section — separated from GPU driver.
+- **VA-API:** Added hardware video decode section for Intel, AMD, and NVIDIA.
 - **Removal philosophy changed:** Only KDE PIM (akregator/kmail/korganizer/kontact) and system info tools (khelpcenter/kinfocenter) are removed. Everything else stays (kate, okular, gwenview, spectacle, ark, filelight, kcalc, krfb, krdp, plasma-discover, bluedevil, plasma-firewall, flatpak, print-manager).
 - **Everything ISO path**: clarified software selection — Fedora 44 Anaconda renamed "Minimal Install" to **"Fedora Custom Operating System"**. Select Custom OS + Standard + KDE.
 - **Btrfs subvolumes**: documented exact layout (`@`, `@home`, `@var_log`, `@var_cache`). Removed `@root` (Fedora won't allow it — lives inside `@`). Removed `@var` and `@srv` (unnecessary for desktop).
@@ -232,12 +240,52 @@ Enabled=false
 EOF
 ```
 
+## Third-Party Repositories
+
+📦 Fedora ships with only free software in its default repos. Enable these third-party repos for drivers, codecs, and extra software.
+
+### RPM Fusion
+
+RPM Fusion provides software that Fedora doesn't ship — most importantly **NVIDIA drivers** and multimedia codecs.
+
+```bash
+# Enable both free and nonfree
+sudo dnf5 install -y \
+  https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+  https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+```
+
+> **Why nonfree?** Needed for `akmod-nvidia` (NVIDIA proprietary driver) and optional codecs. Skip `nonfree` if you have Intel/AMD iGPU only.
+
+### Fedora Workstation Third-Party Repos
+
+Fedora pre-configures optional repos for Google Chrome, PyCharm, and other proprietary software.
+
+```bash
+# Enable the pre-configured third-party repos
+sudo dnf5 config-manager --set-enabled fedora-workstation-repositories
+# Optional: enable Cisco OpenH264 codec repo
+sudo dnf5 config-manager --set-enabled fedora-cisco-openh264
+```
+
+### Terra (HP Anyware / Teradici PCoIP Client)
+
+HP Anyware PCoIP client is distributed as an Ubuntu `.deb` — no Fedora RPM repo exists. Use the dedicated install script instead:
+
+```bash
+git clone https://github.com/poppatchara/fedora-pcoip-client.git
+cd fedora-pcoip-client
+sudo ./install.sh
+```
+
+> No extra repository needed — the script bundles the `.deb` repackaged for Fedora.
+
 ## GPU Driver (Automatic Detection)
 
-🟩 This section auto-detects your GPU and installs the appropriate driver.
+🟩 Auto-detects your GPU and installs the appropriate driver. **Requires RPM Fusion** (enabled above) for NVIDIA.
 
-- **NVIDIA dGPU** → Installs `akmod-nvidia` from RPM Fusion (proprietary)
-- **Intel/AMD iGPU** → No extra driver needed (kernel drivers included)
+- **NVIDIA dGPU** → Installs `akmod-nvidia` from RPM Fusion
+- **Intel/AMD iGPU** → No extra driver (kernel drivers included)
 
 ```bash
 # Detect GPU vendor
@@ -254,31 +302,42 @@ fi
 echo "Detected GPU vendor: ${gpu_vendor:-unknown}"
 ```
 
-### RPM Fusion + NVIDIA (if detected)
+### NVIDIA Driver
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  # Enable RPM Fusion (required for NVIDIA proprietary driver)
-  sudo dnf5 install -y \
-    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
-    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-
-  # Enable Fedora Linux Third Party Repo (optional, for multimedia codecs)
-  sudo dnf5 config-manager --set-enabled fedora-cisco-openh264
-
-  # Install NVIDIA driver (akmod builds for current kernel automatically)
+  # Install NVIDIA driver (akmod builds kernel module automatically)
   sudo dnf5 install -y \
     akmod-nvidia \
     xorg-x11-drv-nvidia-cuda \
     libva-utils \
     vdpauinfo
 
-  # Wait for akmod to build the kernel module (takes 1-3 minutes)
+  # Wait for akmod to build the kernel module (~1-3 min)
   echo "Waiting for NVIDIA kernel module to build..."
   sudo akmods --force
   sudo dracut --force
 
-  echo "NVIDIA driver installed. Reboot to load the nouveau blacklist and nvidia module."
+  echo "NVIDIA driver installed. Reboot to complete."
+fi
+```
+
+### VA-API (Hardware Video Decode)
+
+```bash
+# Intel
+if [ "$gpu_vendor" = "intel" ]; then
+  sudo dnf5 install -y intel-media-driver libva-intel-driver
+fi
+
+# AMD
+if [ "$gpu_vendor" = "amd" ]; then
+  sudo dnf5 install -y libva-mesa-driver
+fi
+
+# NVIDIA (needs RPM Fusion nonfree)
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo dnf5 install -y libva-nvidia-driver
 fi
 ```
 
@@ -286,10 +345,7 @@ fi
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  # Check if the nvidia module is loaded
   lsmod | grep nvidia
-
-  # Check if nvidia-smi works
   nvidia-smi
 fi
 ```

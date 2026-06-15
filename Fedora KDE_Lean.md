@@ -24,9 +24,12 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
     - [Terra (HP Anyware / PCoIP)](#terra-hp-anyware--teradici-pcoip-client)
 9. [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
     - [NVIDIA Driver](#nvidia-driver)
-    - [VA-API (Hardware Video Decode)](#va-api-hardware-video-decode)
     - [Verify](#verify-after-reboot-nvidia-only)
-10. [Post-Install Extras](#post-install-extras)
+10. [Media Codecs](#media-codecs)
+    - [Install Codecs](#install-codecs)
+    - [H/W Video Decoding with VA-API](#hw-video-decoding-with-va-api)
+    - [OpenH264 for Firefox](#openh264-for-firefox)
+11. [Post-Install Extras](#post-install-extras)
     - [Flatpak Apps](#flatpak-apps)
     - [pyenv](#pyenv)
     - [Fonts](#fonts)
@@ -34,8 +37,8 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
     - [Theme](#theme)
     - [SPDIF audio dropout / sleep](#spdif-audio-dropout--sleep)
     - [Clear caches](#clear-caches)
-11. [Snapper (optional)](#snapper-optional)
-12. [Credits & Thanks](#credits--thanks)
+12. [Snapper (optional)](#snapper-optional)
+13. [Credits & Thanks](#credits--thanks)
 
 ## Updates
 
@@ -324,25 +327,6 @@ if [ "$gpu_vendor" = "nvidia" ]; then
 fi
 ```
 
-### VA-API (Hardware Video Decode)
-
-```bash
-# Intel
-if [ "$gpu_vendor" = "intel" ]; then
-  sudo dnf5 install -y intel-media-driver libva-intel-driver
-fi
-
-# AMD
-if [ "$gpu_vendor" = "amd" ]; then
-  sudo dnf5 install -y libva-mesa-driver
-fi
-
-# NVIDIA (needs RPM Fusion nonfree)
-if [ "$gpu_vendor" = "nvidia" ]; then
-  sudo dnf5 install -y libva-nvidia-driver
-fi
-```
-
 ### Verify (after reboot, NVIDIA only)
 
 ```bash
@@ -351,6 +335,60 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   nvidia-smi
 fi
 ```
+
+## Media Codecs
+
+📀 Full multimedia playback + hardware acceleration. **Requires RPM Fusion** (enabled above).
+
+### Install Codecs
+
+```bash
+# Install full ffmpeg (replaces Fedora's limited ffmpeg-free)
+sudo dnf5 swap ffmpeg-free ffmpeg --allowerasing
+
+# Install multimedia group + sound & video
+sudo dnf5 group install -y multimedia
+sudo dnf5 group install -y sound-and-video
+
+# Core VA-API tools
+sudo dnf5 install -y ffmpeg-libs libva libva-utils
+```
+
+### H/W Video Decoding with VA-API
+
+Hardware-accelerated video decode for each GPU vendor.
+
+```bash
+# Intel (5th Gen+) — swap to full-featured driver
+if [ "$gpu_vendor" = "intel" ]; then
+  sudo dnf5 swap libva-intel-media-driver intel-media-driver --allowerasing
+  sudo dnf5 install -y libva-intel-driver
+fi
+
+# AMD — needs freeworld drivers (RPM Fusion) for h264/h265
+if [ "$gpu_vendor" = "amd" ]; then
+  sudo dnf5 install -y mesa-va-drivers-freeworld
+  sudo dnf5 install -y mesa-va-drivers-freeworld.i686
+fi
+
+# NVIDIA — needs RPM Fusion nonfree
+if [ "$gpu_vendor" = "nvidia" ]; then
+  sudo dnf5 install -y libva-nvidia-driver
+fi
+```
+
+> **Why this matters:** Without VA-API, the CPU does all video decode work. With it, the GPU handles decoding — lower CPU usage, less heat, longer battery life.
+
+### OpenH264 for Firefox
+
+Firefox needs Cisco's OpenH264 plugin for H.264 video (e.g., WebRTC calls). Fedora ships the repo but leaves it disabled.
+
+```bash
+sudo dnf5 config-manager --set-enabled fedora-cisco-openh264
+sudo dnf5 install -y openh264 gstreamer1-plugin-openh264 mozilla-openh264
+```
+
+After install, enable the plugin in Firefox: **Settings → General → Play DRM-controlled content** and verify at `about:addons → Plugins` that OpenH264 is active.
 
 ## Post-Install Extras
 

@@ -29,6 +29,9 @@ Not the best way or most correct way. Just the way I like.
 ### 2026-06-16
 
 - **AUR security hardening:** Following the [June 2026 AUR malware incident](https://archlinux.org/news/active-aur-malicious-packages-incident/), added AUR Security Practices section with PKGBUILD review checklist. Moved all packages available in official repos from `yay` to `pacman`. Only true AUR-only packages remain under `yay`, each clearly marked with 🔒 and a review reminder.
+- **Cleanup & optimization:** Removed unreferenced packages (`inotify-tools`, `openbsd-netcat`, `vim`, `wget`, `snapper-tools`, `acpi_call`). Consolidated 8 separate `pacman -S` calls in Extra Packages into one. Removed redundant Flatpak disk-usage tools (`baobab`, `kdf`) — `filelight` already covers this. Removed `com.adobe.Reader` (okular handles PDFs).
+- **SSH fixes:** Removed deprecated `Protocol 2` (default since OpenSSH 7.6). Replaced `ChallengeResponseAuthentication` with `KbdInteractiveAuthentication`. Removed `ForwardAgent yes` (security risk — use `ProxyJump` instead).
+- **NVIDIA hook:** Removed misleading "Adjust line(6)" / "Change line(7)" comments — targets already correctly set to `nvidia-open-dkms` + `linux-zen`.
 
 ### 2026-06-07
 
@@ -294,10 +297,9 @@ pacstrap -K /mnt \
   linux linux-headers linux-zen linux-zen-headers linux-firmware "${cpu}-ucode" \
   efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs\
   networkmanager openssh \
-  vim nvim git sudo man curl wget perl \
+  nvim git sudo man curl perl \
   zsh zsh-completions zsh-autosuggestions bash-completion \
-  pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector \
-  inotify-tools
+  pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector
 
 # copy pacman config
 
@@ -315,7 +317,7 @@ cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 - Filesystem tools: `btrfs-progs`
 - Boot/UEFI tools: `efibootmgr`
 - Networking + SSH: `networkmanager`, `openssh`
-- Editors + tools: `vim`, `nvim`, `git`, `sudo`, `man`, `curl`, `wget`, `perl`, `inotify-tools`
+- Editors + tools: `nvim`, `git`, `sudo`, `man`, `curl`, `perl`
 - Audio stack (PipeWire): `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
 - Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
 
@@ -594,7 +596,7 @@ pacman -Syu --needed \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
   cups \
-  acpi acpi_call acpid \
+  acpi acpid \
   xdg-user-dirs
 
 ```
@@ -609,7 +611,7 @@ pacman -Syu --needed \
 - Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
 - Bluetooth: `bluez`, `bluez-utils`
 - Printing: `cups`
-- Power/ACPI: `acpi`, `acpi_call`, `acpid`
+- Power/ACPI: `acpi`, `acpid`
 - Desktop/user dirs: `xdg-user-dirs`
 
 </details>
@@ -914,7 +916,6 @@ Host arch
     User pop
     IdentityFile ~/.ssh/id_ed25519
     IdentitiesOnly yes
-    ForwardAgent yes
     ForwardX11 yes
 EOF
 
@@ -943,11 +944,8 @@ PasswordAuthentication no
 # Disable empty passwords
 PermitEmptyPasswords no
 
-# Disable challenge-response authentication
-ChallengeResponseAuthentication no
-
-# Use SSH protocol 2 only
-Protocol 2
+# Disable keyboard-interactive authentication
+KbdInteractiveAuthentication no
 
 # Limit max authentication attempts
 MaxAuthTries 3
@@ -1096,7 +1094,7 @@ sudo pacman -S --needed snapper btrfs-assistant
 Review PKGBUILDs before installing. These are well-established packages but always verify.
 
 ```bash
-yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git snapper-tools
+yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git
 
 ```
 
@@ -1112,7 +1110,6 @@ yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git snapper-tools
 - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
 - `snap-pac-grub`: update GRUB after snapshot operations
 - `snapper-gui-git`: GUI for snapper snapshot management
-- `snapper-tools`: additional snapper utilities
 
 </details>
 
@@ -1157,52 +1154,25 @@ exit
 
 🧺 Personal "daily driver" pick list. Install only what you want.
 
-#### Core CLI + utilities (official)
-
-```bash
-sudo pacman -S --needed openbsd-netcat imagemagick
-
-```
-
-#### Filesystem / network integration (official)
-
-```bash
-sudo pacman -S --needed gvfs gvfs-smb
-
-```
-
-#### Power / laptop bits (official)
-
-```bash
-sudo pacman -S --needed brightnessctl
-
-```
-
-#### Audio / media / creative (official)
-
-```bash
-sudo pacman -S --needed vlc gimp obs-studio
-
-```
-
-#### JavaScript/TypeScript runtimes (official)
-
-```bash
-sudo pacman -S --needed nodejs npm bun
-```
-
-#### Desktop apps
-
-**Official repos:**
+#### All extra packages (one call)
 
 ```bash
 sudo pacman -S --needed \
-  firefox chromium \
-  libreoffice-fresh \
-  filezilla
+  imagemagick \
+  gvfs gvfs-smb brightnessctl \
+  vlc gimp obs-studio \
+  nodejs npm bun \
+  firefox chromium libreoffice-fresh filezilla \
+  gamemode lib32-gamemode steam lutris \
+  mangohud lib32-mangohud goverlay \
+  flatpak \
+  noto-fonts noto-fonts-emoji ttf-dejavu \
+  ttf-ubuntu-font-family terminus-font nerd-fonts ttf-ms-fonts
+
+sudo usermod -aG gamemode $USER
 ```
 
-**AUR (proprietary -bin packages)** 🔒
+#### AUR desktop apps (proprietary -bin packages) 🔒
 
 Review PKGBUILDs before installing. These are official vendor binaries repackaged for Arch.
 
@@ -1213,47 +1183,12 @@ yay -S --needed \
   visual-studio-code-bin
 ```
 
-#### Gaming stack
-
-**Official repos:**
-
-```bash
-sudo pacman -S --needed \
-  gamemode lib32-gamemode \
-  steam \
-  lutris \
-  mangohud lib32-mangohud \
-  goverlay
-sudo usermod -aG gamemode $USER
-```
-
-**AUR** 🔒
+#### AUR gaming 🔒
 
 Review PKGBUILD before installing. Proton-GE is a custom Proton build by GloriousEggroll.
 
 ```bash
 yay -S --needed proton-ge-custom-bin
-```
-
-#### Flatpak runtime (official)
-
-```bash
-sudo pacman -S flatpak
-
-```
-
-#### Fonts (official)
-
-```bash
-sudo pacman -S --needed \
-  noto-fonts \
-  noto-fonts-emoji \
-  ttf-dejavu \
-  ttf-ubuntu-font-family \
-  terminus-font \
-  nerd-fonts \
-  ttf-ms-fonts
-
 ```
 
 ### SPDIF audio dropout / sleep
@@ -1445,10 +1380,6 @@ Target = nvidia-open-dkms
 Target = linux
 Target = linux-zen
 
-# Adjust line(6) above to match your driver, e.g. Target=nvidia-dkms for proprietary or Target=nvidia-470xx-dkms for legacy GPUs
-
-# Change line(7) above, if you are not using the vanilla kernel. For example, Target=linux-zen
-
 [Action]
 Description = Update Nvidia module in initramfs
 Depends = mkinitcpio
@@ -1560,13 +1491,11 @@ Can't do this over SSH; install this in the logged-in session.
 
 ```bash
 flatpak install -y flathub \
-  org.gnome.baobab \
   io.github.jonmagon.kdiskmark \
   io.github.flattool.Warehouse \
   io.missioncenter.MissionCenter \
   xyz.z3ntu.razergenie \
   io.github.arunsivaramanneo.GPUViewer \
-  org.kde.kdf \
   com.kgurgul.cpuinfo \
   org.raspberrypi.rpi-imager \
   io.github.shonubot.Spruce \
@@ -1575,7 +1504,6 @@ flatpak install -y flathub \
   org.gnome.Cheese \
   com.discordapp.Discord \
   com.cassidyjames.butler \
-  com.adobe.Reader \
   net.davidotek.pupgui2 \
   com.vysp3r.ProtonPlus
 

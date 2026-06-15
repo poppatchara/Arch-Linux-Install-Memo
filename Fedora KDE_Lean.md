@@ -570,7 +570,8 @@ sudo dnf5 install -y snapper btrfs-assistant
 # DNF plugin: auto snapshots around package transactions (like Arch's snap-pac)
 sudo dnf5 install -y dnf-plugin-snapper
 
-# GRUB integration: boot into snapshots from GRUB menu
+# GRUB integration: boot into snapshots from GRUB menu (via COPR)
+sudo dnf5 copr enable -y kylegospo/grub-btrfs
 sudo dnf5 install -y grub-btrfs inotify-tools
 ```
 
@@ -580,7 +581,7 @@ sudo dnf5 install -y grub-btrfs inotify-tools
 - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
 - `btrfs-assistant`: GUI for Btrfs/Snapper management
 - `dnf-plugin-snapper`: DNF plugin — pre/post snapshots on every `dnf` transaction
-- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
+- `grub-btrfs`: GRUB menu entries for Btrfs snapshots (from `kylegospo/grub-btrfs` COPR)
 - `inotify-tools`: file change monitoring (required by grub-btrfs)
 
 </details>
@@ -636,7 +637,7 @@ sudo systemctl enable --now snapper-cleanup.timer
 
 `grub-btrfs` generates GRUB menu entries for every snapshot so you can boot into them directly for rollback.
 
-> **Note:** Fedora's `grub-btrfs` package does not ship a systemd service (`grub-btrfsd`). Run `grub2-mkconfig` manually after snapshots to refresh the GRUB menu.
+> **Note:** The COPR `grub-btrfs` package does not ship a systemd service (`grub-btrfsd`). Run `grub2-mkconfig` manually after snapshots to refresh the GRUB menu.
 
 ```bash
 # After creating or deleting snapshots, regenerate GRUB

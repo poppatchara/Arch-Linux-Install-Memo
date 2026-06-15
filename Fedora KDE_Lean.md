@@ -539,23 +539,111 @@ systemctl --user restart wireplumber
 sudo dnf5 clean all
 ```
 
-## Snapper (Optional)
+## Snapper
 
-📸 Fedora uses Btrfs by default. Set up snapshots for rollback.
+📸 Set up snapshot management for Btrfs — auto snapshots, GRUB integration, and rollback.
+
+### Install Packages
 
 ```bash
-# Install snapper + Btrfs tools
+# Core: snapper + GUI tools
 sudo dnf5 install -y snapper btrfs-assistant
 
-# Create snapper config for root
-sudo snapper -c root create-config /
+# DNF plugin: auto snapshots around package transactions (like Arch's snap-pac)
+sudo dnf5 install -y dnf-plugin-snapper
 
-# Enable snapper timer
+# GRUB integration: boot into snapshots from GRUB menu
+sudo dnf5 install -y grub-btrfs inotify-tools
+```
+
+<details>
+  <summary>📸 Packages being installed</summary>
+
+- `snapper`: manage Btrfs snapshots (create/list/rollback policies)
+- `btrfs-assistant`: GUI for Btrfs/Snapper management
+- `dnf-plugin-snapper`: DNF plugin — pre/post snapshots on every `dnf` transaction
+- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
+- `inotify-tools`: file change monitoring (required by grub-btrfs)
+
+</details>
+
+### Create Snapper Configs
+
+Only `@` (root) is snapshot-worthy. `/home`, `/var/log`, and `/var/cache` are already on separate subvolumes without snapshotting — skip them.
+
+```bash
+# Create root config
+sudo snapper -c root create-config /
+```
+
+> **Why not `/boot`?** In this guide `/boot` lives inside `@` — it's included automatically in root snapshots. If you kept a separate `/boot` partition, create `sudo snapper -c boot create-config /boot`.
+
+### DNF Plugin: Auto Snapshots
+
+`dnf-plugin-snapper` is the Fedora equivalent of Arch's `snap-pac` — it creates a pre+post snapshot pair every time you run `dnf5 install/remove/upgrade`.
+
+```bash
+# Verify it's active (creates snapshot pairs on dnf operations)
+sudo snapper list
+
+# Example output after a dnf5 upgrade:
+#  # │ Type   │ Pre # │ Date                     │ Cleanup │ Description
+#  0 │ single │       │                         │         │ current root
+#  1 │ pre    │       │ Thu 12 Jun 2026 14:22:01 │ number  │ dnf update
+#  2 │ post   │     1 │ Thu 12 Jun 2026 14:23:15 │ number  │ dnf update
+```
+
+### Timeline Snapshots + Cleanup
+
+Enable the systemd timer for automatic hourly snapshots and periodic cleanup.
+
+```bash
+# Enable the snapper timeline timer
 sudo systemctl enable --now snapper-timer.timer
 
-# Optional: grub-btrfs for GRUB snapshot integration
-# Note: grub2-snapper-plugin is not in Fedora repos; use grub-btrfs + inotify-tools instead
-# sudo dnf5 install -y grub-btrfs inotify-tools
+# Cleanup runs as part of the timer. Defaults:
+#   - hourly snapshots: keep last 10
+#   - daily: keep last 10
+#   - weekly: keep last 5
+#   - monthly: keep last 5
+#   - yearly: keep last 5
+```
+
+> **Tune retention** in `/etc/snapper/configs/root` — adjust `TIMELINE_LIMIT_*` values to taste.
+
+### grub-btrfs: Boot into Snapshots
+
+`grub-btrfs` auto-generates GRUB menu entries for every snapshot so you can boot into them directly for rollback.
+
+```bash
+# Enable the grub-btrfs daemon (updates GRUB when snapshots change)
+sudo systemctl enable --now grub-btrfsd
+
+# Regenerate GRUB to include snapshots in the menu
+sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+```
+
+> After enabling, reboot and look for "Btrfs snapshots of `/`" in the GRUB menu.
+
+### Snapper in Action
+
+```bash
+# List all snapshots
+sudo snapper list
+
+# Create a manual snapshot (e.g., before risky changes)
+sudo snapper -c root create -d "before kernel update"
+
+# Compare file changes between snapshots
+sudo snapper -c root diff 5..7
+
+# Quick rollback (from a booted snapshot in GRUB, or from running system)
+sudo snapper -c root undochange 5..7
+
+# Enter a read-write shell in a snapshot (for fixing things)
+sudo snapper -c root mount 5 /mnt/snapshot  # mount first
+# ... fix files in /mnt/snapshot ...
+sudo umount /mnt/snapshot
 ```
 
 ## Credits & Thanks

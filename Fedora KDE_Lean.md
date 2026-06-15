@@ -10,9 +10,15 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
 2. [Assumptions](#assumptions)
 3. [ISO Choice](#iso-choice)
 4. [Installation](#installation)
+    - [Btrfs Subvolume Layout](#btrfs-subvolume-layout)
+    - [Installer Steps](#installer-steps)
 5. [Post-Install Base Setup](#post-install-base-setup)
 6. [Services & QoL](#services--qol)
 7. [KDE — Make It Lighter](#kde--make-it-lighter)
+    - [Remove Bloat](#31-remove-bloat)
+    - [What @kde-desktop Includes](#what-kde-desktop-includes)
+    - [Keep the Essentials](#32-keep-the-essentials)
+    - [Disable Unneeded Plasma Services](#33-disable-unneeded-plasma-services)
 8. [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
 9. [Post-Install Extras](#post-install-extras)
     - [RPM Fusion + Third-Party Repos](#rpm-fusion--third-party-repos)
@@ -26,6 +32,13 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
 11. [Credits & Thanks](#credits--thanks)
 
 ## Updates
+
+### 2026-06-16
+
+- **Everything ISO path**: clarified software selection — Fedora 44 Anaconda renamed "Minimal Install" to **"Fedora Custom Operating System"**. Select Custom OS + Standard + KDE.
+- **Btrfs subvolumes**: documented exact layout (`@`, `@home`, `@var_log`, `@var_cache`). Removed `@root` (Fedora won't allow it — lives inside `@`). Removed `@var` and `@srv` (unnecessary for desktop).
+- **`@kde-desktop` group contents**: documented what the DNF group actually includes (from Fedora 44 comps). PIM apps (kontact/kmail/akregator) NOT in group — only akonadi-server backend. Good news: half the removal list is unnecessary when using Everything ISO.
+- `/boot` on Btrfs: Fedora 44 Cloud defaults to `/boot` as Btrfs subvolume; KDE/Workstation still use separate ext4 `/boot` by default. Custom partitioning can merge `/boot` into `@`.
 
 ### 2026-06-07
 
@@ -56,12 +69,32 @@ Download: <https://fedoraproject.org/en/spins/kde>
 Download: <https://fedoraproject.org/en/server/download>
 
 - Minimal base install, then pick exactly what you install.
-- In Anaconda → Software Selection: check **"Minimal Install"** base, then add:
-  - `@kde-desktop` (KDE Plasma desktop)
-  - `@standard` (basic CLI tools)
-  - Uncheck everything else (Office, Print Server, etc.)
+- In Anaconda → Software Selection:
+  - **Base Environment:** ☑ **Fedora Custom Operating System** (this is the minimal base — Anaconda renamed it from "Minimal Install" in Fedora 44)
+  - **Additional Software:** ☑ Standard (`@standard`), ☑ KDE (Plasma Workspaces) (`@kde-desktop`)
+  - Uncheck everything else (Office, Print Server, Web Server, etc.)
+- **Why this over KDE Spin:** `@kde-desktop` group does NOT include KDE PIM apps (kontact/kmail/akregator/korganizer) — they won't be installed at all. Saves you from removing them later. See [What @kde-desktop includes](#what-kde-desktop-includes).
 
 ## Installation
+
+### Btrfs Subvolume Layout
+
+📦 Fedora defaults to Btrfs with `@` and `@home` subvolumes. For Snapper-compatible snapshots, use this custom layout:
+
+| Subvolume | Mount Point | Snapshot? | Notes |
+|-----------|------------|-----------|-------|
+| `@` | `/` | ✅ YES | Root + kernel via `/boot` merged |
+| `@home` | `/home` | ❌ NO | User data |
+| `@var_log` | `/var/log` | ❌ NO | Logs |
+| `@var_cache` | `/var/cache` | ❌ NO | DNF5 cache |
+
+**Why not `@var`?** Fedora stores Flatpak, containers, and other large data under `/var/lib` — snapshotting all of `/var` is too heavy. Split out only what matters.
+
+**Why not `@root`?** Anaconda won't allow a separate `/root` mount. `/root` lives inside `@` — it's tiny anyway (~0 bytes on a fresh install).
+
+**`/boot` on Btrfs?** Fedora 44 Cloud defaults to `/boot` on Btrfs. KDE/Workstation still use separate ext4 `/boot` by default. In Custom partitioning you can skip the `/boot` partition entirely and let `/boot` live inside `@` — this way Snapper snapshots include the kernel, so rollback keeps everything in sync. GRUB2 2.12+ (Fedora 44) supports Btrfs zstd compression.
+
+### Installer Steps
 
 1. Boot ISO → Anaconda GUI installer.
 2. **Keyboard**: Set to your layout.
@@ -151,6 +184,8 @@ sudo systemctl enable --now avahi-daemon
 
 🖥️ Fedora KDE Spin ships with a lot of apps by default. Strip the fat.
 
+> **Everything ISO users:** If you used Custom OS + KDE, about half the removal list below is already NOT installed — skip to the [notes](#what-kde-desktop-includes) to see what's different.
+
 ### 3.1 Remove Bloat
 
 ```bash
@@ -180,7 +215,27 @@ sudo dnf5 remove -y \
   xdg-desktop-portal-gnome
 ```
 
+> **Note about flatpak:** `flatpak` is removed here (the KDE Spin includes it), but reinstalled later in [4.2 Flatpak Apps](#42-flatpak-apps) with Flathub configured. If using Everything ISO, `flatpak` may not be installed yet — skip it in the remove list if `dnf5 remove` complains.
+
 > **Note:** This removes a lot. If you use any of these apps, keep them. The point is: you don't need a full KDE suite to run KDE Plasma.
+
+### What @kde-desktop Includes
+
+The `@kde-desktop` group (from Fedora 44 comps) contains 92 packages — **not** the full KDE Spin bloat. Good news: PIM apps are absent. Bad news: some removal candidates still come with the group.
+
+| Cat | In `@kde-desktop`? | Packages |
+|-----|-------------------|----------|
+| **PIM apps** | ❌ NOT included | kontact, kmail, akregator, korganizer — skip these removals |
+| **Editors** | ❌ NOT included | kate, okular, gwenview — skip these removals |
+| **System info** | ✅ Included | khelpcenter, kinfocenter — still need to remove |
+| **Remote desktop** | ✅ Included | krfb, krdp — still need to remove |
+| **Discover** | ✅ Included | plasma-discover, plasma-discover-notifier — still need to remove |
+| **Bluetooth** | ✅ Included | bluedevil — still need to remove |
+| **Print** | ✅ Included | plasma-print-manager — still need to remove |
+| **File tools** | ✅ Included | ark, filelight, spectacle — still need to remove |
+| **Core** | ✅ Included | dolphin, konsole, kde-connect, plasma-nm, plasma-pa, kscreen, kscreenlocker, plasma-breeze, kwin |
+
+**Bottom line:** Everything ISO + `@kde-desktop` starts ~30% cleaner than KDE Spin.
 
 ### 3.2 Keep the Essentials
 

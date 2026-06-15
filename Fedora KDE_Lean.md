@@ -15,10 +15,9 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
 5. [Post-Install Base Setup](#post-install-base-setup)
 6. [Services & QoL](#services--qol)
 7. [KDE — Make It Lighter](#kde--make-it-lighter)
-    - [Remove Bloat](#31-remove-bloat)
+    - [Remove PIM & System Info](#31-remove-pim--system-info)
     - [What @kde-desktop Includes](#what-kde-desktop-includes)
-    - [Keep the Essentials](#32-keep-the-essentials)
-    - [Disable Unneeded Plasma Services](#33-disable-unneeded-plasma-services)
+    - [Disable Unneeded Plasma Services](#32-disable-unneeded-plasma-services)
 8. [GPU Driver (Automatic Detection)](#gpu-driver-automatic-detection)
 9. [Post-Install Extras](#post-install-extras)
     - [RPM Fusion + Third-Party Repos](#rpm-fusion--third-party-repos)
@@ -35,9 +34,10 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
 
 ### 2026-06-16
 
+- **Removal philosophy changed:** Only KDE PIM (akregator/kmail/korganizer/kontact) and system info tools (khelpcenter/kinfocenter) are removed. Everything else stays (kate, okular, gwenview, spectacle, ark, filelight, kcalc, krfb, krdp, plasma-discover, bluedevil, plasma-firewall, flatpak, print-manager).
 - **Everything ISO path**: clarified software selection — Fedora 44 Anaconda renamed "Minimal Install" to **"Fedora Custom Operating System"**. Select Custom OS + Standard + KDE.
 - **Btrfs subvolumes**: documented exact layout (`@`, `@home`, `@var_log`, `@var_cache`). Removed `@root` (Fedora won't allow it — lives inside `@`). Removed `@var` and `@srv` (unnecessary for desktop).
-- **`@kde-desktop` group contents**: documented what the DNF group actually includes (from Fedora 44 comps). PIM apps (kontact/kmail/akregator) NOT in group — only akonadi-server backend. Good news: half the removal list is unnecessary when using Everything ISO.
+- **`@kde-desktop` group contents**: documented what the DNF group actually includes (from Fedora 44 comps). PIM apps (kontact/kmail/akregator) NOT in group — only akonadi-server backend. Everything ISO users can skip the removal section entirely (none of the 6 removed packages are in the group).
 - `/boot` on Btrfs: Fedora 44 Cloud defaults to `/boot` as Btrfs subvolume; KDE/Workstation still use separate ext4 `/boot` by default. Custom partitioning can merge `/boot` into `@`.
 
 ### 2026-06-07
@@ -182,14 +182,15 @@ sudo systemctl enable --now avahi-daemon
 
 ## KDE — Make It Lighter
 
-🖥️ Fedora KDE Spin ships with a lot of apps by default. Strip the fat.
+🖥️ Fedora KDE Spin ships with a lot of apps by default. This section removes only the heavy PIM suite and system info tools — everything else stays.
 
-> **Everything ISO users:** If you used Custom OS + KDE, about half the removal list below is already NOT installed — skip to the [notes](#what-kde-desktop-includes) to see what's different.
+> **Philosophy:** Keep what you use. kate, okular, gwenview, spectacle, ark, filelight, kcalc, krfb, krdp, plasma-discover, bluedevil, plasma-firewall, flatpak, and the print manager are kept. Only KDE PIM (email/calendar/contacts) and info docs are removed.
 
-### 3.1 Remove Bloat
+### 3.1 Remove PIM & System Info
 
 ```bash
-# Remove apps you don't need (adjust to taste)
+# Remove only the heavy PIM suite and info tools
+# Everything else stays — kate, okular, gwenview, spectacle, ark, etc.
 
 sudo dnf5 remove -y \
   akregator \
@@ -197,63 +198,32 @@ sudo dnf5 remove -y \
   korganizer \
   kontact \
   khelpcenter \
-  kinfocenter \
-  kate \
-  okular \
-  gwenview \
-  spectacle \
-  ark \
-  filelight \
-  kcalc \
-  krfb \
-  krdp \
-  plasma-discover \
-  kde-print-manager \
-  bluedevil \
-  plasma-firewall \
-  flatpak \
-  xdg-desktop-portal-gnome
+  kinfocenter
 ```
 
-> **Note about flatpak:** `flatpak` is removed here (the KDE Spin includes it), but reinstalled later in [4.2 Flatpak Apps](#42-flatpak-apps) with Flathub configured. If using Everything ISO, `flatpak` may not be installed yet — skip it in the remove list if `dnf5 remove` complains.
+> **Note:** `akregator`, `kmail`, `korganizer`, `kontact` are KDE PIM apps (email, calendar, RSS, contacts) — heavy backends (akonadi + MySQL), no desktop impact when removed. `khelpcenter` and `kinfocenter` are system info/documentation viewers.
 
-> **Note:** This removes a lot. If you use any of these apps, keep them. The point is: you don't need a full KDE suite to run KDE Plasma.
+> **Everything ISO users:** If you used Custom OS + KDE, NONE of these 6 packages are installed — the entire section is a no-op.
 
 ### What @kde-desktop Includes
 
-The `@kde-desktop` group (from Fedora 44 comps) contains 92 packages — **not** the full KDE Spin bloat. Good news: PIM apps are absent. Bad news: some removal candidates still come with the group.
+The `@kde-desktop` group (from Fedora 44 comps) contains 92 packages — **not** the full KDE Spin bloat. PIM apps are absent from the group. Here's what comes with it vs what doesn't:
 
 | Cat | In `@kde-desktop`? | Packages |
 |-----|-------------------|----------|
-| **PIM apps** | ❌ NOT included | kontact, kmail, akregator, korganizer — skip these removals |
-| **Editors** | ❌ NOT included | kate, okular, gwenview — skip these removals |
-| **System info** | ✅ Included | khelpcenter, kinfocenter — still need to remove |
-| **Remote desktop** | ✅ Included | krfb, krdp — still need to remove |
-| **Discover** | ✅ Included | plasma-discover, plasma-discover-notifier — still need to remove |
-| **Bluetooth** | ✅ Included | bluedevil — still need to remove |
-| **Print** | ✅ Included | plasma-print-manager — still need to remove |
-| **File tools** | ✅ Included | ark, filelight, spectacle — still need to remove |
-| **Core** | ✅ Included | dolphin, konsole, kde-connect, plasma-nm, plasma-pa, kscreen, kscreenlocker, plasma-breeze, kwin |
+| **PIM apps** | ❌ NOT included | kontact, kmail, akregator, korganizer |
+| **Info tools** | ✅ Included | khelpcenter, kinfocenter |
+| **Editors** | ❌ NOT included | kate, okular, gwenview |
+| **File tools** | ✅ Included | ark, filelight, spectacle |
+| **Remote desktop** | ✅ Included | krfb, krdp |
+| **Discover** | ✅ Included | plasma-discover, plasma-discover-notifier |
+| **Bluetooth** | ✅ Included | bluedevil |
+| **Print** | ✅ Included | plasma-print-manager |
+| **Core** | ✅ Included | dolphin, konsole, kde-connect, plasma-nm, plasma-pa, kscreen, kscreenlocker, plasma-breeze, kwin, kcalc, plasma-firewall |
 
-**Bottom line:** Everything ISO + `@kde-desktop` starts ~30% cleaner than KDE Spin.
-
-### 3.2 Keep the Essentials
+### 3.2 Disable Unneeded Plasma Services
 
 ```bash
-# Reinstall only what you actually want from the list above
-
-sudo dnf5 install -y \
-  dolphin konsole \
-  kde-connect \
-  xdg-desktop-portal-kde
-```
-
-### 3.3 Disable Unneeded Plasma Services
-
-```bash
-# Disable Discover notifier (you removed discover anyway)
-systemctl --user disable --now plasma-discover-notifier.service 2>/dev/null || true
-
 # Disable KDE Wallet if you don't use it
 mkdir -p ~/.config
 cat <<'EOF' >> ~/.config/kwalletrc
@@ -366,8 +336,7 @@ pyenv global 3.13.2
 ### 4.2 Flatpak Apps
 
 ```bash
-# Reinstall flatpak if you removed it earlier
-sudo dnf5 install -y flatpak
+# Add Flathub if not already configured
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Pick what you need

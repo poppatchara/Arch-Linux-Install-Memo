@@ -501,7 +501,7 @@ efibootmgr --delete-bootnum --bootnum XXXX
 
 # Install GRUB (efibootmgr and dosfstools already in pacstrap)
 
-pacman -Sy --needed grub
+pacman -S --noconfirm --needed grub
 
 # Install GRUB to the EFI System Partition
 
@@ -586,7 +586,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # Install os-prober
 
-pacman -Sy --needed os-prober
+pacman -S --noconfirm --needed os-prober
 
 # Enable os-prober in GRUB config
 
@@ -696,7 +696,7 @@ systemctl enable fstrim.timer
 # qt6-wayland : Qt6 Wayland platform plugin
 # xorg-xwayland : Runs X11 apps under Wayland
 
-pacman -Sy --needed \
+pacman -S --noconfirm --needed \
   plasma-login-manager \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
@@ -714,7 +714,7 @@ systemctl enable plasmalogin
 # kde-gtk-config : Configure GTK theme/fonts under KDE
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
-pacman -Sy --needed \
+pacman -S --noconfirm --needed \
   plasma-desktop \
   kscreen \
   kde-gtk-config \
@@ -737,7 +737,7 @@ You can select what you need.
 # appmenu-gtk-module : AppMenu GTK module
 # libdbusmenu-glib : DBus menu integration
 
-pacman -Sy --needed \
+pacman -S --noconfirm --needed \
   bluedevil \
   power-profiles-daemon \
   kdeplasma-addons \
@@ -752,10 +752,10 @@ pacman -Sy --needed \
 systemctl enable power-profiles-daemon
 
 # Optional: Encrypted "vault" folders integration: plasma-vault
-# pacman -Sy --needed plasma-vault
+# pacman -S --noconfirm --needed plasma-vault
 
 # Optional: Phone integration (kdeconnectd service): kdeconnect
-# pacman -Sy --needed kdeconnect
+# pacman -S --noconfirm --needed kdeconnect
 ```
 
 #### Plasma Login Manager PAM configuration
@@ -786,7 +786,7 @@ EOF
 # kwalletmanager : GUI to inspect/manage wallets
 # kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
-pacman -Sy --needed \
+pacman -S --noconfirm --needed \
   kwallet \
   kwalletmanager \
   kwallet-pam
@@ -829,7 +829,7 @@ userdel -r sddm
 # btop : System monitor (alternative to htop)
 # fastfetch : System info tool (neofetch alternative)
 
-pacman -Sy --needed \
+pacman -S --noconfirm --needed \
   dolphin \
   dolphin-plugins \
   konsole \
@@ -1051,7 +1051,7 @@ If it works, you're all set. If not, you still have the active session to fix an
 ### YAY package manager
 
 ```bash
-sudo pacman -Sy --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+sudo pacman -S --noconfirm --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd ..
 rm -rf yay
 
@@ -1112,7 +1112,7 @@ This guide marks AUR packages clearly. Review them before running `yay -S`.
 #### Official packages (pacman)
 
 ```bash
-sudo pacman -Sy --needed snapper btrfs-assistant
+sudo pacman -S --noconfirm --needed snapper btrfs-assistant
 
 ```
 
@@ -1278,7 +1278,7 @@ sudo snapper -c home set-config EMPTY_PRE_POST_CLEANUP=yes
 #### All extra packages (one call)
 
 ```bash
-sudo pacman -Sy --needed \
+sudo pacman -S --noconfirm --needed \
   imagemagick \
   gvfs gvfs-smb brightnessctl \
   vlc gimp obs-studio \
@@ -1390,7 +1390,7 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   # clinfo : query OpenCL platforms/devices
   # cuda : CUDA toolkit/runtime
 
-  sudo pacman -Sy --needed \
+  sudo pacman -S --noconfirm --needed \
     nvidia-open-dkms \
     nvidia-utils \
     lib32-nvidia-utils \
@@ -1408,7 +1408,7 @@ Extra stuffs for gaming (NVIDIA only):
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  sudo pacman -Sy --needed \
+  sudo pacman -S --noconfirm --needed \
     libva-utils \
     vdpauinfo \
     vulkan-tools \
@@ -1554,7 +1554,7 @@ yay -Yc
 # Install common build deps for compiling Python versions
 # (base-devel already installed in base install)
 
-sudo pacman -Sy --needed openssl zlib xz tk readline sqlite libffi bzip2
+sudo pacman -S --noconfirm --needed openssl zlib xz tk readline sqlite libffi bzip2
 
 # Clone pyenv into your home directory
 

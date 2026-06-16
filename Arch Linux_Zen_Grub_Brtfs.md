@@ -188,15 +188,17 @@ mkswap /dev/nvme0n1p2
 
 # Store UUID for later scripts.
 
-# Validate swap partition type before storing UUID
-if ! blkid -s TYPE -o value /dev/nvme0n1p2 | grep -q swap; then
-  echo "ERROR: /dev/nvme0n1p2 is not a swap partition (type: $(blkid -s TYPE -o value /dev/nvme0n1p2))" >&2
-  echo "Run 'mkswap /dev/nvme0n1p2' first." >&2
+# Auto-detect swap partition (adapts to any partition layout)
+swap_part="$(blkid -t TYPE=swap -o device /dev/nvme0n1* | head -1)"
+if [ -z "$swap_part" ]; then
+  echo "ERROR: No swap partition found on /dev/nvme0n1" >&2
+  echo "Run 'mkswap /dev/nvme0n1pX' first." >&2
   exit 1
 fi
+echo "Detected swap partition: $swap_part"
 
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
+swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 
 ```
@@ -497,13 +499,13 @@ grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"
 
-# Validate swap before capturing UUID
-swap_type="$(blkid -s TYPE -o value /dev/nvme0n1p2)"
-if [ "$swap_type" != "swap" ]; then
-  echo "ERROR: /dev/nvme0n1p2 is type '$swap_type', expected 'swap'" >&2
+# Auto-detect swap partition
+swap_part="$(blkid -t TYPE=swap -o device /dev/nvme0n1* | head -1)"
+if [ -z "$swap_part" ]; then
+  echo "ERROR: No swap partition found on /dev/nvme0n1" >&2
   exit 1
 fi
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
+swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 
 # Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line
 

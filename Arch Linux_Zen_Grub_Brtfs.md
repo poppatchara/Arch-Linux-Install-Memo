@@ -188,11 +188,11 @@ mkswap /dev/nvme0n1p2
 
 # Store UUID for later scripts.
 
-# Auto-detect swap partition (adapts to any partition layout)
-swap_part="$(blkid -t TYPE=swap -o device /dev/nvme0n1* | head -1)"
+# Auto-detect swap partition (any disk, any partition number)
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
 if [ -z "$swap_part" ]; then
-  echo "ERROR: No swap partition found on /dev/nvme0n1" >&2
-  echo "Run 'mkswap /dev/nvme0n1pX' first." >&2
+  echo "ERROR: No swap partition found" >&2
+  echo "Run 'mkswap /dev/<disk-partition>' first." >&2
   exit 1
 fi
 echo "Detected swap partition: $swap_part"
@@ -499,10 +499,10 @@ grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"
 
-# Auto-detect swap partition
-swap_part="$(blkid -t TYPE=swap -o device /dev/nvme0n1* | head -1)"
+# Auto-detect swap partition (any disk)
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
 if [ -z "$swap_part" ]; then
-  echo "ERROR: No swap partition found on /dev/nvme0n1" >&2
+  echo "ERROR: No swap partition found" >&2
   exit 1
 fi
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"

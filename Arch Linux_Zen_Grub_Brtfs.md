@@ -197,7 +197,20 @@ if [ -z "$swap_part" ]; then
 fi
 echo "Detected swap partition: $swap_part"
 
-esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
+# Auto-detect ESP by GPT partition type GUID
+esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
+  case "$type" in
+    c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;;
+  esac
+done)"
+if [ -z "$esp_part" ]; then
+  echo "ERROR: No EFI System Partition found (no partition with ESP GUID)" >&2
+  echo "Create a FAT32 partition with type EFI System (ef00 in cgdisk)" >&2
+  exit 1
+fi
+echo "Detected ESP: $esp_part"
+
+esp_uuid="$(blkid -s UUID -o value "$esp_part")"
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 

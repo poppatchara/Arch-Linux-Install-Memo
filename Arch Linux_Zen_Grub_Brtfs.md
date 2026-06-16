@@ -1775,6 +1775,15 @@ cd $repo
 cd sddm && sudo ./install.sh  # sddm
 rm -rf $repo && cd ~
 
+# Lavanda KDE
+
+repo=~/Desktop/theme
+git clone https://github.com/vinceliuice/Lavanda-kde.git $repo
+cd $repo
+./install.sh
+cd sddm/6.0 && sudo ./install.sh  # sddm
+rm -rf $repo && cd ~
+
 ```
 
 ### Icon themes & cursors
@@ -1814,6 +1823,20 @@ git clone https://github.com/vinceliuice/Qogir-icon-theme.git $repo
 cd $repo
 ./install.sh
 cd cursor && sudo ./install.sh    # cursors
+rm -rf $repo && cd ~
+
+```
+
+### Wallpapers
+
+```bash
+
+# WhiteSur Wallpapers
+
+repo=~/Desktop/wallpaper
+git clone https://github.com/vinceliuice/WhiteSur-wallpapers.git $repo
+cd $repo
+./install-wallpapers.sh
 rm -rf $repo && cd ~
 
 ```

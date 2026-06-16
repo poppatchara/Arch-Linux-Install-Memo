@@ -298,7 +298,7 @@ pacstrap -K /mnt \
   linux linux-headers linux-zen linux-zen-headers linux-firmware "${cpu}-ucode" \
   efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs\
   networkmanager openssh \
-  nvim git sudo man curl perl \
+  vim nvim git sudo man curl perl \
   zsh zsh-completions zsh-autosuggestions bash-completion \
   pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector
 
@@ -318,7 +318,7 @@ cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 - Filesystem tools: `btrfs-progs`
 - Boot/UEFI tools: `efibootmgr`
 - Networking + SSH: `networkmanager`, `openssh`
-- Editors + tools: `nvim`, `git`, `sudo`, `man`, `curl`, `perl`
+- Editors + tools: `vim`, `nvim`, `git`, `sudo`, `man`, `curl`, `perl`
 - Audio stack (PipeWire): `pipewire`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `wireplumber`
 - Mirrors/shell UX: `reflector`, `zsh`, `zsh-completions`, `zsh-autosuggestions`, `bash-completion`
 

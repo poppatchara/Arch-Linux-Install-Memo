@@ -1343,6 +1343,12 @@ sudo pacman -S --noconfirm --needed \
   terminus-font nerd-fonts ttf-ms-fonts
 ```
 
+#### Theming (official)
+
+```bash
+sudo pacman -S --noconfirm --needed kvantum
+```
+
 ### SPDIF audio dropout / sleep
 
 🔊 Some SPDIF receivers/DACs go to sleep after a few idle seconds, so the first 1-3 seconds of the next sound get eaten while the link wakes up. Two tweaks that keep the SPDIF clock alive:

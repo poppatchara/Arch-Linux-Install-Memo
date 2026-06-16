@@ -709,13 +709,17 @@ systemctl enable plasmalogin
 #### KDE Plasma Core
 
 ```bash
-# plasma-desktop : The Plasma desktop shell (pulls plasma-workspace, kwin, systemsettings, plasma-nm, plasma-pa)
+# plasma-desktop : The Plasma desktop shell (pulls plasma-workspace, kwin, systemsettings as deps)
+# plasma-nm : NetworkManager tray applet (OPTIONAL dep — must install explicitly!)
+# plasma-pa : Audio volume tray applet (OPTIONAL dep — must install explicitly!)
 # kscreen : Display configuration + monitor hotplug handling
 # kde-gtk-config : Configure GTK theme/fonts under KDE
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
 pacman -S --noconfirm --needed \
   plasma-desktop \
+  plasma-nm \
+  plasma-pa \
   kscreen \
   kde-gtk-config \
   breeze-gtk

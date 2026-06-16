@@ -1180,30 +1180,30 @@ sudo snapper -c home set-config TIMELINE_LIMIT_YEARLY=0
 Timeline limits control *age*. Number limits control *total count* — a safety net against snapshot bloat regardless of timeline rules.
 
 ```bash
-# === root — hard cap at 30 snapshots (10 important) ===
+# === root — hard cap at 15 snapshots (5 important) ===
 sudo snapper -c root set-config NUMBER_CLEANUP=yes
-sudo snapper -c root set-config NUMBER_LIMIT=30
-sudo snapper -c root set-config NUMBER_LIMIT_IMPORTANT=10
+sudo snapper -c root set-config NUMBER_LIMIT=15
+sudo snapper -c root set-config NUMBER_LIMIT_IMPORTANT=5
 sudo snapper -c root set-config NUMBER_MIN_AGE=1800
 
-# === boot — cap at 10 (snap-pac pre/post pairs add up) ===
+# === boot — cap at 5 (snap-pac pre/post pairs add up) ===
 sudo snapper -c boot set-config NUMBER_CLEANUP=yes
-sudo snapper -c boot set-config NUMBER_LIMIT=10
-sudo snapper -c boot set-config NUMBER_LIMIT_IMPORTANT=5
+sudo snapper -c boot set-config NUMBER_LIMIT=5
+sudo snapper -c boot set-config NUMBER_LIMIT_IMPORTANT=3
 sudo snapper -c boot set-config NUMBER_MIN_AGE=1800
 
-# === home — cap at 20 ===
+# === home — cap at 10 ===
 sudo snapper -c home set-config NUMBER_CLEANUP=yes
-sudo snapper -c home set-config NUMBER_LIMIT=20
-sudo snapper -c home set-config NUMBER_LIMIT_IMPORTANT=5
+sudo snapper -c home set-config NUMBER_LIMIT=10
+sudo snapper -c home set-config NUMBER_LIMIT_IMPORTANT=3
 sudo snapper -c home set-config NUMBER_MIN_AGE=1800
 ```
 
 | Config | NUMBER_LIMIT | IMPORTANT | Logic |
 |--------|-------------|-----------|-------|
-| `root` | 30 | 10 | Safety net beyond timeline |
-| `boot` | 10 | 5 | snap-pac pre/post pairs, keep it tight |
-| `home` | 20 | 5 | Prevent runaway user-data snapshots |
+| `root` | 15 | 5 | Safety net beyond timeline |
+| `boot` | 5 | 3 | snap-pac pre/post pairs, keep it tight |
+| `home` | 10 | 3 | Prevent runaway user-data snapshots |
 
 #### Enable Snapper Timers
 

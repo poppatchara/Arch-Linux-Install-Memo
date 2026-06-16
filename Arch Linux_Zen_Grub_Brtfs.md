@@ -1366,6 +1366,9 @@ sudo pacman -S --noconfirm --needed kvantum
 > **Security scan passed:** PKGBUILD reviewed 2026-06-16. Source: `github.com/ekaaty/vinyl-theme` (GPL-2.0, 140★). Standard cmake build, no obfuscation, no suspicious network calls.
 
 ```bash
+# python-cairosvg is a build dep — install first or cursor generation fails
+sudo pacman -S --noconfirm --needed python-cairosvg
+
 yay -S --noconfirm --needed vinyl-git
 ```
 

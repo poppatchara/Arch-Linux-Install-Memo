@@ -1209,11 +1209,30 @@ sudo snapper -c home set-config NUMBER_MIN_AGE=1800
 
 ```bash
 
-# Enable automatic timeline snapshots + periodic cleanup
+# Enable timeline snapshots (hourly) + periodic cleanup
 
 sudo systemctl enable --now snapper-timeline.timer
 sudo systemctl enable --now snapper-cleanup.timer
 
+```
+
+#### Cleanup Algorithms (safety nets)
+
+Three cleanup algorithms run every time `snapper-cleanup.timer` fires:
+
+| Algorithm | What it does | Default |
+|-----------|-------------|---------|
+| `NUMBER` | Hard cap on total snapshots | We set above |
+| `TIMELINE` | Age-based retention | We set above |
+| `EMPTY_PRE_POST` | Removes pre/post pairs where nothing changed between them | `yes` ✅ |
+
+Number + timeline + empty-pre-post are all on by default. Only override if you want to disable one:
+
+```bash
+# Defaults are fine — set explicitly for peace of mind
+sudo snapper -c root set-config EMPTY_PRE_POST_CLEANUP=yes
+sudo snapper -c boot set-config EMPTY_PRE_POST_CLEANUP=yes
+sudo snapper -c home set-config EMPTY_PRE_POST_CLEANUP=yes
 ```
 
 ### Extra Packages and fonts

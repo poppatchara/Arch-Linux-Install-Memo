@@ -1349,6 +1349,16 @@ sudo pacman -S --noconfirm --needed \
 sudo pacman -S --noconfirm --needed kvantum
 ```
 
+#### Vinyl Theme (AUR) 🔒
+
+[Vinyl](https://github.com/ekaaty/vinyl-theme) is a sleek KDE Plasma 6 theme. ⚠️ Builds from source — slow machines may take 5-15 min (cmake + Python SVG processing).
+
+> **Security scan passed:** PKGBUILD reviewed 2026-06-16. Source: `github.com/ekaaty/vinyl-theme` (GPL-2.0, 140★). Standard cmake build, no obfuscation, no suspicious network calls.
+
+```bash
+yay -S --noconfirm --needed vinyl-git
+```
+
 ### SPDIF audio dropout / sleep
 
 🔊 Some SPDIF receivers/DACs go to sleep after a few idle seconds, so the first 1-3 seconds of the next sound get eaten while the link wakes up. Two tweaks that keep the SPDIF clock alive:

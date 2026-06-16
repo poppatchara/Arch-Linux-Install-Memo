@@ -188,6 +188,13 @@ mkswap /dev/nvme0n1p2
 
 # Store UUID for later scripts.
 
+# Validate swap partition type before storing UUID
+if ! blkid -s TYPE -o value /dev/nvme0n1p2 | grep -q swap; then
+  echo "ERROR: /dev/nvme0n1p2 is not a swap partition (type: $(blkid -s TYPE -o value /dev/nvme0n1p2))" >&2
+  echo "Run 'mkswap /dev/nvme0n1p2' first." >&2
+  exit 1
+fi
+
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
@@ -489,6 +496,13 @@ grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"
+
+# Validate swap before capturing UUID
+swap_type="$(blkid -s TYPE -o value /dev/nvme0n1p2)"
+if [ "$swap_type" != "swap" ]; then
+  echo "ERROR: /dev/nvme0n1p2 is type '$swap_type', expected 'swap'" >&2
+  exit 1
+fi
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 
 # Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line

@@ -1343,6 +1343,16 @@ sudo pacman -S --noconfirm --needed \
   terminus-font nerd-fonts ttf-ms-fonts
 ```
 
+#### Spell check (hunspell)
+
+```bash
+# Engine + English dictionaries
+sudo pacman -S --noconfirm --needed hunspell hunspell-en_us hunspell-en_gb
+
+# Thai dictionary (AUR) 🔒
+yay -S --noconfirm --needed hunspell-th
+```
+
 #### Theming (official)
 
 ```bash

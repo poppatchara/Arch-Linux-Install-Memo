@@ -1116,7 +1116,7 @@ sudo systemctl enable --now grub-btrfsd
 
 #### Create Snapper Configs
 
-You can omit `/home` snapping if you prefer (e.g., for large media folders).
+📝 `/home` snapshotting is optional — skip if you have large media/game folders or prefer separate backup for user data.
 
 ```bash
 
@@ -1130,6 +1130,7 @@ sudo su
 snapper -c root create-config /
 snapper -c boot create-config /boot
 snapper -c home create-config /home
+# ↑ Skip /home if you don't want user data in snapshots
 
 ```
 
@@ -1138,6 +1139,53 @@ snapper -c home create-config /home
 # Exit root
 
 exit
+
+```
+
+#### Timeline & Retention Settings
+
+Snapper creates automatic hourly snapshots by default. Tune how many to keep per config:
+
+```bash
+# === root (system files) — moderate retention ===
+sudo snapper -c root set-config TIMELINE_CREATE=yes
+sudo snapper -c root set-config TIMELINE_LIMIT_HOURLY=5
+sudo snapper -c root set-config TIMELINE_LIMIT_DAILY=7
+sudo snapper -c root set-config TIMELINE_LIMIT_WEEKLY=4
+sudo snapper -c root set-config TIMELINE_LIMIT_MONTHLY=3
+sudo snapper -c root set-config TIMELINE_LIMIT_YEARLY=0
+
+# === boot (kernel + initramfs) — changes rarely ===
+sudo snapper -c boot set-config TIMELINE_CREATE=yes
+sudo snapper -c boot set-config TIMELINE_LIMIT_HOURLY=0
+sudo snapper -c boot set-config TIMELINE_LIMIT_DAILY=5
+sudo snapper -c boot set-config TIMELINE_LIMIT_WEEKLY=2
+sudo snapper -c boot set-config TIMELINE_LIMIT_MONTHLY=0
+sudo snapper -c boot set-config TIMELINE_LIMIT_YEARLY=0
+
+# === home (if enabled) — light retention ===
+sudo snapper -c home set-config TIMELINE_CREATE=yes
+sudo snapper -c home set-config TIMELINE_LIMIT_HOURLY=0
+sudo snapper -c home set-config TIMELINE_LIMIT_DAILY=3
+sudo snapper -c home set-config TIMELINE_LIMIT_WEEKLY=2
+sudo snapper -c home set-config TIMELINE_LIMIT_MONTHLY=0
+sudo snapper -c home set-config TIMELINE_LIMIT_YEARLY=0
+```
+
+| Config | Hourly | Daily | Weekly | Monthly | Use case |
+|--------|--------|-------|--------|---------|----------|
+| `root` | 5 | 7 | 4 | 3 | System files, most rollbacks |
+| `boot` | 0 | 5 | 2 | 0 | Kernels change rarely |
+| `home` | 0 | 3 | 2 | 0 | User data, light retention |
+
+#### Enable Snapper Timers
+
+```bash
+
+# Enable automatic timeline snapshots + periodic cleanup
+
+sudo systemctl enable --now snapper-timeline.timer
+sudo systemctl enable --now snapper-cleanup.timer
 
 ```
 

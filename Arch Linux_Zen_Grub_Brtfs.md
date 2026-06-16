@@ -406,7 +406,9 @@ user=pop
 
 ```bash
 echo "Create user, and set password"
-useradd -m -G wheel,storage,power,audio,video -s /bin/bash $user
+# Create docker group early for passwordless docker (group stays even if docker not installed yet)
+groupadd -f docker
+useradd -m -G wheel,storage,power,audio,video,docker -s /bin/bash $user
 passwd $user
 ```
 

@@ -501,7 +501,7 @@ efibootmgr --delete-bootnum --bootnum XXXX
 
 # Install GRUB (efibootmgr and dosfstools already in pacstrap)
 
-pacman -S --needed grub
+pacman -Sy --needed grub
 
 # Install GRUB to the EFI System Partition
 
@@ -586,7 +586,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # Install os-prober
 
-pacman -S --needed os-prober
+pacman -Sy --needed os-prober
 
 # Enable os-prober in GRUB config
 
@@ -696,7 +696,7 @@ systemctl enable fstrim.timer
 # qt6-wayland : Qt6 Wayland platform plugin
 # xorg-xwayland : Runs X11 apps under Wayland
 
-pacman -S --needed \
+pacman -Sy --needed \
   plasma-login-manager \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
@@ -714,7 +714,7 @@ systemctl enable plasmalogin
 # kde-gtk-config : Configure GTK theme/fonts under KDE
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
-pacman -S --needed \
+pacman -Sy --needed \
   plasma-desktop \
   kscreen \
   kde-gtk-config \
@@ -737,7 +737,7 @@ You can select what you need.
 # appmenu-gtk-module : AppMenu GTK module
 # libdbusmenu-glib : DBus menu integration
 
-pacman -S --needed \
+pacman -Sy --needed \
   bluedevil \
   power-profiles-daemon \
   kdeplasma-addons \
@@ -752,10 +752,10 @@ pacman -S --needed \
 systemctl enable power-profiles-daemon
 
 # Optional: Encrypted "vault" folders integration: plasma-vault
-# pacman -S --needed plasma-vault
+# pacman -Sy --needed plasma-vault
 
 # Optional: Phone integration (kdeconnectd service): kdeconnect
-# pacman -S --needed kdeconnect
+# pacman -Sy --needed kdeconnect
 ```
 
 #### Plasma Login Manager PAM configuration
@@ -786,7 +786,7 @@ EOF
 # kwalletmanager : GUI to inspect/manage wallets
 # kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
-pacman -S --needed \
+pacman -Sy --needed \
   kwallet \
   kwalletmanager \
   kwallet-pam
@@ -829,7 +829,7 @@ userdel -r sddm
 # btop : System monitor (alternative to htop)
 # fastfetch : System info tool (neofetch alternative)
 
-pacman -S --needed \
+pacman -Sy --needed \
   dolphin \
   dolphin-plugins \
   konsole \
@@ -1051,7 +1051,7 @@ If it works, you're all set. If not, you still have the active session to fix an
 ### YAY package manager
 
 ```bash
-sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+sudo pacman -Sy --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd ..
 rm -rf yay
 
@@ -1112,7 +1112,7 @@ This guide marks AUR packages clearly. Review them before running `yay -S`.
 #### Official packages (pacman)
 
 ```bash
-sudo pacman -S --needed snapper btrfs-assistant
+sudo pacman -Sy --needed snapper btrfs-assistant
 
 ```
 
@@ -1121,7 +1121,7 @@ sudo pacman -S --needed snapper btrfs-assistant
 Review PKGBUILDs before installing. These are well-established packages but always verify.
 
 ```bash
-yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git
+yay -S --noconfirm --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git
 
 ```
 
@@ -1278,7 +1278,7 @@ sudo snapper -c home set-config EMPTY_PRE_POST_CLEANUP=yes
 #### All extra packages (one call)
 
 ```bash
-sudo pacman -S --needed \
+sudo pacman -Sy --needed \
   imagemagick \
   gvfs gvfs-smb brightnessctl \
   vlc gimp obs-studio \
@@ -1298,7 +1298,7 @@ sudo usermod -aG gamemode $USER
 Review PKGBUILDs before installing. These are official vendor binaries repackaged for Arch.
 
 ```bash
-yay -S --needed \
+yay -S --noconfirm --needed \
   brave-bin \
   mailspring-bin \
   visual-studio-code-bin
@@ -1309,7 +1309,7 @@ yay -S --needed \
 Review PKGBUILD before installing. Proton-GE is a custom Proton build by GloriousEggroll.
 
 ```bash
-yay -S --needed proton-ge-custom-bin
+yay -S --noconfirm --needed proton-ge-custom-bin
 ```
 
 ### SPDIF audio dropout / sleep
@@ -1390,7 +1390,7 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   # clinfo : query OpenCL platforms/devices
   # cuda : CUDA toolkit/runtime
 
-  sudo pacman -S --needed \
+  sudo pacman -Sy --needed \
     nvidia-open-dkms \
     nvidia-utils \
     lib32-nvidia-utils \
@@ -1408,7 +1408,7 @@ Extra stuffs for gaming (NVIDIA only):
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  sudo pacman -S --needed \
+  sudo pacman -Sy --needed \
     libva-utils \
     vdpauinfo \
     vulkan-tools \
@@ -1537,7 +1537,7 @@ EOF
 ### Clear package manager caches
 
 ```bash
-yay -Syu
+yay -Syu --noconfirm
 sudo paccache -r
 yay -Yc
 
@@ -1554,7 +1554,7 @@ yay -Yc
 # Install common build deps for compiling Python versions
 # (base-devel already installed in base install)
 
-sudo pacman -S --needed openssl zlib xz tk readline sqlite libffi bzip2
+sudo pacman -Sy --needed openssl zlib xz tk readline sqlite libffi bzip2
 
 # Clone pyenv into your home directory
 

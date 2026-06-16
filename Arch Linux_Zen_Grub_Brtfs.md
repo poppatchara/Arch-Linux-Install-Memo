@@ -507,17 +507,14 @@ if [ -z "$swap_part" ]; then
 fi
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 
-# Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line
+# Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line, then insert after GRUB_CMDLINE_LINUX=
 
 sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
-
-# Add the new line (shell expands variables before writing)
-
-echo "GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" >> /etc/default/grub
+sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
 
 # Verify the change
 
-grep "^GRUB_CMDLINE_LINUX_DEFAULT=" /etc/default/grub
+grep "^GRUB_CMDLINE_LINUX" /etc/default/grub
 
 ```
 

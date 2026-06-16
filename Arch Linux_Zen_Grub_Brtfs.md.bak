@@ -501,7 +501,7 @@ efibootmgr --delete-bootnum --bootnum XXXX
 
 # Install GRUB (efibootmgr and dosfstools already in pacstrap)
 
-pacman -S --noconfirm --needed grub
+pacman -S --needed grub
 
 # Install GRUB to the EFI System Partition
 
@@ -586,7 +586,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # Install os-prober
 
-pacman -S --noconfirm --needed os-prober
+pacman -S --needed os-prober
 
 # Enable os-prober in GRUB config
 
@@ -696,7 +696,7 @@ systemctl enable fstrim.timer
 # qt6-wayland : Qt6 Wayland platform plugin
 # xorg-xwayland : Runs X11 apps under Wayland
 
-pacman -S --noconfirm --needed \
+pacman -S --needed \
   plasma-login-manager \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
@@ -714,7 +714,7 @@ systemctl enable plasmalogin
 # kde-gtk-config : Configure GTK theme/fonts under KDE
 # breeze-gtk : Breeze theme for GTK apps (visual consistency)
 
-pacman -S --noconfirm --needed \
+pacman -S --needed \
   plasma-desktop \
   kscreen \
   kde-gtk-config \
@@ -737,7 +737,7 @@ You can select what you need.
 # appmenu-gtk-module : AppMenu GTK module
 # libdbusmenu-glib : DBus menu integration
 
-pacman -S --noconfirm --needed \
+pacman -S --needed \
   bluedevil \
   power-profiles-daemon \
   kdeplasma-addons \
@@ -752,10 +752,10 @@ pacman -S --noconfirm --needed \
 systemctl enable power-profiles-daemon
 
 # Optional: Encrypted "vault" folders integration: plasma-vault
-# pacman -S --noconfirm --needed plasma-vault
+# pacman -S --needed plasma-vault
 
 # Optional: Phone integration (kdeconnectd service): kdeconnect
-# pacman -S --noconfirm --needed kdeconnect
+# pacman -S --needed kdeconnect
 ```
 
 #### Plasma Login Manager PAM configuration
@@ -786,7 +786,7 @@ EOF
 # kwalletmanager : GUI to inspect/manage wallets
 # kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
-pacman -S --noconfirm --needed \
+pacman -S --needed \
   kwallet \
   kwalletmanager \
   kwallet-pam
@@ -829,7 +829,7 @@ userdel -r sddm
 # btop : System monitor (alternative to htop)
 # fastfetch : System info tool (neofetch alternative)
 
-pacman -S --noconfirm --needed \
+pacman -S --needed \
   dolphin \
   dolphin-plugins \
   konsole \
@@ -1051,7 +1051,7 @@ If it works, you're all set. If not, you still have the active session to fix an
 ### YAY package manager
 
 ```bash
-sudo pacman -S --noconfirm --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd ..
 rm -rf yay
 
@@ -1112,7 +1112,7 @@ This guide marks AUR packages clearly. Review them before running `yay -S`.
 #### Official packages (pacman)
 
 ```bash
-sudo pacman -S --noconfirm --needed snapper btrfs-assistant
+sudo pacman -S --needed snapper btrfs-assistant
 
 ```
 
@@ -1121,7 +1121,7 @@ sudo pacman -S --noconfirm --needed snapper btrfs-assistant
 Review PKGBUILDs before installing. These are well-established packages but always verify.
 
 ```bash
-yay -S --noconfirm --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git
+yay -S --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git
 
 ```
 
@@ -1273,74 +1273,43 @@ sudo snapper -c home set-config EMPTY_PRE_POST_CLEANUP=yes
 
 ### Extra Packages and fonts
 
-🧺 Personal "daily driver" pick list. Install only what you want — each section can be skipped.
+🧺 Personal "daily driver" pick list. Install only what you want.
 
-#### Core CLI + media (official)
-
-```bash
-sudo pacman -S --noconfirm --needed imagemagick vlc gimp obs-studio
-```
-
-#### Filesystem / network / power (official)
+#### All extra packages (one call)
 
 ```bash
-sudo pacman -S --noconfirm --needed gvfs gvfs-smb brightnessctl
+sudo pacman -S --needed \
+  imagemagick \
+  gvfs gvfs-smb brightnessctl \
+  vlc gimp obs-studio \
+  nodejs npm bun \
+  firefox chromium libreoffice-fresh filezilla \
+  gamemode lib32-gamemode steam lutris \
+  mangohud lib32-mangohud goverlay \
+  flatpak \
+  noto-fonts noto-fonts-emoji ttf-dejavu \
+  ttf-ubuntu-font-family terminus-font nerd-fonts ttf-ms-fonts
+
+sudo usermod -aG gamemode $USER
 ```
 
-#### JavaScript/TypeScript runtimes (official)
-
-```bash
-sudo pacman -S --noconfirm --needed nodejs npm bun
-```
-
-#### Desktop apps (official)
-
-```bash
-sudo pacman -S --noconfirm --needed \
-  firefox chromium libreoffice-fresh filezilla
-```
-
-#### Desktop apps (AUR) 🔒
+#### AUR desktop apps (proprietary -bin packages) 🔒
 
 Review PKGBUILDs before installing. These are official vendor binaries repackaged for Arch.
 
 ```bash
-yay -S --noconfirm --needed \
+yay -S --needed \
   brave-bin \
   mailspring-bin \
   visual-studio-code-bin
 ```
 
-#### Gaming (official)
-
-```bash
-sudo pacman -S --noconfirm --needed \
-  gamemode lib32-gamemode steam lutris \
-  mangohud lib32-mangohud goverlay
-sudo usermod -aG gamemode $USER
-```
-
-#### Gaming (AUR) 🔒
+#### AUR gaming 🔒
 
 Review PKGBUILD before installing. Proton-GE is a custom Proton build by GloriousEggroll.
 
 ```bash
-yay -S --noconfirm --needed proton-ge-custom-bin
-```
-
-#### Flatpak runtime (official)
-
-```bash
-sudo pacman -S --noconfirm --needed flatpak
-```
-
-#### Fonts (official)
-
-```bash
-sudo pacman -S --noconfirm --needed \
-  noto-fonts noto-fonts-emoji \
-  ttf-dejavu ttf-ubuntu-font-family \
-  terminus-font nerd-fonts ttf-ms-fonts
+yay -S --needed proton-ge-custom-bin
 ```
 
 ### SPDIF audio dropout / sleep
@@ -1421,7 +1390,7 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   # clinfo : query OpenCL platforms/devices
   # cuda : CUDA toolkit/runtime
 
-  sudo pacman -S --noconfirm --needed \
+  sudo pacman -S --needed \
     nvidia-open-dkms \
     nvidia-utils \
     lib32-nvidia-utils \
@@ -1439,7 +1408,7 @@ Extra stuffs for gaming (NVIDIA only):
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  sudo pacman -S --noconfirm --needed \
+  sudo pacman -S --needed \
     libva-utils \
     vdpauinfo \
     vulkan-tools \
@@ -1568,7 +1537,7 @@ EOF
 ### Clear package manager caches
 
 ```bash
-yay -Syu --noconfirm
+yay -Syu
 sudo paccache -r
 yay -Yc
 
@@ -1585,7 +1554,7 @@ yay -Yc
 # Install common build deps for compiling Python versions
 # (base-devel already installed in base install)
 
-sudo pacman -S --noconfirm --needed openssl zlib xz tk readline sqlite libffi bzip2
+sudo pacman -S --needed openssl zlib xz tk readline sqlite libffi bzip2
 
 # Clone pyenv into your home directory
 

@@ -52,6 +52,7 @@ Personal notes for building a lightweight Fedora 44 KDE desktop: minimal package
 - **Btrfs subvolumes**: documented exact layout (`@`, `@home`, `@var_log`, `@var_cache`). Removed `@root` (Fedora won't allow it — lives inside `@`). Removed `@var` and `@srv` (unnecessary for desktop).
 - **`@kde-desktop` group contents**: documented what the DNF group actually includes (from Fedora 44 comps). PIM apps (kontact/kmail/akregator) NOT in group — only akonadi-server backend. Everything ISO users can skip the removal section entirely (none of the 6 removed packages are in the group).
 - `/boot` on Btrfs: Fedora 44 Cloud defaults to `/boot` as Btrfs subvolume; KDE/Workstation still use separate ext4 `/boot` by default. Custom partitioning can merge `/boot` into `@`.
+- **SECURITY FIX:** Removed dangerous `--allowerasing` from `dnf5 swap ffmpeg-free ffmpeg`. This flag allows DNF to cascade-delete conflicting system packages (e.g., `util-linux` which provides `/usr/sbin/sulogin`) — causing unbootable system. Swap now runs without `--allowerasing` so conflicts are visible before any action is taken.
 
 ### 2026-06-07
 
@@ -345,7 +346,11 @@ fi
 
 ```bash
 # Install full ffmpeg (replaces Fedora's limited ffmpeg-free)
-sudo dnf5 swap ffmpeg-free ffmpeg --allowerasing
+
+# SAFE: swap without --allowerasing — shows conflicts BEFORE acting
+sudo dnf5 swap ffmpeg-free ffmpeg
+# If the above fails with dependency errors, check what would be removed:
+#   sudo dnf5 remove ffmpeg-free  (dry-run first: add --setopt=clean_requirements_on_remove=0)
 
 # Install multimedia group + sound & video
 sudo dnf5 group install -y multimedia

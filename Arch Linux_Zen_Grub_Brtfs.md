@@ -1147,21 +1147,18 @@ exit
 Snapper creates automatic hourly snapshots by default. Tune how many to keep per config:
 
 ```bash
-# === root (system files) — moderate retention ===
+# === root (system files) — keep recent rollback window ===
 sudo snapper -c root set-config TIMELINE_CREATE=yes
 sudo snapper -c root set-config TIMELINE_LIMIT_HOURLY=5
 sudo snapper -c root set-config TIMELINE_LIMIT_DAILY=7
 sudo snapper -c root set-config TIMELINE_LIMIT_WEEKLY=4
-sudo snapper -c root set-config TIMELINE_LIMIT_MONTHLY=3
+sudo snapper -c root set-config TIMELINE_LIMIT_MONTHLY=0
 sudo snapper -c root set-config TIMELINE_LIMIT_YEARLY=0
 
-# === boot (kernel + initramfs) — changes rarely ===
-sudo snapper -c boot set-config TIMELINE_CREATE=yes
-sudo snapper -c boot set-config TIMELINE_LIMIT_HOURLY=0
-sudo snapper -c boot set-config TIMELINE_LIMIT_DAILY=5
-sudo snapper -c boot set-config TIMELINE_LIMIT_WEEKLY=2
-sudo snapper -c boot set-config TIMELINE_LIMIT_MONTHLY=0
-sudo snapper -c boot set-config TIMELINE_LIMIT_YEARLY=0
+# === boot (kernel + initramfs) — snap-pac covers kernel updates, no timeline needed ===
+sudo snapper -c boot set-config TIMELINE_CREATE=no
+# ↑ snap-pac creates pre/post snapshots around every pacman transaction.
+#   No point snapshotting /boot on a timer — kernels only change on updates.
 
 # === home (if enabled) — light retention ===
 sudo snapper -c home set-config TIMELINE_CREATE=yes
@@ -1172,11 +1169,11 @@ sudo snapper -c home set-config TIMELINE_LIMIT_MONTHLY=0
 sudo snapper -c home set-config TIMELINE_LIMIT_YEARLY=0
 ```
 
-| Config | Hourly | Daily | Weekly | Monthly | Use case |
-|--------|--------|-------|--------|---------|----------|
-| `root` | 5 | 7 | 4 | 3 | System files, most rollbacks |
-| `boot` | 0 | 5 | 2 | 0 | Kernels change rarely |
-| `home` | 0 | 3 | 2 | 0 | User data, light retention |
+| Config | Hourly | Daily | Weekly | Monthly | Logic |
+|--------|--------|-------|--------|---------|-------|
+| `root` | 5 | 7 | 4 | 0 | System files, hourly for quick undo |
+| `boot` | — | — | — | — | `TIMELINE_CREATE=no` — snap-pac covers kernel updates |
+| `home` | 0 | 3 | 2 | 0 | User data, daily is enough |
 
 #### Enable Snapper Timers
 

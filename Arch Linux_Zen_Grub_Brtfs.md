@@ -348,6 +348,14 @@ arch-chroot /mnt
 
 ```bash
 
+# Safety check: ensure we're in chroot, not on live ISO
+# Live ISO uses overlay/squashfs; installed system uses Btrfs
+if [ "$(findmnt -n -o FSTYPE /)" != "btrfs" ]; then
+  echo "ERROR: Not in chroot — / is not on Btrfs." >&2
+  echo "Run 'arch-chroot /mnt' first." >&2
+  exit 1
+fi
+
 # Change the timezone to yours.
 
 ln -sf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime

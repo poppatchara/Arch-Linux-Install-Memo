@@ -1737,7 +1737,7 @@ repo=~/Desktop/theme
 git clone https://github.com/vinceliuice/Orchis-kde.git $repo
 cd $repo
 ./install.sh
-cd sddm && sudo ./install.sh  # sddm
+cd sddm/6.0 && sudo ./install.sh  # sddm
 rm -rf $repo && cd ~
 
 # Orchis GTK
@@ -1822,7 +1822,6 @@ repo=~/Desktop/icons
 git clone https://github.com/vinceliuice/Qogir-icon-theme.git $repo
 cd $repo
 ./install.sh
-cd cursor && sudo ./install.sh    # cursors
 rm -rf $repo && cd ~
 
 ```

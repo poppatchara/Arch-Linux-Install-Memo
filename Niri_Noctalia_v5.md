@@ -142,6 +142,7 @@ From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installatio
 ```bash
 sudo pacman -S --noconfirm --needed \
   ghostty \
+  libcanberra \
   xdg-desktop-portal-gtk \
   xwayland-satellite \
   udiskie
@@ -150,6 +151,7 @@ sudo pacman -S --noconfirm --needed \
 | Package | Purpose | Why included |
 |---------|---------|-------------|
 | `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
+| `libcanberra` | Sound event player | Freedesktop sound theme — plays feedback for volume, mute, notifications |
 | `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
 | `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
 | `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |
@@ -283,10 +285,10 @@ binds {
     Mod+S       { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma   { spawn-sh "noctalia msg settings-toggle"; }
 
-    // Media keys (handled by Noctalia)
-    XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up"; }
-    XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down"; }
-    XF86AudioMute         { spawn-sh "noctalia msg volume-mute"; }
+    // Audio & Brightness (with freedesktop sound feedback)
+    XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
+    XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
+    XF86AudioMute         { spawn-sh "noctalia msg volume-mute; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
     XF86MonBrightnessUp   { spawn-sh "noctalia msg brightness-up"; }
     XF86MonBrightnessDown { spawn-sh "noctalia msg brightness-down"; }
 }

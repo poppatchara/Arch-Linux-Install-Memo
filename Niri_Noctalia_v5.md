@@ -14,8 +14,9 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 4. [Niri Configuration](#niri-configuration)
 5. [Session File for Plasma Login Manager](#session-file-for-plasma-login-manager)
 6. [Post-Install & Tweaks](#post-install--tweaks)
-7. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
-8. [Uninstalling](#uninstalling)
+7. [Complete DE Experience](#complete-de-experience)
+8. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
+9. [Uninstalling](#uninstalling)
 
 ---
 
@@ -420,6 +421,187 @@ yay -S --noconfirm --needed noctalia-greeter
 ```
 
 > **Note:** This replaces plasma-login-manager as your display manager. Only do this if you want a unified Noctalia-themed login screen.
+
+---
+
+## Complete DE Experience
+
+This section polishes Niri + Noctalia v5 into a full desktop environment. Config patterns adapted from [CachyOS Niri Noctalia](https://github.com/cachyos/cachyos-niri-noctalia) (translated from v4 to v5), with KDE-preferred packages.
+
+### Additional Packages
+
+> **If you already have KDE Plasma:** most of these are already installed — skip this section.
+
+**KDE-preferred additions:**
+
+```bash
+# Core DE packages
+sudo pacman -S --noconfirm --needed \
+  dolphin \
+  ark \
+  gwenview \
+  spectacle \
+  kate \
+  kdeconnect
+```
+
+| Package | Purpose |
+|---------|---------|
+| `dolphin` | GUI file manager (`Mod+E`) |
+| `ark` | Archive manager (zip/tar/7z) |
+| `gwenview` | Image viewer |
+| `spectacle` | Screenshot tool |
+| `kate` | Text editor |
+| `kdeconnect` | Phone integration (notifications, file transfer, clipboard sync) |
+
+**Cursor theme (optional):**
+
+```bash
+sudo pacman -S --noconfirm --needed capitaine-cursors
+```
+
+### Keybind Additions
+
+Add these to the `binds {}` block in your niri config:
+
+```kdl
+    // ─── DE Applications ───
+    Mod+Return               hotkey-overlay-title="Open Terminal" { spawn "alacritty"; }
+    Mod+E                    hotkey-overlay-title="File Manager: Dolphin" { spawn "dolphin"; }
+    Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
+    Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg lock-screen"; }
+    Mod+Shift+Q              hotkey-overlay-title="Session Menu" { spawn-sh "noctalia msg panel-toggle session"; }
+```
+
+> **Note:** `Mod+Return` replaces the default Niri `Mod+T` — matches the CachyOS convention.
+
+### Input & Keyboard QoL
+
+Add to `input {}` in your niri config:
+
+```kdl
+input {
+    keyboard {
+        xkb {
+            layout "us,th"
+        }
+        numlock                        // Enable numlock on startup
+    }
+    touchpad {
+        tap                            // Tap-to-click
+        natural-scroll                 // Natural (macOS-style) scrolling
+    }
+    focus-follows-mouse                 // Focus windows under mouse pointer
+    workspace-auto-back-and-forth       // Switch workspace back-and-forth
+}
+```
+
+### Layout & Visual Polish
+
+Add these to your niri config (or place in `layout {}`):
+
+```kdl
+layout {
+    gaps 16                            // Gap between windows
+    center-focused-column "never"      // Don't auto-center columns
+    background-color "transparent"     // Required for Noctalia wallpaper
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    struts {}
+}
+```
+
+### Animations (Optional)
+
+Add spring-physics animations for smooth workspace transitions:
+
+```kdl
+animations {
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=900 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+    window-close {
+        duration-ms 200
+        curve "ease-out-cubic"
+    }
+    overview-open-close {
+        spring damping-ratio=1.0 stiffness=900 epsilon=0.0001
+    }
+}
+```
+
+### Window Rules for Gaming
+
+Steam popups and game launchers work better with floating rules:
+
+```kdl
+window-rule {
+    match app-id="steam"
+    exclude title=r#"^[Ss]team$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
+    default-floating-position x=10 y=10 relative-to="bottom-right"
+    open-focused false
+}
+```
+
+### Modular Config Structure (Optional)
+
+CachyOS splits niri config into `~/.config/niri/cfg/`. Replace your monolithic `config.kdl` with:
+
+**`~/.config/niri/config.kdl`:**
+```kdl
+include "./cfg/animation.kdl"
+include "./cfg/autostart.kdl"
+include "./cfg/keybinds.kdl"
+include "./cfg/input.kdl"
+include "./cfg/display.kdl"
+include "./cfg/layout.kdl"
+include "./cfg/rules.kdl"
+include "./cfg/misc.kdl"
+```
+
+Then split your config into these files. This makes it easier to manage — especially when moving between setups.
+
+### Complete Environment Variables
+
+Add to `cfg/misc.kdl` (or your main config):
+
+```kdl
+prefer-no-csd
+screenshot-path null
+
+environment {
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland"
+    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+}
+
+cursor {
+    xcursor-theme "capitaine-cursors"
+    xcursor-size 24
+}
+
+hotkey-overlay {
+    skip-at-startup
+}
+```
 
 ---
 

@@ -107,7 +107,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Power off monitors |
 | <kbd>Mod</kbd> + <kbd>Esc</kbd> | Toggle keyboard shortcuts inhibit |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Show hotkey overlay |
-| <kbd>Mod</kbd> + <kbd>T</kbd> | Launch terminal (default: `alacritty`) |
+| <kbd>Mod</kbd> + <kbd>T</kbd> | Launch terminal (default: `ghostty`) |
 
 ### 🐭 Mouse Gestures
 
@@ -120,7 +120,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 
 > **Tip:** Most actions can also be triggered via `niri msg action <action-name>`. See `niri msg action help` for the full list.
 >
-> **Default terminal:** Niri ships with `alacritty` as default. Konsole is already installed from your KDE setup — you can rebind `Mod+T` to Konsole if preferred.
+> **Default terminal:** Ghostty is the recommended terminal for this setup. Niri's factory default is alacritty, but we override to ghostty throughout this guide. Konsole is already installed from your KDE setup — you can use any terminal you prefer.
 
 ---
 
@@ -140,7 +140,7 @@ From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installatio
 
 ```bash
 sudo pacman -S --noconfirm --needed \
-  alacritty \
+  ghostty \
   xdg-desktop-portal-gtk \
   xwayland-satellite \
   udiskie
@@ -148,7 +148,7 @@ sudo pacman -S --noconfirm --needed \
 
 | Package | Purpose | Why included |
 |---------|---------|-------------|
-| `alacritty` | Default terminal in Niri | Niri's `Mod+T` default — already installed on most setups |
+| `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
 | `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
 | `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
 | `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |
@@ -461,7 +461,7 @@ Add these to the `binds {}` block in your niri config:
 
 ```kdl
     // ─── DE Applications ───
-    Mod+Return               hotkey-overlay-title="Open Terminal" { spawn "alacritty"; }
+    Mod+Return               hotkey-overlay-title="Open Terminal" { spawn "ghostty"; }
     Mod+E                    hotkey-overlay-title="File Manager: Dolphin" { spawn "dolphin"; }
     Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
     Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg lock-screen"; }

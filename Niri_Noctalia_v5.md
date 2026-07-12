@@ -149,6 +149,10 @@ sudo pacman -S --noconfirm --needed \
   xdg-utils \
   shared-mime-info \
   kde-cli-tools \
+  accountsservice \
+  qt5-wayland \
+  gvfs-mtp \
+  gvfs-gphoto2 \
   xwayland-satellite \
   udiskie
 ```
@@ -160,6 +164,10 @@ sudo pacman -S --noconfirm --needed \
 | `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
 | `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
 | `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
+| `accountsservice` | User account D-Bus interface | Needed by `noctalia-greeter` for avatar + user info |
+| `qt5-wayland` | Qt5 Wayland plugin | Some apps (VLC, older Qt5 apps) need this — not all are Qt6 yet |
+| `gvfs-mtp` | Android/phone file transfer | Mount Android devices via MTP in Dolphin |
+| `gvfs-gphoto2` | Camera import | Import photos from digital cameras |
 | `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
 | `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
 | `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |

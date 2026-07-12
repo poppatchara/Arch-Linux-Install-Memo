@@ -402,14 +402,67 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 ⚙️ Goal: enable the essential background services you want on every boot (networking, bluetooth, etc.).
 
+### Extra packages
+
 ```bash
 
-# Enable core services
+# Core system tools & CLI utilities
+# Audio firmware & tools
+# Bluetooth support
+# Power & hardware management
+# User directory structure
+# Phone/camera MTP support
 
+pacman -Syu --noconfirm --needed \
+  util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
+  iwd \
+  avahi nss-mdns \
+  alsa-utils sof-firmware easyeffects \
+  bluez bluez-utils \
+  cups \
+  acpi acpid \
+  xdg-user-dirs \
+  accountsservice \
+  gvfs-mtp gvfs-gphoto2 \
+  qt5-wayland
+```
+
+<details>
+  <summary>⚙️ Packages being installed (Services & QoL extras)</summary>
+
+- Basics: `htop`, `inetutils`, `usbutils`, `rsync`, `util-linux`
+- Archives: `zip`, `unzip`, `p7zip`
+- CLI quality-of-life: `bat`
+- Networking (pick what you use): `iwd`, `avahi`, `nss-mdns`
+- Audio firmware/tools: `sof-firmware`, `alsa-utils`, `easyeffects`
+- Bluetooth: `bluez`, `bluez-utils`
+- Printing: `cups`
+- Power/ACPI: `acpi`, `acpid`
+- Desktop/user dirs: `xdg-user-dirs`
+- Greeter support: `accountsservice`
+- Phone/camera: `gvfs-mtp`, `gvfs-gphoto2`
+- Qt5 apps: `qt5-wayland`
+
+</details>
+
+### Enable services
+
+```bash
+
+# Networking
 systemctl enable NetworkManager
+
+# Optional Wi‑Fi tooling (only enable if you actually use it)
+# systemctl enable iwd
+
+# Everything else (pick what you need)
 systemctl enable bluetooth
-systemctl enable sshd
+# systemctl enable cups
+# systemctl enable avahi-daemon
+# systemctl enable acpid
+
 systemctl enable reflector.timer
+systemctl enable sshd
 systemctl enable fstrim.timer
 
 ```

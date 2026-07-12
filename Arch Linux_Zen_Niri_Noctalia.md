@@ -461,8 +461,9 @@ yay -S --noconfirm --needed noctalia-git
 # 🔒 AUR — Noctalia greeter (login screen)
 yay -S --noconfirm --needed noctalia-greeter
 
-# 🔒 AUR — Niri config GUI (optional)
-yay -S --noconfirm --needed niri-settings-git
+# 🔒 AUR — NiriMod: visual, interactive niri config GUI
+# Repo: https://github.com/srinivasr/nirimod
+yay -S --noconfirm --needed nirimod-git
 ```
 
 ### Display Manager (greetd + Noctalia Greeter)

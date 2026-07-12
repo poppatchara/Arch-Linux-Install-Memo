@@ -174,8 +174,10 @@ sudo pacman -S --noconfirm --needed qt6ct-kde
 **Optional:**
 
 ```bash
-# 🔒 AUR — Niri config GUI
-yay -S --noconfirm --needed niri-settings-git
+# 🔒 AUR — NiriMod: visual, interactive config GUI
+# Preserves manual settings & comments — better than niri-settings-git
+# Repo: https://github.com/srinivasr/nirimod
+yay -S --noconfirm --needed nirimod-git
 ```
 
 ### 3. Install Noctalia v5

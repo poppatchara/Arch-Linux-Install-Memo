@@ -15,8 +15,9 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 5. [Session File for Plasma Login Manager](#session-file-for-plasma-login-manager)
 6. [Post-Install & Tweaks](#post-install--tweaks)
 7. [Complete DE Experience](#complete-de-experience)
-8. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
-9. [Uninstalling](#uninstalling)
+8. [Switch to Noctalia Greeter](#switch-to-noctalia-greeter)
+9. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
+10. [Uninstalling](#uninstalling)
 
 ---
 
@@ -416,20 +417,6 @@ Noctalia v5 supports plugins. Browse and install via:
 - GUI: **Settings → Plugins**
 - Or manually from the [plugin registry](https://github.com/noctalia-dev/plugin-registry)
 
-### Greeter (Login Screen)
-
-Install Noctalia greeter as an alternative to Plasma Login Manager:
-
-```bash
-# 🔒 AUR — Review PKGBUILD before installing
-yay -S --noconfirm --needed noctalia-greeter
-
-# Then configure greetd to use it
-# See: https://docs.noctalia.dev/v5/greeter/
-```
-
-> **Note:** This replaces plasma-login-manager as your display manager. Only do this if you want a unified Noctalia-themed login screen.
-
 ---
 
 ## Complete DE Experience
@@ -610,6 +597,146 @@ hotkey-overlay {
     skip-at-startup
 }
 ```
+
+---
+
+## Switch to Noctalia Greeter
+
+Replace Plasma Login Manager with the Noctalia-themed greeter for a unified login experience. The greeter runs on **greetd** with a bundled wlroots compositor.
+
+> **⚠️ Safe approach:** Test first, then disable Plasma Login Manager. You can always switch back.
+
+### 1. Install
+
+```bash
+# greetd (official repo) + Noctalia greeter (AUR)
+sudo pacman -S --noconfirm --needed greetd
+
+# 🔒 AUR — Review PKGBUILD before installing
+yay -S --noconfirm --needed noctalia-greeter
+```
+
+### 2. Configure greetd
+
+Edit `/etc/greetd/config.toml`:
+
+```toml
+[terminal]
+vt = 1
+
+[default_session]
+command = "noctalia-greeter"
+user = "greetd"
+```
+
+> The greeter runs as the `greetd` user. The config directory `/var/lib/noctalia-greeter/` must be owned by this user — the AUR package sets this up automatically.
+
+### 3. Configure the Greeter
+
+The greeter stores settings at `/var/lib/noctalia-greeter/greeter.toml`. Create with your preferences:
+
+```toml
+# /var/lib/noctalia-greeter/greeter.toml
+
+[session]
+default = "niri-noctalia"     # Pre-select "Niri + Noctalia v5" session
+
+[keyboard]
+layout = "us,th"              # Match your keyboard layouts
+numlock = true
+
+[cursor]
+theme = "capitaine-cursors"
+size = 24
+
+[appearance]
+password_style = "default"    # "default" = filled circles, "random" = varied glyphs
+```
+
+**Multi-monitor:** List your connectors from a running Wayland session:
+
+```bash
+noctalia-greeter outputs
+```
+
+Then set the preferred monitor in `greeter.toml`:
+
+```toml
+[output]
+name = "DP-1"                 # Show greeter on this monitor only
+```
+
+Or sync monitor layout from Noctalia: **Settings → Security → Noctalia Greeter → Sync Now**.
+
+### 4. Test the Greeter
+
+**Do NOT disable Plasma Login Manager yet.** Test first:
+
+```bash
+# Start greetd in a TTY for testing
+sudo systemctl start greetd
+```
+
+Switch to TTY1 (the configured VT) — you should see the Noctalia login screen. If it works, switch back to your current session (TTY2 or back to Plasma) with `Ctrl+Alt+F2`.
+
+If the greeter doesn't appear, check logs:
+
+```bash
+journalctl -u greetd -f
+```
+
+### 5. Enable Greeter, Disable Plasma Login Manager
+
+Once tested:
+
+```bash
+# Enable greetd
+sudo systemctl enable greetd
+
+# Disable Plasma Login Manager
+sudo systemctl disable plasmalogin
+
+# Reboot
+sudo reboot
+```
+
+After reboot, you'll see the Noctalia greeter instead of the Plasma login screen. Select **"Niri + Noctalia v5"** (or "Plasma" to go back to KDE).
+
+### Rollback to Plasma Login Manager
+
+If anything goes wrong:
+
+```bash
+# From TTY (Ctrl+Alt+F3), log in and:
+sudo systemctl disable greetd
+sudo systemctl enable plasmalogin
+sudo reboot
+```
+
+You'll be back to the Plasma login screen. All sessions (Plasma, Niri+Noctalia) still work.
+
+### Greeter Config Reference
+
+| Key | Purpose | Example |
+|-----|---------|---------|
+| `[session].default` | Pre-selected session (by Name from `.desktop` file) | `"niri-noctalia"` |
+| `[session].last` | Last-used session (auto-written by greeter) | `"niri-noctalia"` |
+| `[user].default` | Pre-filled username on startup | `"pop"` |
+| `[output].name` | Show greeter on one monitor only | `"DP-2"` |
+| `[output].layout` | Multi-monitor positions | `"DP-1:0,0; DP-2:2560,0"` |
+| `[output].scale` | Manual UI scale (override auto) | `1.5` |
+| `[keyboard].layout` | XKB layout(s), comma-separated | `"us,th"` |
+| `[keyboard].variant` | XKB variant(s) | `""` |
+| `[keyboard].options` | XKB options | `"grp:alt_shift_toggle"` |
+| `[keyboard].numlock` | Num Lock on start | `true` |
+| `[cursor].theme` | Cursor theme | `"capitaine-cursors"` |
+| `[cursor].size` | Cursor size in px | `24` |
+| `[appearance].password_style` | Password dots: `default` or `random` | `"default"` |
+| `[appearance].scheme` | Color scheme (auto-written) | `"Synced"` |
+| `[appearance].hide_logo` | Hide Noctalia brand logo | `false` |
+| `[auth].allow_empty_password` | Allow empty password (for fprintd/smartcard) | `false` |
+
+> Full docs: https://docs.noctalia.dev/v5/greeter/configuration/
 
 ---
 

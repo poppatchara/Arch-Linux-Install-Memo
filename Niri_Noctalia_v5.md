@@ -149,6 +149,8 @@ sudo pacman -S --noconfirm --needed \
 |---------|---------|-------------|
 | `alacritty` | Default terminal in Niri | Niri's `Mod+T` default — already installed on most setups |
 | `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
+| `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
+| `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |
 | `xwayland-satellite` | Run X11 applications | Some apps (e.g., older Electron apps) need XWayland |
 | `udiskie` | Auto-mount USB drives | Convenience — tray icon for removable media |
 
@@ -156,6 +158,12 @@ sudo pacman -S --noconfirm --needed \
 
 ```bash
 sudo pacman -S --noconfirm --needed xdg-desktop-portal-kde
+```
+
+**Qt theme consistency:** Without Plasma running, Qt apps may look wrong. Install `qt6ct-kde` to apply KDE color schemes and styles to Qt applications under Niri:
+
+```bash
+sudo pacman -S --noconfirm --needed qt6ct-kde
 ```
 
 **Optional:**
@@ -656,7 +664,7 @@ If you have NVIDIA (from your existing guide):
 | Clipboard not working | Missing `cliphist` | v5 has built-in clipboard — do NOT install `cliphist` |
 | Night light not working | Missing `wlsunset` | v5 has built-in night light — do NOT install `wlsunset` |
 | Screen share broken | xdg-desktop-portal not running | `systemctl --user enable --now xdg-desktop-portal` |
-| Qt apps look wrong | Missing Qt Wayland support | Ensure `qt6-wayland` is installed (pulled by KDE) |
+| Qt apps look wrong | Missing Qt Wayland support or `qt6ct-kde` | Ensure `qt6-wayland` is installed (pulled by KDE) and `qt6ct-kde` is installed for theme consistency |
 | Wallpaper wrong namespace | Using v4 namespace | Match `^noctalia-wallpaper` (Option 2) or `^noctalia-backdrop` (Option 1) |
 
 ---

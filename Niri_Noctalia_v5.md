@@ -219,6 +219,20 @@ This pulls in all native dependencies automatically. Noctalia v5 has **built-in*
 
 ---
 
+### Plasma Integration (Optional)
+
+For browser download notifications, media controls, and KDE Connect integration:
+
+```bash
+# plasma-workspace (~200MB disk, ~0MB RAM — nothing auto-starts)
+# plasma-browser-integration (Firefox/Chromium extensions)
+sudo pacman -S --noconfirm --needed \
+  plasma-workspace \
+  plasma-browser-integration
+```
+
+> **Note:** `plasmashell`/`kwin` don't run — only `kded6` and browser native messaging host. Install browser extensions.
+
 ## Niri Configuration
 
 Create `~/.config/niri/config.kdl`:

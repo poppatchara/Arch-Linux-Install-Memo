@@ -623,6 +623,20 @@ pacman -S --noconfirm --needed \
   qt6ct-kde
 ```
 
+### Plasma Integration (Optional)
+
+Enables browser integration (download progress, media controls, send links from phone) and full KDE ecosystem compatibility. Costs ~200MB disk but near zero RAM — `plasmashell`/`kwin` don't auto-start.
+
+```bash
+# plasma-workspace : KDE session infrastructure (pulls ~200MB, but nothing auto-starts)
+# plasma-browser-integration : Firefox/Chromium download notifications + media controls
+pacman -S --noconfirm --needed \
+  plasma-workspace \
+  plasma-browser-integration
+```
+
+> **Note:** `plasma-workspace` only sits on disk. No services auto-start — `plasmashell`, `kwin`, `ksmserver` stay idle. Only `kded6` (already running for KDE integration) and the browser native messaging host run. Install browser extensions: [Firefox](https://addons.mozilla.org/en-US/firefox/addon/plasma-integration/) | [Chromium](https://chrome.google.com/webstore/detail/plasma-integration/cimiefiiaegbelhefglklhhakcgmhkai)
+
 ## Reboot
 
 🔁 Goal: cleanly exit the installer environment and reboot into the new system.

@@ -649,7 +649,20 @@ spawn-at-startup "kded6"
 
 ### KWallet (Optional)
 
-KWallet stores passwords for KDE apps (WiFi, email, browser passwords). If you don't need it, disable to avoid prompts:
+KWallet stores passwords for KDE apps (WiFi, email, browser passwords). On Niri+Noctalia with `greetd`, add PAM to greetd (not plasmalogin).
+
+If you want KWallet working:
+
+```bash
+sudo pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
+
+# Add PAM unlock via greetd
+echo 'session    optional     pam_kwallet5.so auto_start' | sudo tee -a /etc/pam.d/greetd
+```
+
+> **Auto-unlock:** Wallet password = login password, blowfish encryption, wallet name `kdewallet`.
+
+If you don't need it, disable to avoid prompts:
 
 ```bash
 mkdir -p ~/.config
@@ -657,13 +670,6 @@ cat <<'EOF' >> ~/.config/kwalletrc
 [Wallet]
 Enabled=false
 EOF
-```
-
-If you want KWallet working:
-
-```bash
-# Enable PAM unlock (unlocks wallet on login)
-sudo pacman -S --noconfirm --needed kwallet
 ```
 
 ---

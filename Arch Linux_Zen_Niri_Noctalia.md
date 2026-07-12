@@ -1014,12 +1014,33 @@ spawn-at-startup "kded6"
 
 ### KWallet (Optional)
 
+KWallet stores passwords for KDE apps (VS Code, Git credential helpers, browser passwords). On Niri+Noctalia with `greetd`, KWallet needs PAM config on greetd (not plasmalogin).
+
 ```bash
+# kwallet : KDE wallet backend + secret service provider
+# kwalletmanager : GUI to inspect/manage wallets
+# kwallet-pam : unlocks the wallet at login (prevents repeated prompts)
 
-# For VS Code, Git credential helpers, etc.
-sudo pacman -S --noconfirm --needed kwallet kwalletmanager
+sudo pacman -S --noconfirm --needed \
+  kwallet \
+  kwalletmanager \
+  kwallet-pam
+```
 
-# Or disable if you don't need it:
+Then add KWallet PAM hook to greetd:
+
+```bash
+# Add pam_kwallet5 to greetd PAM (greetd is our display manager)
+if ! grep -q 'pam_kwallet5' /etc/pam.d/greetd 2>/dev/null; then
+  echo 'session    optional     pam_kwallet5.so auto_start' | sudo tee -a /etc/pam.d/greetd
+fi
+```
+
+> **Auto-unlock requirements:** Wallet password must match login password, must use **blowfish** encryption (not GPG), wallet name must be `kdewallet`. See [KDE Wallet ArchWiki](https://wiki.archlinux.org/title/KDE_Wallet#Unlock_KDE_Wallet_automatically_on_login).
+
+Or disable KWallet entirely if you don't use it:
+
+```bash
 mkdir -p ~/.config
 cat <<'EOF' >> ~/.config/kwalletrc
 [Wallet]

@@ -146,6 +146,9 @@ sudo pacman -S --noconfirm --needed \
   ghostty \
   libcanberra \
   xdg-desktop-portal-gtk \
+  xdg-utils \
+  shared-mime-info \
+  kde-cli-tools \
   xwayland-satellite \
   udiskie
 ```
@@ -154,6 +157,9 @@ sudo pacman -S --noconfirm --needed \
 |---------|---------|-------------|
 | `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
 | `libcanberra` | Sound event player | Freedesktop sound theme — plays feedback for volume, mute, notifications |
+| `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
+| `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
+| `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
 | `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
 | `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
 | `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |
@@ -870,6 +876,7 @@ If you have NVIDIA (from your existing guide):
 | Night light not working | Missing `wlsunset` | v5 has built-in night light — do NOT install `wlsunset` |
 | Screen share broken | xdg-desktop-portal not running | `systemctl --user enable --now xdg-desktop-portal` |
 | Qt apps look wrong | Missing Qt Wayland support or `qt6ct-kde` | Ensure `qt6-wayland` is installed (pulled by KDE) and `qt6ct-kde` is installed for theme consistency |
+| Dolphin "Open With" empty | Missing `xdg-utils` + `kde-cli-tools` | `sudo pacman -S --noconfirm --needed xdg-utils shared-mime-info kde-cli-tools`, then set defaults with `xdg-mime` (see [Default Applications](#default-applications)) |
 | Wallpaper wrong namespace | Using v4 namespace | Match `^noctalia-wallpaper` (Option 2) or `^noctalia-backdrop` (Option 1) |
 
 ---

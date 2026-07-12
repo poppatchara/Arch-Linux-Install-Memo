@@ -428,13 +428,19 @@ systemctl enable fstrim.timer
 # qt6-wayland : Qt6 Wayland platform plugin
 # xorg-xwayland : Run X11 apps under Wayland
 # xwayland-satellite : Alternative XWayland (multi-window support)
+# xdg-utils : xdg-open, xdg-mime — MIME type & default app handling
+# shared-mime-info : Freedesktop MIME type database
+# kde-cli-tools : keditfiletype, kioclient — KDE file associations
 
 pacman -S --noconfirm --needed \
   xdg-desktop-portal \
   xdg-desktop-portal-kde \
   qt6-wayland \
   xorg-xwayland \
-  xwayland-satellite
+  xwayland-satellite \
+  xdg-utils \
+  shared-mime-info \
+  kde-cli-tools
 ```
 
 ### Niri Compositor + Noctalia v5
@@ -1011,6 +1017,41 @@ Add to `~/.config/niri/config.kdl`:
 spawn-at-startup "noctalia"
 spawn-at-startup "kded6"
 ```
+
+### Default Applications
+
+Without Plasma running, KDE apps don't know which programs to use for file types. Set up MIME associations manually:
+
+```bash
+# Set default browser (Firefox)
+xdg-mime default firefox.desktop x-scheme-handler/http
+xdg-mime default firefox.desktop x-scheme-handler/https
+xdg-mime default firefox.desktop text/html
+
+# Set default file manager (Dolphin)
+xdg-mime default org.kde.dolphin.desktop inode/directory
+
+# Set default image viewer (Gwenview)
+xdg-mime default org.kde.gwenview.desktop image/png
+xdg-mime default org.kde.gwenview.desktop image/jpeg
+xdg-mime default org.kde.gwenview.desktop image/webp
+
+# Set default PDF viewer (Okular)
+xdg-mime default org.kde.okular.desktop application/pdf
+
+# Set default text editor (Kate)
+xdg-mime default org.kde.kate.desktop text/plain
+xdg-mime default org.kde.kate.desktop text/x-shellscript
+
+# Set default terminal (Ghostty)
+xdg-mime default com.mitchellh.ghostty.desktop terminal
+
+# Refresh MIME cache
+update-mime-database ~/.local/share/mime
+update-desktop-database ~/.local/share/applications
+```
+
+> **Tip:** After setting these, Dolphin's "Open With" menu will populate. You can also right-click → **Properties → File Type Options** in Dolphin to set per-type defaults via GUI.
 
 ### KWallet (Optional)
 

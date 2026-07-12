@@ -128,14 +128,14 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 ### 1. Install Niri
 
 ```bash
-sudo pacman -S niri
+sudo pacman -S --noconfirm --needed niri
 ```
 
 ### 2. Install Noctalia v5
 
 ```bash
-# v5 is AUR-only: noctalia-git
-yay -S noctalia-git
+# 🔒 AUR — Review PKGBUILD before installing
+yay -S --noconfirm --needed noctalia-git
 ```
 
 This pulls in all native dependencies (meson, wayland-protocols, cairo, pango, libpipewire, wireplumber, polkit, etc.).
@@ -143,14 +143,11 @@ This pulls in all native dependencies (meson, wayland-protocols, cairo, pango, l
 ### 3. Install Optional Dependencies
 
 ```bash
-# Night light feature
-sudo pacman -S wlsunset
-
-# Clipboard history (Noctalia built-in manager)
-sudo pacman -S cliphist
-
-# Audio visualizer support
-sudo pacman -S cava
+# Optional dependencies
+sudo pacman -S --noconfirm --needed \
+  wlsunset \
+  cliphist \
+  cava
 ```
 
 ---
@@ -366,8 +363,8 @@ Noctalia v5 supports **Luau plugins**. Browse and install via:
 Install Noctalia greeter as an alternative to Plasma Login Manager:
 
 ```bash
-# AUR
-yay -S noctalia-greeter
+# 🔒 AUR — Review PKGBUILD before installing
+yay -S --noconfirm --needed noctalia-greeter
 
 # Then configure greetd to use it
 # See: https://docs.noctalia.dev/v5/greeter/
@@ -437,8 +434,8 @@ If you want to remove Niri + Noctalia and go back to Plasma-only:
 
 ```bash
 # Remove packages
-sudo pacman -Rns niri
-yay -Rns noctalia-git
+sudo pacman -Rns --noconfirm niri
+yay -Rns --noconfirm noctalia-git
 
 # Remove session file
 sudo rm /usr/share/wayland-sessions/niri-noctalia.desktop
@@ -449,7 +446,7 @@ rm -rf ~/.config/niri
 rm -rf ~/.config/noctalia
 
 # Remove optional deps (if not needed by other things)
-sudo pacman -Rns cliphist wlsunset
+sudo pacman -Rns --noconfirm cliphist wlsunset
 
 # Verify Plasma login still works
 systemctl status plasmalogin

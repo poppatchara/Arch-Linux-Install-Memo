@@ -103,6 +103,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 
 | Key | Action |
 |-----|--------|
+| <kbd>Left Alt</kbd> + <kbd>Left Shift</kbd> | Switch keyboard layout (`us` ↔ `th`) |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | Quit Niri (shows confirmation) |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Power off monitors |
 | <kbd>Mod</kbd> + <kbd>Esc</kbd> | Toggle keyboard shortcuts inhibit |
@@ -209,7 +210,7 @@ Create `~/.config/niri/config.kdl`:
 // ============================================================
 
 input {
-    keyboard { xkb { layout "us,th" } }
+    keyboard { xkb { layout "us,th" options "grp:lalt_lshift_toggle" } }
 }
 
 // ---- Autostart Noctalia v5 ----
@@ -479,6 +480,7 @@ input {
     keyboard {
         xkb {
             layout "us,th"
+            options "grp:lalt_lshift_toggle"
         }
         numlock                        // Enable numlock on startup
     }

@@ -69,7 +69,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>PageUp</kbd>/<kbd>PageDown</kbd> or <kbd>U</kbd>/<kbd>I</kbd> | Focus workspace up/down |
 | <kbd>Mod</kbd> + <kbd>Ctrl</kbd> + <kbd>1</kbd>–<kbd>9</kbd> | Move column to workspace N |
 | <kbd>Mod</kbd> + <kbd>Ctrl</kbd> + <kbd>PageUp</kbd>/<kbd>PageDown</kbd> | Move column to workspace up/down |
-| <kbd>Mod</kbd> + <kbd>O</kbd> | Toggle Overview (zoom-out view) |
+| <kbd>Mod</kbd> + <kbd>Tab</kbd> | Toggle Overview (zoom-out view) |
 | <kbd>Mod</kbd> + <kbd>Scroll</kbd> | Scroll through workspaces |
 
 ### 🖥️ Multi-Monitor
@@ -99,6 +99,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>PrtSc</kbd> | Screenshot full screen |
 | <kbd>Ctrl</kbd> + <kbd>PrtSc</kbd> | Screenshot current output |
 | <kbd>Alt</kbd> + <kbd>PrtSc</kbd> | Screenshot focused window |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Rectangle screenshot (Spectacle) |
 
 ### 🔄 Other
 
@@ -288,6 +289,8 @@ binds {
     Mod+Space   { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S       { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma   { spawn-sh "noctalia msg settings-toggle"; }
+    Mod+Tab     { toggle-overview; }                       // Overview
+    Mod+Shift+S { spawn "spectacle -r"; }                  // Rectangle screenshot
 
     // Audio & Brightness (with freedesktop sound feedback)
     XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
@@ -473,6 +476,7 @@ Add these to the `binds {}` block in your niri config:
     Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
     Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg lock-screen"; }
     Mod+Shift+Q              hotkey-overlay-title="Session Menu" { spawn-sh "noctalia msg panel-toggle session"; }
+    Mod+Tab                  { toggle-overview; }
 ```
 
 > **Note:** `Mod+Return` replaces the default Niri `Mod+T` — matches the CachyOS convention.

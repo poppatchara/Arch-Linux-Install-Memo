@@ -1099,6 +1099,8 @@ binds {
     Mod+Space   { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S       { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma   { spawn-sh "noctalia msg settings-toggle"; }
+    Mod+Tab     { toggle-overview; }
+    Mod+Shift+S { spawn "spectacle -r"; }
     XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
     XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
     XF86AudioMute         { spawn-sh "noctalia msg volume-mute; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }

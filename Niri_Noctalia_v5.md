@@ -15,9 +15,10 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 5. [Session File for Plasma Login Manager](#session-file-for-plasma-login-manager)
 6. [Post-Install & Tweaks](#post-install--tweaks)
 7. [Complete DE Experience](#complete-de-experience)
-8. [Switch to Noctalia Greeter](#switch-to-noctalia-greeter)
-9. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
-10. [Uninstalling](#uninstalling)
+8. [KDE Integration](#kde-integration)
+9. [Switch to Noctalia Greeter](#switch-to-noctalia-greeter)
+10. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
+11. [Uninstalling](#uninstalling)
 
 ---
 
@@ -217,6 +218,7 @@ input {
 
 // ---- Autostart Noctalia v5 ----
 spawn-at-startup "noctalia"
+spawn-at-startup "kded6"   // KDE daemon — file dialogs, mime types, trash
 
 // ---- Window Appearance ----
 window-rule {
@@ -600,6 +602,66 @@ cursor {
 hotkey-overlay {
     skip-at-startup
 }
+```
+
+---
+
+## KDE Integration
+
+KDE apps (Dolphin, Kate, Okular) run fine standalone, but they need background services for full functionality — file dialogs, theme consistency, trash support, network transparency.
+
+### Required Services
+
+```bash
+# KDE file dialogs + Qt platform theme
+sudo pacman -S --noconfirm --needed \
+  plasma-integration \
+  kded
+```
+
+| Package | Provides | What breaks without it |
+|---------|----------|----------------------|
+| `plasma-integration` | Qt Platform Theme | KDE apps use ugly fallback theme, wrong fonts & colors |
+| `kded` | KDE Daemon (`kded6`) | KDE file dialogs fail, mime types wrong, no trash support, `kioclient` broken |
+
+### Autostart KDE Daemon
+
+Add to `~/.config/niri/config.kdl`:
+
+```kdl
+spawn-at-startup "kded6"
+```
+
+> **Plasma 5 → 6:** Use `kded6` for Plasma 6 (Arch default). For older Plasma 5 systems: `kded5`.
+
+### What KDE Apps Gain
+
+| Feature | Without Services | With `plasma-integration` + `kded6` |
+|---------|-----------------|--------------------------------------|
+| **Theme** | Qt fallback (ugly) | Breeze theme, colors, fonts |
+| **File Dialogs** | GTK fallback or broken | Native KDE file picker |
+| **Trash** | Delete only (no restore) | Trash support with restore |
+| **Network** | Some KIO fails | Full KIO (sftp, fish, smb) |
+| **Mime types** | Generic icons | Proper file type icons |
+| **KWallet** | May prompt endlessly | Integrated password storage |
+
+### KWallet (Optional)
+
+KWallet stores passwords for KDE apps (WiFi, email, browser passwords). If you don't need it, disable to avoid prompts:
+
+```bash
+mkdir -p ~/.config
+cat <<'EOF' >> ~/.config/kwalletrc
+[Wallet]
+Enabled=false
+EOF
+```
+
+If you want KWallet working:
+
+```bash
+# Enable PAM unlock (unlocks wallet on login)
+sudo pacman -S --noconfirm --needed kwallet
 ```
 
 ---

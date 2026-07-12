@@ -233,6 +233,20 @@ sudo pacman -S --noconfirm --needed \
 
 > **Note:** `plasmashell`/`kwin` don't run — only `kded6` and browser native messaging host. Install browser extensions.
 
+#### KDE System Settings & GTK Theme Sync
+
+```bash
+# systemsettings : KDE config GUI
+# kde-gtk-config : Sync KDE theme to GTK apps  
+# breeze-gtk     : Breeze theme for GTK apps
+sudo pacman -S --noconfirm --needed \
+  systemsettings \
+  kde-gtk-config \
+  breeze-gtk
+```
+
+Disable Baloo if pulled: `balooctl disable`
+
 ## Niri Configuration
 
 Create `~/.config/niri/config.kdl`:

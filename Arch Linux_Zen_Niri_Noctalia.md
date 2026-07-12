@@ -637,6 +637,22 @@ pacman -S --noconfirm --needed \
 
 > **Note:** `plasma-workspace` only sits on disk. No services auto-start — `plasmashell`, `kwin`, `ksmserver` stay idle. Only `kded6` (already running for KDE integration) and the browser native messaging host run. Install browser extensions: [Firefox](https://addons.mozilla.org/en-US/firefox/addon/plasma-integration/) | [Chromium](https://chrome.google.com/webstore/detail/plasma-integration/cimiefiiaegbelhefglklhhakcgmhkai)
 
+#### KDE System Settings & GTK Theme Sync
+
+With `plasma-workspace` installed, add GUI config and GTK theme consistency:
+
+```bash
+# systemsettings : KDE System Settings GUI (fonts, icons, cursors, theme)
+# kde-gtk-config : Sync KDE theme to GTK apps
+# breeze-gtk     : Breeze theme for GTK apps (visual consistency with KDE)
+sudo pacman -S --noconfirm --needed \
+  systemsettings \
+  kde-gtk-config \
+  breeze-gtk
+```
+
+> **Note:** Disable Baloo file indexing if it gets pulled — `balooctl disable`. It's heavy and not needed on Niri.
+
 ## Reboot
 
 🔁 Goal: cleanly exit the installer environment and reboot into the new system.

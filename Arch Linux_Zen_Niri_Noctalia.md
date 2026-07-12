@@ -1181,7 +1181,10 @@ debug { honor-xdg-activation-with-invalid-serial }
 
 // Wallpaper — stationary
 layer-rule { match namespace="^noctalia-wallpaper" place-within-backdrop true }
-layout { background-color "transparent" }
+layout {
+    background-color "transparent"
+    center-focused-column "never"
+}
 overview { workspace-shadow { off } }
 
 // Blur

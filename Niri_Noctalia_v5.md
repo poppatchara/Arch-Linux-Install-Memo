@@ -272,6 +272,7 @@ layer-rule {
 }
 layout {
     background-color "transparent"
+    center-focused-column "never"      // Don't auto-center — prevents viewport shift on focus change
 }
 overview {
     workspace-shadow { off }

@@ -1,8 +1,8 @@
-# Niri + Noctalia v5 (Beta) 🏔️🪽
+# Niri + Noctalia v5 🏔️🪽
 
 Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an existing Arch Linux + KDE Plasma + Plasma Login Manager setup.
 
-> **v5 is beta.** Stable users may prefer [v4 (Quickshell)](https://docs.noctalia.dev/v4/) via `noctalia-shell`. v5 is built on a native runtime (no Quickshell/QML) with a TOML-based config model.
+> **v5 is beta.** This guide is based on the [official v5 docs](https://docs.noctalia.dev/v5/). v5 is a **native C++ rewrite** — completely different from v4 (Quickshell/QML). Package: `noctalia-git`, binary: `noctalia`, config: TOML under `[shell]`.
 
 ---
 
@@ -24,16 +24,15 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | Component | Package | Source | Purpose |
 |-----------|---------|--------|---------|
 | **Niri** | `niri` | `extra` (official) | Scrollable-tiling Wayland compositor |
-| **Noctalia v5** | `noctalia-git` | AUR (noctalia-git) | Desktop shell: bars, launcher, notifications, wallpaper, OSD, lock screen, dock |
+| **Noctalia v5** | `noctalia-git` | AUR | Desktop shell: bars, launcher, dock, notifications, wallpaper, OSD, lock screen, clipboard, night light |
 | **Plasma Login Manager** | `plasma-login-manager` | Already installed | Session switcher at login — keep KDE Plasma as alternative session |
 
 **Key differences from Noctalia v4:**
 - v5 is **native C++** (not Quickshell/QML)
 - Package: `noctalia-git` (not `noctalia-shell`)
-- Binary: `/usr/local/bin/noctalia`
-- Config: TOML files in `~/.config/noctalia/`
-- IPC: `noctalia msg <command>`
-- Required deps: wayland, cairo, pango, pipewire, wireplumber, etc.
+- Binary: `noctalia` (in PATH, not `/usr/local/bin/noctalia`)
+- Config: TOML in `~/.config/noctalia/` under `[shell]` (not `[bar]`/`[dock]` top-level)
+- Built-in: clipboard, night light, lock screen (no external `cliphist`/`wlsunset`/`swaylock` needed)
 
 ---
 
@@ -77,7 +76,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>←</kbd>/<kbd>→</kbd> | Focus monitor left/right |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>←</kbd>/<kbd>→</kbd> | Move column to other monitor |
 
-### 🏔️ Noctalia v5 IPC (ต้องมีใน `binds {}`)
+### 🏔️ Noctalia v5 IPC
 
 | Key | Action |
 |-----|--------|
@@ -119,7 +118,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 
 > **Tip:** Most actions can also be triggered via `niri msg action <action-name>`. See `niri msg action help` for the full list.
 >
-> **Default terminal:** Niri ships with `alacritty` as default. To change it, add a bind like `Mod+T { spawn "konsole"; }` in your config. (Konsole is already installed from your KDE setup.)
+> **Default terminal:** Niri ships with `alacritty` as default. Konsole is already installed from your KDE setup — you can rebind `Mod+T` to Konsole if preferred.
 
 ---
 
@@ -131,24 +130,61 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 sudo pacman -S --noconfirm --needed niri
 ```
 
-### 2. Install Noctalia v5
+### 2. Install Recommended Packages
+
+From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installation), filtered for Noctalia v5 compatibility. Packages that Noctalia v5 already provides (launcher, bar, notifications, wallpaper, lock screen) are **excluded**.
+
+**Core packages:**
+
+```bash
+sudo pacman -S --noconfirm --needed \
+  alacritty \
+  xdg-desktop-portal-gtk \
+  xwayland-satellite \
+  udiskie
+```
+
+| Package | Purpose | Why included |
+|---------|---------|-------------|
+| `alacritty` | Default terminal in Niri | Niri's `Mod+T` default — already installed on most setups |
+| `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
+| `xwayland-satellite` | Run X11 applications | Some apps (e.g., older Electron apps) need XWayland |
+| `udiskie` | Auto-mount USB drives | Convenience — tray icon for removable media |
+
+**KDE users:** If you already have KDE Plasma, use `xdg-desktop-portal-kde` instead of `-gtk` for better integration:
+
+```bash
+sudo pacman -S --noconfirm --needed xdg-desktop-portal-kde
+```
+
+**Optional:**
+
+```bash
+# 🔒 AUR — Niri config GUI
+yay -S --noconfirm --needed niri-settings-git
+```
+
+### 3. Install Noctalia v5
 
 ```bash
 # 🔒 AUR — Review PKGBUILD before installing
 yay -S --noconfirm --needed noctalia-git
 ```
 
-This pulls in all native dependencies (meson, wayland-protocols, cairo, pango, libpipewire, wireplumber, polkit, etc.).
+This pulls in all native dependencies automatically. Noctalia v5 has **built-in** clipboard, night light, and lock screen — do NOT install `cliphist`, `wlsunset`, `swayidle`, or `swaylock` (they conflict with Noctalia's built-in functionality).
 
-### 3. Install Optional Dependencies
+**Packages NOT needed (provided by Noctalia v5):**
 
-```bash
-# Optional dependencies
-sudo pacman -S --noconfirm --needed \
-  wlsunset \
-  cliphist \
-  cava
-```
+| Replaced | Provided by Noctalia v5 |
+|----------|------------------------|
+| `fuzzel` (launcher) | Built-in launcher (`Mod+Space`) |
+| `mako` (notifications) | Built-in notifications |
+| `waybar` (bar) | Built-in bar |
+| `swaybg` (wallpaper) | Built-in wallpaper engine |
+| `swayidle` + `swaylock` (lock/idle) | Built-in lock screen + idle service |
+| `cliphist` (clipboard) | Built-in clipboard manager |
+| `wlsunset` (night light) | Built-in night light |
+| `dms-shell-niri` / `noctalia-shell` | Replaced by `noctalia-git` (v5) |
 
 ---
 
@@ -159,8 +195,7 @@ Create `~/.config/niri/config.kdl`:
 ```kdl
 // ============================================================
 // Niri + Noctalia v5 Config
-// Based on: https://docs.noctalia.dev/v5/getting-started/running-the-shell/
-//           https://docs.noctalia.dev/v5/compositor-settings/niri
+// Based on: https://docs.noctalia.dev/v5/compositor-settings/niri/
 // ============================================================
 
 input {
@@ -172,7 +207,7 @@ spawn-at-startup "noctalia"
 
 // ---- Window Appearance ----
 window-rule {
-    geometry-corner-radius 12
+    geometry-corner-radius 20
     clip-to-geometry true
 }
 
@@ -190,6 +225,8 @@ debug {
 }
 
 // ---- Wallpaper Backdrop ----
+// Pick ONE option below. Uncomment your choice.
+
 // Option 1: Blurred Overview (wallpaper visible only in overview, blurred)
 // layer-rule {
 //     match namespace="^noctalia-backdrop"
@@ -208,12 +245,17 @@ overview {
     workspace-shadow { off }
 }
 
+// Option 3: Flat Color (no wallpaper, solid background)
+// overview {
+//     backdrop-color "#26233a"
+// }
+
 // ---- Blur ----
 window-rule {
     background-effect { blur true xray false }
 }
 layer-rule {
-    match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+    match namespace="^noctalia-(bar-[^"]+|notification|dock|panel|attached-panel|osd)$"
     background-effect { xray false }
 }
 blur {
@@ -236,9 +278,6 @@ binds {
     XF86AudioMute         { spawn-sh "noctalia msg volume-mute"; }
     XF86MonBrightnessUp   { spawn-sh "noctalia msg brightness-up"; }
     XF86MonBrightnessDown { spawn-sh "noctalia msg brightness-down"; }
-
-    // Niri-native
-    Mod+Shift+E { spawn "wlogout"; }
 }
 ```
 
@@ -250,20 +289,27 @@ Uncomment only **one** of the options above:
 |--------|------------|--------|
 | **Option 1** (Blurred Overview) | `match namespace="^noctalia-backdrop"` | Wallpaper visible only in overview, blurred & tinted |
 | **Option 2** ★ (Stationary) | `match namespace="^noctalia-wallpaper"` | Wallpaper visible always, does not scroll with workspaces |
-| **Option 3** (Flat Color) | None — set `overview.backdrop-color` | Solid color, no wallpaper |
+| **Option 3** (Flat Color) | `overview { backdrop-color "..." }` | Solid color, no wallpaper |
 
-### Environment Variables
+### Per-Widget Desktop Layer Rules
 
-Noctalia v5 handles most env vars internally, but add these for Qt/Electron compatibility:
+Noctalia v5 desktop widgets each have a unique namespace. Target individual widgets with `layer-rule`:
 
 ```kdl
-environment {
-    QT_QPA_PLATFORM "wayland"
-    QT_QPA_PLATFORMTHEME "gtk3"
-    ELECTRON_OZONE_PLATFORM_HINT "auto"
-    GDK_BACKEND "wayland"
+// Target all desktop widgets
+layer-rule {
+    match namespace="^noctalia-desktop-widget-"
+    // ... custom rules
+}
+
+// Target specific widget (e.g. weather)
+layer-rule {
+    match namespace="^noctalia-desktop-widget-weather-"
+    // ... custom rules
 }
 ```
+
+Run `niri msg layers` to list all layer surfaces and see exact namespaces.
 
 ---
 
@@ -271,12 +317,14 @@ environment {
 
 ### Create Wrapper Script
 
+> **Important:** Use `niri-session` (not plain `niri`) — it exports environment variables to systemd correctly.
+
 ```bash
 sudo tee /usr/local/bin/niri-noctalia-session << 'EOF'
 #!/usr/bin/env bash
 export XDG_CURRENT_DESKTOP=Noctalia
 export XDG_SESSION_DESKTOP=noctalia
-exec niri
+exec niri-session
 EOF
 
 sudo chmod +x /usr/local/bin/niri-noctalia-session
@@ -301,13 +349,15 @@ Before rebooting, test that Noctalia starts under Niri:
 
 ```bash
 # From a TTY (not inside Plasma)
-niri --session noctalia
+niri-session -l
 ```
 
 Or run Noctalia standalone for debugging:
 
 ```bash
 noctalia
+# Or daemon mode (returns after shell initialized):
+noctalia --daemon
 ```
 
 If it works, log out, select **"Niri + Noctalia v5"** from the Plasma Login Manager session dropdown, and log in.
@@ -323,38 +373,37 @@ Noctalia v5 config lives at `~/.config/noctalia/config.toml`. The GUI settings e
 ```toml
 # ~/.config/noctalia/config.toml
 
-[bar]
-position = "top"
-height = 40
+[shell]
+corner_radius_scale = 1.0        # 0 = square, 1 = default, 2 = extra rounded
+clipboard_enabled = true          # built-in clipboard manager (no cliphist needed)
+telemetry_enabled = false
 
-[launcher]
-enabled = true
+[shell.panel]
+transparency_mode = "solid"      # solid | soft | glass
+borders = true
+shadow = true
 
-[dock]
-enabled = true
-auto_hide = true
+[shell.launcher]
+categories = true
+sort_by_usage = true
 
-[night_light]
-enabled = true
-# Sunset/sunrise schedule (auto-detect location)
-# or manual:
-# schedule_start = "18:00"
-# schedule_end = "06:00"
+[hot_corners]
+enabled = false
 ```
 
 ### Enable Type-to-Launch in Overview
 
-```bash
-# Option A: via TOML config
-echo '[shell]
-niri_overview_type_to_launch_enabled = true' >> ~/.config/noctalia/config.toml
-
-# Option B: via GUI → Settings → Niri → Overview
+```toml
+# ~/.config/noctalia/config.toml
+[shell]
+niri_overview_type_to_launch_enabled = true
 ```
+
+Or via GUI: **Settings → Niri → Overview**.
 
 ### Install Plugins
 
-Noctalia v5 supports **Luau plugins**. Browse and install via:
+Noctalia v5 supports plugins. Browse and install via:
 - GUI: **Settings → Plugins**
 - Or manually from the [plugin registry](https://github.com/noctalia-dev/plugin-registry)
 
@@ -398,8 +447,8 @@ yay -S --noconfirm --needed noctalia-greeter
 | Wallpaper | Plasma wallpaper | Noctalia wallpaper engine |
 | System Tray | Plasma systray | Noctalia tray (Wayland protocol) |
 | Lock Screen | KScreenLock | Noctalia lock screen |
-| Clipboard | Klipper | Noctalia clipboard (uses cliphist) |
-| Night Light | KDE Night Color | Noctalia night light (uses wlsunset) |
+| Clipboard | Klipper | Noctalia clipboard (built-in, no cliphist needed) |
+| Night Light | KDE Night Color | Noctalia night light (built-in, no wlsunset needed) |
 | Audio OSD | Plasma OSD | Noctalia OSD |
 
 ### NVIDIA Notes
@@ -420,11 +469,13 @@ If you have NVIDIA (from your existing guide):
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| Noctalia not starting | Missing deps | Run `noctalia` from terminal, check errors |
-| Clipboard not working | cliphist not installed | `sudo pacman -S cliphist` |
-| Night light not working | wlsunset not installed | `sudo pacman -S wlsunset` |
+| Noctalia not starting | Binary not found | v5 binary is `noctalia` (in PATH), not `/usr/local/bin/noctalia` |
+| Config ignored | Using old v4 TOML format | v5 uses `[shell]` nested sections, not `[bar]`/`[dock]` |
+| Clipboard not working | Missing `cliphist` | v5 has built-in clipboard — do NOT install `cliphist` |
+| Night light not working | Missing `wlsunset` | v5 has built-in night light — do NOT install `wlsunset` |
 | Screen share broken | xdg-desktop-portal not running | `systemctl --user enable --now xdg-desktop-portal` |
-| Qt apps look wrong | Missing env vars | Add `environment { QT_QPA_PLATFORM "wayland" }` to niri config |
+| Qt apps look wrong | Missing Qt Wayland support | Ensure `qt6-wayland` is installed (pulled by KDE) |
+| Wallpaper wrong namespace | Using v4 namespace | Match `^noctalia-wallpaper` (Option 2) or `^noctalia-backdrop` (Option 1) |
 
 ---
 
@@ -445,8 +496,12 @@ sudo rm /usr/local/bin/niri-noctalia-session
 rm -rf ~/.config/niri
 rm -rf ~/.config/noctalia
 
-# Remove optional deps (if not needed by other things)
-sudo pacman -Rns --noconfirm cliphist wlsunset
+# Remove cache/state
+rm -rf ~/.local/state/noctalia
+rm -rf ~/.cache/noctalia
+
+# Remove optional packages (if not needed by other things)
+sudo pacman -Rns --noconfirm xwayland-satellite udiskie
 
 # Verify Plasma login still works
 systemctl status plasmalogin
@@ -456,3 +511,5 @@ systemctl status plasmalogin
 
 *Noctalia v5 is beta — expect occasional updates. Keep packages up to date: `yay -Syu noctalia-git`.*
 *Docs: https://docs.noctalia.dev/v5/* 🏔️🪽
+*Arch Wiki: https://wiki.archlinux.org/title/Niri*
+*llm-wiki: [[concepts/noctalia-v5]]*

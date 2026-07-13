@@ -228,7 +228,7 @@ btrfs subvolume create /mnt/@swap
 
 ```
 
-> **Why no `@var`?** Fedora stores Flatpak, containers under `/var/lib` — snapshotting all of `/var` is too heavy.
+> **Why no `@var`?** Flatpak and containers store large data under `/var/lib` — snapshotting all of `/var` is too heavy.
 
 Then unmount, mount subvolumes with options, and prepare `/boot`:
 

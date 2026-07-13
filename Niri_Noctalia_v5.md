@@ -145,6 +145,7 @@ From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installatio
 sudo pacman -S --noconfirm --needed \
   ghostty \
   libcanberra \
+  gnome-keyring \
   xdg-desktop-portal-gtk \
   xdg-utils \
   shared-mime-info \
@@ -161,6 +162,7 @@ sudo pacman -S --noconfirm --needed \
 |---------|---------|-------------|
 | `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
 | `libcanberra` | Sound event player | Freedesktop sound theme — plays feedback for volume, mute, notifications |
+| `gnome-keyring` | Secret portal backend | Required by niri-portals.conf for the Secret portal — password storage for GTK/Flatpak apps |
 | `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
 | `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
 | `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
@@ -501,6 +503,8 @@ sudo pacman -S --noconfirm --needed \
 | `spectacle` | Screenshot tool |
 | `kate` | Text editor |
 | `kdeconnect` | Phone integration (notifications, file transfer, clipboard sync) |
+| `ffmpegthumbs` | Video thumbnails KIO plugin | Pre-installed with KDE graphics |
+| `ffmpegthumbnailer` | Video thumbnail generator | Install manually: `sudo pacman -S ffmpegthumbnailer` |
 
 **Cursor theme (optional):**
 
@@ -637,14 +641,23 @@ screenshot-path null
 environment {
     ELECTRON_OZONE_PLATFORM_HINT "auto"
     QT_QPA_PLATFORM "wayland"
-    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_QPA_PLATFORMTHEME "kde"
+    QT_QPA_PLATFORMTHEME_QT6 "kde"
+    QT_STYLE_OVERRIDE "breeze"
+    XDG_MENU_PREFIX "plasma-"
+    QT_AUTO_SCREEN_SCALE_FACTOR "1"
+    QT_ENABLE_HIGHDPI_SCALING "1"
+    QT_SCALE_FACTOR_ROUNDING_POLICY "RoundPreferFloor"
+    GTK_USE_PORTAL "1"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
     XDG_CURRENT_DESKTOP "niri"
     XDG_SESSION_TYPE "wayland"
+    KDE_SESSION_VERSION "6"
+    KDE_FULL_SESSION "true"
 }
 
 cursor {
-    xcursor-theme "capitaine-cursors"
+    xcursor-theme "Adwaita"
     xcursor-size 24
 }
 
@@ -652,6 +665,8 @@ hotkey-overlay {
     skip-at-startup
 }
 ```
+
+> Also create `~/.config/environment.d/10-kde-on-niri.conf` with the same variables — see [KDE Integration](#kde-integration) for details on why both locations are needed.
 
 ---
 
@@ -718,6 +733,139 @@ cat <<'EOF' >> ~/.config/kwalletrc
 Enabled=false
 EOF
 ```
+
+### Dolphin "Open With" Blank Popup Fix
+
+The most common issue: Dolphin shows an empty "Choose Application" dialog when opening files. This happens because KDE 6 renamed `applications.menu` to `plasma-applications.menu`, and `kbuildsycoca6` can't find it without `XDG_MENU_PREFIX=plasma-`.
+
+**Root cause:** `kbuildsycoca6` — the KDE system configuration cache — is what populates Dolphin's "Open With" list. Without the menu file, it builds an empty database. The `plasma-applications.menu` file ships with `plasma-workspace` and lives at `/etc/xdg/menus/`.
+
+**The fix requires three things:**
+
+1. Set `XDG_MENU_PREFIX=plasma-` in your environment (so KDE looks for `plasma-applications.menu` instead of `applications.menu`)
+
+2. Rebuild the KDE cache:
+```bash
+XDG_MENU_PREFIX=plasma- kbuildsycoca6 --noincremental
+```
+
+3. Auto-start `kded6` (the KDE daemon):
+```kdl
+spawn-at-startup "kded6"
+```
+
+**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND niri's `environment {}` block (so niri-spawned apps see them). Systemd user services and portals can't read niri's `environment {}` block.
+
+Create `~/.config/environment.d/10-kde-on-niri.conf`:
+
+> **Important:** environment.d files use `KEY=VALUE` syntax and require **absolute paths**. `$HOME` and `%h` do NOT expand here.
+
+```ini
+QT_QPA_PLATFORM=wayland
+QT_QPA_PLATFORMTHEME=kde
+QT_QPA_PLATFORMTHEME_QT6=kde
+QT_STYLE_OVERRIDE=breeze
+XDG_MENU_PREFIX=plasma-
+XDG_DATA_DIRS=/home/$USER/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+QT_AUTO_SCREEN_SCALE_FACTOR=1
+QT_ENABLE_HIGHDPI_SCALING=1
+QT_SCALE_FACTOR_ROUNDING_POLICY=RoundPreferFloor
+GTK_USE_PORTAL=1
+```
+
+| Variable | Why |
+|----------|-----|
+| `QT_QPA_PLATFORMTHEME=kde` | Use KDE's `plasma-integration` for theming (NOT `gtk3`/`qt6ct`) — lets `systemsettings` control Qt themes across Plasma and Niri |
+| `QT_STYLE_OVERRIDE=breeze` | Forces Breeze widget style even when Plasma isn't running |
+| `XDG_MENU_PREFIX=plasma-` | **Critical:** tells `kbuildsycoca6` to use `/etc/xdg/menus/plasma-applications.menu` — without this, Dolphin's "Open With" is empty |
+| `GTK_USE_PORTAL=1` | Forces GTK apps to use the portal file picker (so they respect your KDE picker preference) |
+| `XDG_DATA_DIRS` | Exposes Flatpak apps to KDE the same way Plasma does |
+
+Sync the same variables in niri's `~/.config/niri/config.kdl`:
+
+```kdl
+environment {
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland"
+    QT_QPA_PLATFORMTHEME "kde"
+    QT_QPA_PLATFORMTHEME_QT6 "kde"
+    QT_STYLE_OVERRIDE "breeze"
+    XDG_MENU_PREFIX "plasma-"
+    QT_AUTO_SCREEN_SCALE_FACTOR "1"
+    QT_ENABLE_HIGHDPI_SCALING "1"
+    QT_SCALE_FACTOR_ROUNDING_POLICY "RoundPreferFloor"
+    GTK_USE_PORTAL "1"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+    KDE_SESSION_VERSION "6"
+    KDE_FULL_SESSION "true"
+}
+```
+
+Reload after creating: `systemctl --user daemon-reexec`
+
+### KDE File Picker Instead of GNOME
+
+Niri's default portal config uses `xdg-desktop-portal-gnome` for file pickers (which means Nautilus). To force the KDE file picker instead, create `~/.config/xdg-desktop-portal/niri-portals.conf`:
+
+```ini
+[preferred]
+default=kde;gnome;gtk;
+org.freedesktop.impl.portal.FileChooser=kde;
+```
+
+Keep `xdg-desktop-portal-gnome` installed — it's still needed for screencasting. `default=kde;gnome;gtk;` prioritizes KDE portals for everything, falling back to GNOME then GTK.
+
+**Firefox:** In `about:config`, set `widget.use-xdg-desktop-portal.file-picker` to `1` to force it through the portal.
+
+### kded6 + Noctalia Tray Conflict
+
+If your system tray disappears after starting `kded6`, it's because kded6 registers its own `StatusNotifierWatcher`, overriding Quickshell/Noctalia's. Add this BEFORE `kded6` in autostart:
+
+```kdl
+spawn-at-startup "dbus-update-activation-environment" "--systemd" "--all"
+spawn-at-startup "kded6"
+```
+
+### Prevent KDE File Picker Fullscreen
+
+Without Plasma, the KDE file picker can open fullscreen. Add a window rule to constrain it:
+
+```kdl
+window-rule {
+    match app-id="org.freedesktop.impl.portal.desktop.kde"
+    default-column-width { proportion 0.5; }
+    default-window-height { proportion 0.8; }
+    open-floating true
+    open-fullscreen false
+}
+```
+
+### Dolphin Dialogs as Floating Popups
+
+Without Plasma, Dolphin's delete confirmation, copy progress, and other operation dialogs open as tiled windows instead of popups. Match them by title pattern:
+
+```kdl
+window-rule {
+    match app-id="org.kde.dolphin" title="^(Delete|Deleting|Copy|Copying|Mov|Moving|Renaming|Creating) "
+    open-floating true
+    default-column-width { fixed 500; }
+    default-window-height { fixed 250; }
+}
+```
+
+To find app-ids and titles for other windows, use `niri msg pick-window` then click the window.
+
+### Video Thumbnails in Dolphin
+
+```bash
+sudo pacman -S --noconfirm --needed ffmpegthumbnailer
+```
+
+(`ffmpegthumbs` is already installed by default with KDE graphics packages.)
+
+> See [Resources](#resources) at the bottom for all references and reading material.
 
 ---
 
@@ -951,4 +1099,61 @@ systemctl status plasmalogin
 *Noctalia v5 is beta — expect occasional updates. Keep packages up to date: `yay -Syu noctalia-git`.*
 *Docs: https://docs.noctalia.dev/v5/* 🏔️🪽
 *Arch Wiki: https://wiki.archlinux.org/title/Niri*
-*llm-wiki: [[concepts/noctalia-v5]]*
+
+---
+
+## Resources
+
+### Official Documentation
+
+| Resource | URL |
+|----------|-----|
+| Niri Wiki | <https://niri-wm.github.io/niri/> |
+| Niri GitHub | <https://github.com/niri-wm/niri> |
+| Noctalia v5 Docs | <https://docs.noctalia.dev/v5/> |
+| Noctalia v4 Docs | <https://docs.noctalia.dev/v4/> |
+| Noctalia GitHub | <https://github.com/noctalia-dev/noctalia> |
+| Noctalia Discord | <https://discord.noctalia.dev> |
+
+### Arch Wiki
+
+| Page | URL |
+|------|-----|
+| Niri | <https://wiki.archlinux.org/title/Niri> |
+| Default Applications (xdg-mime) | <https://wiki.archlinux.org/title/Default_applications> |
+| Dolphin | <https://wiki.archlinux.org/title/Dolphin> |
+| KDE | <https://wiki.archlinux.org/title/KDE> |
+
+### KDE on Non-Plasma Compositors
+
+| Resource | URL |
+|----------|-----|
+| **Dolphin & KDE File Picker on Niri** (linhusp) | <https://gist.github.com/linhusp/05f8f7e0af3fa0fbb944dec17a75aa78> |
+| Fixing empty "Open With" in Dolphin (Hyprland → applies to Niri) | <https://www.lorenzobettini.it/2024/05/fixing-the-empty-open-with-in-dolphin-in-hyprland/> |
+| CachyOS Niri + Dolphin Tweak Notes | <https://discuss.cachyos.org/t/cachyos-niri-with-dolphin-tweak-notes/32700> |
+| NixOS: Dolphin MIME Associations | <https://discourse.nixos.org/t/dolphin-does-not-have-mime-associations/48985> |
+| Niri Important Software (portals, keyring, etc.) | <https://github.com/niri-wm/niri/wiki/Important-Software> |
+
+### Community Tools
+
+| Tool | URL | Purpose |
+|------|-----|---------|
+| NiriMod | <https://github.com/srinivasr/nirimod> | Visual config editor for Niri |
+| waycorner | <https://github.com/AndreasBackx/waycorner> | Hot corners for Wayland |
+| niri_tweaks | <https://github.com/heyoeyo/niri_tweaks> | Layout scripts for advanced window arrangements |
+| awesome-niri | <https://github.com/niri-wm/awesome-niri> | Curated list of Niri-related projects |
+
+### Community
+
+| Resource | URL |
+|----------|-----|
+| r/niri (Reddit) | <https://www.reddit.com/r/niri/> |
+| Noctalia Discord | <https://discord.noctalia.dev> |
+
+### Reading Material
+
+- [Niri, btw — Setup Guide](https://www.tonybtw.com/tutorial/niri/)
+- [Niri: Scrollable Tiling and the Setup Around It](https://timothyjohnsonsci.com/writing/2026-06-12-niri-setup/)
+- [Custom is the new Desktop (Dunkelstern)](https://dunkelstern.de/articles/2025-01-24/index.html)
+- [CachyOS Niri Keybinds & FAQ](https://wiki.cachyos.org/configuration/desktop_environments/niri/)
+- [KaOS Switches to Niri with Noctalia](https://medium.com/@emilyharbord2/kaos-switches-focus-to-niri-with-noctalia-on-the-latest-iso-39d61983ad19)

@@ -1,6 +1,6 @@
-# Arch Linux + Btrfs + CachyOS Kernels + KDE Plasma + Limine + Nvidia Driver
+# Arch Linux + Btrfs + CachyOS Kernels + KDE Plasma + GRUB + Nvidia Driver
 
-Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop (with Plasma Login Manager), Limine bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
+Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop (with Plasma Login Manager), GRUB bootloader, and ready for dual-booting, Nvidia DKMS, and Snapper-style snapshots.
 
 Not the best way or most correct way. Just the way I like.
 
@@ -13,14 +13,13 @@ Not the best way or most correct way. Just the way I like.
 5. [Btrfs Subvolumes & Mounts](#btrfs-subvolumes--mounts)
 6. [Base Install](#base-install)
 7. [Chroot Configuration](#chroot-configuration)
-8. [Limine Bootloader](#limine-bootloader)
+8. [GRUB Bootloader](#grub-bootloader)
 9. [Services & QoL](#services--qol)
 10. [Desktop Stack](#desktop-stack)
 11. [Reboot](#reboot)
 12. [Post-Install Ideas](#post-install-ideas)
     - [YAY package manager](#yay-package-manager)
     - [Snapper](#snapper)
-    - [Extra Packages for Limine](#extra-packages-for-limine)
     - [CachyOS Kernels](#cachyos-kernels)
     - [CachyOS Packages](#cachyos-packages)
     - [Update all packages to CachyOS Optimized](#update-all-packages-to-cachyos-optimized)
@@ -36,6 +35,11 @@ Not the best way or most correct way. Just the way I like.
 16. [Credits & Thanks](#credits--thanks)
 
 ## Updates
+
+### 2026-07-13
+
+- **Switched from Limine to GRUB:** ESP now mounted at `/boot/EFI` with `/boot` on a Btrfs `@boot` subvolume for snapshots. Replaced Limine config/packages with GRUB equivalents (`grub-btrfs`, `snap-pac`).
+- **Snapper:** Added `@boot` subvolume snapshot config.
 
 ### 2026-03-21
 
@@ -153,7 +157,7 @@ sudo pacman -Syy
 
 | Partition | Size | Type | Purpose |
 |-----------|------|------|---------|
-| `/dev/nvme0n1p1` | 2-4 GB | EFI System (type `ef00`) | Mounted at `/boot` |
+| `/dev/nvme0n1p1` | 1 GB | EFI System (type `ef00`) | Mounted at `/boot/EFI` |
 | `/dev/nvme0n1p2` | Remainder | Linux filesystem (`8300`) | Btrfs root |
 | `/dev/nvme0n1p3` | About half or equal your RAM size | Linux swap | Swap |
 
@@ -198,6 +202,7 @@ swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 mount UUID="${root_uuid}" /mnt
 
 btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@boot
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@var
 btrfs subvolume create /mnt/@var_log
@@ -228,6 +233,9 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root UUID="${root_uuid}" /mnt/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/srv
 
+# Mount @boot subvolume for kernel/initramfs (on Btrfs for snapshots)
+mount --mkdir -o compress=zstd:1,noatime,subvol=@boot UUID="${root_uuid}" /mnt/boot
+
 # If you created optional subvolumes, mount them.
 
 # I'm the only user of this machine, so I will mount it directly to my home.
@@ -247,9 +255,9 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@srv  UUID="${root_uuid}" /mnt/s
 
 ```bash
 
-# Mount ESP at /boot
+# Mount ESP at /boot/EFI
 
-mount --mkdir UUID="${esp_uuid}" /mnt/boot
+mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 
 # Enable swap
 
@@ -442,99 +450,79 @@ mkinitcpio -P
 
 ```
 
-## Limine Bootloader
+## GRUB Bootloader
 
-🚀 Goal: install Limine to the EFI System Partition and generate a `limine.conf` that boots your Arch kernel/initramfs from Btrfs by UUID. The key idea is to keep Limine’s config and the kernel artifacts together under `/boot/limine`.
+🚀 Goal: install GRUB to the EFI System Partition and generate a `grub.cfg` that boots your Arch kernel/initramfs from Btrfs by UUID. GRUB will be installed to `/boot/EFI` (the FAT32 ESP), while kernel and initramfs files live on the Btrfs `/boot` subvolume.
 
-### 6.1 Install Limine binaries (ESP mounted at `/boot`)
+### 6.1 Clean up EFI boot entries (optional)
+
+📝 **Note:** On a fresh install or if you no longer need other boot entries (e.g., Windows Boot Manager), you can remove old EFI boot entries to clean up your UEFI boot menu.
 
 ```bash
 
-# Limine Bootloader
+# View current EFI boot entries
 
-pacman -S --needed limine
-mkdir -p /boot/EFI/limine /boot/limine
-cp -v /usr/share/limine/*.EFI /boot/EFI/limine/
+efibootmgr -v
+
+# Delete unwanted boot entries (replace XXXX with the boot number, e.g., 0001, 0002)
+
+efibootmgr --delete-bootnum --bootnum XXXX
 
 ```
 
-Some extra for Limine are in AUR, so we will install them later, after we got yay installed.
-
-<details>
-  <summary>🚀 Packages being installed (Limine)</summary>
-
-- `limine`: Limine UEFI bootloader EFI binaries + templates/config support
-
-</details>
-
-### 6.2 Register Limine with the firmware
+### 6.2 Install GRUB
 
 ```bash
-efibootmgr --create --disk /dev/nvme0n1 --part 1 \
-  --label "Limine Bootloader" \
-  --loader '\EFI\limine\BOOTX64.EFI' \
-  --unicode
+
+# Install GRUB (efibootmgr and dosfstools already in pacstrap)
+
+pacman -S --noconfirm --needed grub
+
+# Install GRUB to the EFI System Partition
+
+grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 
 ```
 
-- `--disk /dev/nvme0n1 --part 1` corresponds to `/dev/nvme0n1p1`.
-- Limine interprets `boot():/` as “the partition containing `limine.conf`”.
+### 6.3 Configure GRUB cmdline
 
-### 6.3 Copy kernels, initramfs, and microcode into `/boot/limine`
-
-```bash
-ucode_img="intel-ucode"
-if lscpu | grep -qi amd; then
-  ucode_img="amd-ucode"
-fi
-
-cp -v /boot/vmlinuz-linux /boot/limine/
-cp -v /boot/initramfs-linux*.img /boot/limine/
-cp -v "/boot/${ucode_img}.img" /boot/limine/
-
-```
-
-Repeat after every kernel, initramfs, or microcode update (consider adding a pacman hook later).
-
-### 6.4 Generate `/boot/limine/limine.conf`
+📝 **Note:** Set up kernel parameters in `/etc/default/grub` for Btrfs root, resume (hibernation), and optional zswap support.
 
 ```bash
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+
+# Detect CPU and get UUIDs
+
 ucode_img="intel"
-if lscpu | grep -qi amd; then
-  ucode_img="amd"
+lscpu | grep -qi amd && ucode_img="amd"
+
+# Auto-detect swap partition (any disk)
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
+if [ -z "$swap_part" ]; then
+  echo "ERROR: No swap partition found" >&2
+  exit 1
 fi
+swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 
-cat <<EOF | tee /boot/limine/limine.conf >/dev/null
-TIMEOUT=3
-DEFAULT_ENTRY=Arch Linux
+# Remove any existing GRUB_CMDLINE_LINUX_DEFAULT line, then insert after GRUB_CMDLINE_LINUX=
 
-/Arch Linux
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
-    MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
+sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
 
-/Arch Linux (fallback)
-    PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-linux
-    MODULE_PATH: boot():/limine/initramfs-linux.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
-EOF
+# Verify the change
 
-cat /boot/limine/limine.conf
+grep "^GRUB_CMDLINE_LINUX" /etc/default/grub
 
 ```
 
-#### Add zswap setting to initrd (optional)
+📝 **Tip:** If you don't want zswap, remove the `zswap.*` parameters from the cmdline.
+
+### 6.4 Add zswap modules to initramfs (optional)
 
 ```bash
 
 # Add zswap modules to mkinitcpio.conf (idempotent)
 
-sudo perl -0777 -i.bak -pe '
+perl -0777 -i.bak -pe '
   s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
     my @mods = grep { length } split " ", $1;
     my %seen; @mods = grep { !$seen{$_}++ } @mods;
@@ -544,29 +532,47 @@ sudo perl -0777 -i.bak -pe '
     "MODULES=(" . join(" ", @mods) . ")"
   }mge;
 ' /etc/mkinitcpio.conf
-sudo mkinitcpio -P
-grep -E '^MODULES=' /etc/mkinitcpio.conf
+
+# Rebuild initramfs
+
+mkinitcpio -P
+
+# Verify
+
+grep -E "^MODULES=" /etc/mkinitcpio.conf
 
 ```
 
-### 6.5 Pacman hook to redeploy Limine EFI files
+### 6.5 Generate GRUB configuration
 
 ```bash
-sudo mkdir -p /etc/pacman.d/hooks
-sudo tee /etc/pacman.d/hooks/99-limine.hook >/dev/null <<'EOF'
-[Trigger]
-Operation = Install
-Operation = Upgrade
-Type      = Package
-Target    = limine
 
-[Action]
-Description = Copy Limine EFI files to the ESP
-When = PostTransaction
-Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
-EOF
+# Generate grub.cfg
+
+grub-mkconfig -o /boot/grub/grub.cfg
 
 ```
+
+### 6.6 Enable os-prober (optional, for dual-boot)
+
+📝 **Note:** If you have Windows or another Linux installation on the same machine, enable `os-prober` to detect and add them to the GRUB menu.
+
+```bash
+
+# Install os-prober
+
+pacman -S --noconfirm --needed os-prober
+
+# Enable os-prober in GRUB config
+
+echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
+
+# Regenerate GRUB config
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+```
+
 
 ## Services & QoL
 
@@ -867,7 +873,7 @@ pacman -S --needed \
 
 ## Reboot
 
-🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/mnt/boot/limine/limine.conf` exists.
+🔁 Goal: cleanly exit the installer environment and reboot into the new system. Before rebooting, it’s worth quickly checking `/mnt/etc/fstab` and that `/boot/grub/grub.cfg` exists.
 
 ### Exit chroot and reboot
 
@@ -908,7 +914,7 @@ rm -rf yay
 
 ### Snapper
 
-📸 Goal: set up snapshot management for Btrfs so you can roll back system changes. `snapper` itself is in the official repos; the Limine integration shown below uses AUR packages (requires an AUR helper such as `yay`, installed above).
+📸 Goal: set up snapshot management for Btrfs so you can roll back system changes. `snapper` itself is in the official repos; the GRUB integration shown below uses official repo packages (requires an AUR helper such as `yay`, installed above).
 
 ```bash
 sudo pacman -Syu snapper
@@ -916,12 +922,12 @@ sudo pacman -Syu snapper
 ```
 
 <details>
-  <summary>📸 Packages being installed (Snapper + optional Limine integration)</summary>
+  <summary>📸 Packages being installed (Snapper + GRUB integration)</summary>
 
 - `snapper`: manage Btrfs snapshots (create/list/rollback policies)
+- `grub-btrfs`: GRUB menu entries for Btrfs snapshots
 - `snap-pac`: pacman hooks to auto-create snapshots around package transactions
-- (AUR) `limine-snapper-sync`: keep Limine config/entries aligned with snapshots
-- (AUR) `limine-mkinitcpio-hook`: mkinitcpio hook for Limine workflows
+- `snap-pac-grub`: update GRUB after snapshot operations
 
 </details>
 
@@ -930,43 +936,34 @@ sudo pacman -Syu snapper
 You can omit `/home` snapping if you prefer (e.g., for large media folders).
 
 ```bash
+sudo snapper -c root create-config /
+sudo snapper -c boot create-config /boot
+sudo snapper -c home create-config /home
 
-# We need to be root for this part
+# Timeline tuning: keep hourly/daily/weekly, disable monthly/yearly
+sudo snapper -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=4 TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0
 
-sudo su
+# boot: no timeline needed (snap-pac covers kernel updates)
+sudo snapper -c boot set-config TIMELINE_CREATE=no
 
+# home: keep daily only
+sudo snapper -c home set-config TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=0
 ```
 
-```bash
-snapper -c root create-config /
-snapper -c home create-config /home
-
-```
-
-```bash
-
-# Exit root
-
-exit
-
-```
-
-### Extra Packages for Limine
+### Extra Packages for GRUB
 
 ```bash
 
-# Optional (AUR): keep Limine + initramfs in sync with snapshots/updates
+# GRUB + Btrfs snapshot integration
 
 yay -S \
-  limine-snapper-sync \
-  limine-mkinitcpio-hook \
-  snap-pac
+  grub-btrfs \
+  snap-pac \
+  snap-pac-grub
 
-cp /etc/limine-snapper-sync.conf /etc/default/limine
+# Enable grub-btrfs service
+sudo systemctl enable --now grub-btrfsd
 
-# trigger sync
-
-sudo limine-snapper-sync
 
 ```
 
@@ -1304,7 +1301,7 @@ fi
 
 Only run this section if an NVIDIA GPU was detected.
 
-You should have `/boot/limine/limine.conf` created automatically by now. Edit it and add the NVIDIA params to the `CMDLINE:` lines. You can leave out the fallback entry, or keep it as a safe mode option.
+Edit `/etc/default/grub` and add the NVIDIA params to `GRUB_CMDLINE_LINUX_DEFAULT`. Then regenerate: `grub-mkconfig -o /boot/grub/grub.cfg`.
 
 ```bash
 # Only if GPU is NVIDIA
@@ -1372,12 +1369,12 @@ EOF
 fi
 ```
 
-Then trigger Limine sync (if NVIDIA was installed) and reboot:
+Then regenerate GRUB config and reboot:
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
-  # Disable old limine.conf since limine-snapper-sync generates a new one
-  sudo mv /boot/limine/limine.conf /boot/limine/limine.conf.bak 2>/dev/null || true
+  # Regenerate GRUB config with NVIDIA params
+  sudo grub-mkconfig -o /boot/grub/grub.cfg
 fi
 
 reboot

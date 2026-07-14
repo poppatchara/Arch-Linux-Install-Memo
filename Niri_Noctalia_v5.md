@@ -559,53 +559,69 @@ Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-man
 
 > ✅ **Working** — installed and tracking windows. Add to `spawn-at-startup` for full restore-on-login.
 
-### PCoIP Remote Desktop — Keyboard Passthrough Workaround
+### PCoIP Remote Desktop — Focus-Based Keyboard Passthrough
 
 pcoip-client (HP Anyware) runs on Niri via XWayland but does **not** capture keyboard shortcuts (Mod/Super, Alt+Tab, Mod+drag) because:
 
 | Layer | Problem | Fix |
 |-------|---------|-----|
-| Niri `binds {}` | 110 `Mod+` binds intercept Super | Comment out all except whitelist |
-| Niri `recent-windows` | Built-in Alt+Tab switcher (since v25.11) | `recent-windows { off }` |
-| Niri default gestures | Mod+MouseLeft (drag-move), Mod+MouseRight (drag-resize) | Override with no-op binds |
-| GNOME portal | `org.gnome.desktop.wm.keybindings` has `<Alt>Tab` | `gsettings set ... "[]"` |
+| Niri `binds {}` | 110 `Mod+` binds intercept Super | Focus-based config swap |
+| Niri `recent-windows` | Built-in Alt+Tab switcher (since v25.11) | `recent-windows { off; }` in PCoIP config |
+| Niri default gestures | Mod+MouseLeft (drag), Mod+MouseRight (resize) | Permanent no-op override |
+| GNOME portal | `<Alt>Tab` in gsettings | `gsettings set ... "[]"` |
+| nirimod | Auto-replaces config, strips binds | Stop nirimod before setup |
 
-**Approach:** Dual Niri config — swap to a stripped-down config when using PCoIP, restore normal config on exit.
+**Approach:** Focus watcher in wrapper script — when pcoip-client gains focus, Niri config is swapped to a stripped version. When focus leaves, normal config is restored. All automatic, no manual toggling.
 
-#### 1. Create backup + PCoIP config
+#### 1. Prerequisites
 
-Generate PCoIP config from normal config, keeping only Mod+Escape, Mod+Tab, Mod+F active:
+Stop nirimod if running (it will overwrite config changes):
+
+```bash
+pkill -f nirimod
+# Also remove from spawn-at-startup in config
+```
+
+#### 2. Create PCoIP config
+
+Generate from normal config, whitelisting only desired active binds:
 
 ```bash
 cp ~/.config/niri/config.kdl ~/.config/niri/config-normal.kdl
 
-sed -E '/^    Mod\+/{
+sed -E '
+/^    Mod\+/{
   /Mod\+Escape allow-inhibiting/b
   /Mod\+Tab /b
   /Mod\+F /b
+  /Mod\+MouseLeft/b
+  /Mod\+MouseRight/b
+  /Mod\+Shift\+S /b
+  /Mod\+Shift\+V /b
+  /Mod\+Alt\+[JK] /b
+  /Mod\+Alt\+Up /b
+  /Mod\+Alt\+Down /b
+  /Mod\+.*[Ww]heel[Ss]croll/b
   s/^    /    \/\//
 }' ~/.config/niri/config-normal.kdl > ~/.config/niri/config-pcoip.kdl
 ```
 
-Add recent-windows off + mouse overrides:
-
-Append to end of `config-pcoip.kdl`:
+Append to `config-pcoip.kdl`:
 
 ```kdl
-// Disable Niri built-in Alt-Tab switcher
-recent-windows {
-    off
-}
+recent-windows { off; }
 ```
 
-Inside the `binds {}` block (before closing `}`), add:
+#### 3. Permanent config changes (normal)
+
+Add mouse overrides inside `binds {}` (prevents Mod+drag from moving Niri windows):
 
 ```kdl
-    Mod+MouseLeft { spawn "true"; }
-    Mod+MouseRight { spawn "true"; }
+Mod+MouseLeft { spawn "true"; }
+Mod+MouseRight { spawn "true"; }
 ```
 
-#### 2. Clear GNOME portal Alt+Tab
+Clear GNOME portal Alt+Tab:
 
 ```bash
 gsettings set org.gnome.desktop.wm.keybindings switch-applications "[]"
@@ -614,19 +630,45 @@ gsettings set org.cinnamon.desktop.keybindings.wm switch-windows "[]"
 gsettings set org.cinnamon.desktop.keybindings.wm switch-windows-backward "[]"
 ```
 
-#### 3. Create wrapper script (`~/.local/bin/pcoip`)
+#### 4. Create wrapper script (`~/.local/bin/pcoip`)
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
+# Auto-detect Niri socket (critical — launcher may not export NIRI_SOCKET)
+export NIRI_SOCKET=$(ls /run/user/1000/niri.*.sock 2>/dev/null | head -1)
+
 NIRI_CONFIG="$HOME/.config/niri/config.kdl"
-NORMAL_CONFIG="$HOME/.config/niri/config-normal.kdl"
-PCOIP_CONFIG="$HOME/.config/niri/config-pcoip.kdl"
+NORMAL="$HOME/.config/niri/config-normal.kdl"
+PCOIP="$HOME/.config/niri/config-pcoip.kdl"
+STATE_FILE="/tmp/pcoip-focus-state"
 
-cleanup() { cp "$NORMAL_CONFIG" "$NIRI_CONFIG"; }
+focus_watch() {
+    local CURRENT="normal"
+    niri msg -j event-stream 2>/dev/null | while read -r line; do
+        echo "$line" | grep -q "WindowFocusChanged" || continue
+        FOCUSED_ID=$(echo "$line" | grep -oP '"id":\s*\K\d+|null')
+        APP_ID=""
+        [ "$FOCUSED_ID" != "null" ] && [ -n "$FOCUSED_ID" ] && \
+            APP_ID=$(niri msg -j focused-window 2>/dev/null | grep -oP '"app_id":\s*"\K[^"]*')
+
+        if [ "$APP_ID" = "pcoip-client" ]; then
+            [ "$CURRENT" != "pcoip" ] && cp "$PCOIP" "$NIRI_CONFIG" && CURRENT="pcoip" && echo ON > "$STATE_FILE"
+        else
+            [ "$CURRENT" != "normal" ] && cp "$NORMAL" "$NIRI_CONFIG" && CURRENT="normal" && echo OFF > "$STATE_FILE"
+        fi
+    done
+}
+
+cleanup() {
+    kill $WATCH_PID 2>/dev/null; wait $WATCH_PID 2>/dev/null
+    [ "$(cat "$STATE_FILE" 2>/dev/null)" = "ON" ] && cp "$NORMAL" "$NIRI_CONFIG"
+    rm -f "$STATE_FILE"
+}
+
+echo "OFF" > "$STATE_FILE"
+focus_watch &
+WATCH_PID=$!
 trap cleanup EXIT INT TERM
-
-cp "$PCOIP_CONFIG" "$NIRI_CONFIG"
-sleep 0.5  # wait for Niri auto-reload
 
 QT_QPA_PLATFORM=xcb pcoip-client "$@"
 ```
@@ -635,16 +677,21 @@ QT_QPA_PLATFORM=xcb pcoip-client "$@"
 chmod +x ~/.local/bin/pcoip
 ```
 
-#### 4. Add window rule (to both configs)
+#### 5. Desktop entry for launcher
 
-```kdl
-window-rule {
-    match app-id="pcoip-client"
-    open-floating true
-    default-column-width { proportion 0.95; }
-    default-window-height { proportion 0.95; }
-}
+`~/.local/share/applications/pcoip-client.desktop`:
+
+```desktop
+[Desktop Entry]
+Type=Application
+Name=PCoIP Client
+Exec=/home/pop/.local/bin/pcoip %u
+Icon=pcoip-client
+Terminal=false
+Categories=Network;RemoteAccess;
 ```
+
+> Use absolute path — `~/.local/bin` may not be in launcher `$PATH`.
 
 #### Usage
 
@@ -652,25 +699,35 @@ window-rule {
 pcoip
 ```
 
-| In PCoIP mode | Behavior |
-|---------------|----------|
-| `Mod+Tab` | Niri overview (window switcher) |
+| State | Mod binds | Alt+Tab | Mod+Mouse |
+|-------|-----------|:-------:|:---------:|
+| **PCoIP focused** | Whitelist only (~17 active) | → remote ✅ | → remote ✅ |
+| **Other window** | All 110+ normal | Niri switcher | No-op (permanent) |
+
+**Whitelisted in PCoIP** (still work as Niri shortcuts):
+
+| Bind | Action |
+|------|--------|
+| `Mod+Escape` | Escape hatch |
+| `Mod+Tab` | Overview |
 | `Mod+F` | Maximize column |
-| `Mod+Escape` | Toggle keyboard inhibit (escape hatch) |
-| `Alt+Tab` | → Remote session ✅ |
-| All other `Mod+*` | → Remote session ✅ |
-| Mod + mouse drag | → Remote session ✅ |
+| `Mod+Shift+S` | Region screenshot (Noctalia) |
+| `Mod+Shift+V` | Clipboard (Noctalia) |
+| `Mod+Alt+J/K/Up/Down` | Workspace switch |
+| `Mod+WheelScroll*` (12 binds) | Workspace/column scroll |
 
-When PCoIP exits, normal config is automatically restored via `trap cleanup EXIT`.
+#### Why This Works
 
-#### Why Not gamescope?
+Niri emits `WindowFocusChanged` events via IPC. The wrapper watches these events and swaps config files on focus transitions. Niri auto-reloads config within ~100ms. The `NIRI_SOCKET` export is critical — launchers (Noctalia, wofi, desktop entries) often don't set this variable.
 
-gamescope was tested but had issues:
-- Alt+Tab **still intercepted** by Niri (host compositor sees keys first)
-- Nested compositor overhead, small default resolution
-- `open-fullscreen` locks user out of desktop
+**What was tried and failed:**
 
-The config-swap approach directly removes the shortcuts from Niri, so keys pass through natively — no nested compositor needed.
+| Approach | Issue |
+|----------|-------|
+| gamescope wrapper | Alt+Tab still intercepted by host compositor, small resolution |
+| `toggle-keyboard-shortcuts-inhibit` | Requires app to support `zwp_keyboard_shortcuts_inhibit_manager_v1` — pcoip-client does not |
+| Manual config swap on launch | Mod keys disabled systemwide, not per-window |
+| nirimod auto-config | Strips `binds {}` section, overwrites manual changes |
 
 > ⚠️ xwayland-satellite issue [#220](https://github.com/Supreeeme/xwayland-satellite/issues/220) (`xwayland-keyboard-grab`) is still open. KDE/KWin handles this natively via `XGrabKeyboard` support.
 

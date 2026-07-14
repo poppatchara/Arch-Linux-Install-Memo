@@ -512,6 +512,44 @@ sudo pacman -S --noconfirm --needed \
 sudo pacman -S --noconfirm --needed capitaine-cursors
 ```
 
+### Session Restore (Testing)
+
+Niri has no built-in session restore. Community projects fill the gap:
+
+```bash
+# 🔒 AUR — Review PKGBUILD before installing
+yay -S nirinit-git
+```
+
+[nirinit](https://github.com/amaanq/nirinit) — declarative session manager. Define which apps open on which workspaces, and it spawns them on login. Not full state restore (can't restore app content), but brings your window layout back.
+
+Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-manager) — auto-saves open windows on exit and restores on login. More like traditional session restore.
+
+> ⚠️ **Testing** — both are community projects. Test with `nirinit --help` first.
+
+### Remote Desktop Keyboard Passthrough (Testing)
+
+pcoip-client (HP Anyware) works on niri via XWayland but doesn't capture keyboard shortcuts (Mod keys, Alt+Tab) because xwayland-satellite lacks `xwayland-keyboard-grab` protocol support (tracking: [xwayland-satellite#220](https://github.com/Supreeeme/xwayland-satellite/issues/220)).
+
+**Workaround:** wrap it in `gamescope`, a minimal nested compositor that passes all keys through:
+
+```bash
+sudo pacman -S gamescope
+
+# Launch with full keyboard passthrough
+gamescope -- QT_QPA_PLATFORM=xcb pcoip-client
+```
+
+```kdl
+// Window rule for pcoip-client
+window-rule {
+    match app-id="pcoip-client"
+    open-fullscreen true
+}
+```
+
+> ⚠️ **Testing** — `gamescope` adds overhead. KDE Plasma handles this natively via `XGrabKeyboard` support in KWin. xwayland-satellite issue #220 is still open.
+
 ### Keybind Additions
 
 Add these to the `binds {}` block in your niri config:

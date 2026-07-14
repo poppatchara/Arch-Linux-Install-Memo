@@ -529,11 +529,27 @@ spawn-at-startup "nirinit"
 
 State is saved to `~/.local/share/nirinit/session.json`. On login, nirinit reads it and re-launches all previously open apps on their correct workspaces. Window sizes and positions are preserved.
 
+**Config (`~/.config/nirinit/config.toml`):**
+
+```toml
+# Map app_id to custom launch commands (PWAs, flatpaks, etc.)
+[launch]
+# "chromium-example.com__-Default" = "example-web-app"
+
+# Apps to skip during restore
+[skip]
+# apps = ["steam"]
+```
+
+> ⚠️ `save_interval` is a **CLI flag only** (`--save-interval`), not a config field. Config only supports `[launch]` and `[skip]`. Using `save_interval` in config.toml causes: `unknown field 'save_interval', expected 'skip' or 'launch'`.
+
 **Options:**
 ```
---save-interval 300   # Save interval in seconds (default: 300 = 5 min)
+--save-interval 300   # Save interval in seconds (default: 300 = 5 min) — CLI flag only
 --debug               # Verbose logging
 ```
+
+**Important:** nirinit must be installed BEFORE starting Niri, or Niri must be restarted after install — `spawn-at-startup` only executes when the Niri session begins.
 
 **Limitations:**
 - Only restores which apps were open, not their content (browsers/editors handle their own tab restore)

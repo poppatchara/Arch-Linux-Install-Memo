@@ -573,14 +573,24 @@ pcoip-client (HP Anyware) runs on Niri via XWayland but does **not** capture key
 
 **Approach:** Focus watcher in wrapper script — when pcoip-client gains focus, Niri config is swapped to a stripped version. When focus leaves, normal config is restored. All automatic, no manual toggling.
 
-#### 1. Prerequisites
+#### 1. nirimod Compatibility
 
-Stop nirimod if running (it will overwrite config changes):
+nirimod is a GTK4 GUI for editing Niri config. It can coexist with PCoIP, but must be stopped before launching PCoIP (handled automatically by the wrapper).
 
-```bash
-pkill -f nirimod
-# Also remove from spawn-at-startup in config
-```
+**How nirimod works:**
+- On first run, it backs up your config to `~/.config/nirimod/baseline/`
+- It manages `config.kdl` directly — reads on open, writes on Save (Ctrl+S)
+- Binds are preserved: if you add binds via the GUI and Save, they are written to `config.kdl`
+- Its `auto_update` setting means it may write to `config.kdl` at any time — hence we stop it
+
+**Workflow:**
+1. Use nirimod normally — edit binds, layout, etc. via GUI → Save
+2. Launch `pcoip` → wrapper auto-kills nirimod (`pkill -f nirimod`)
+3. PCoIP runs with focus-based config swap
+4. Exit PCoIP → normal config restored
+5. Re-open nirimod when needed — it reads current config.kdl (including all binds)
+
+No permanent config changes needed — just let the wrapper handle nirimod stop.
 
 #### 2. Create PCoIP config
 

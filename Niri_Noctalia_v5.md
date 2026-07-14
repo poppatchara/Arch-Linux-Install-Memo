@@ -550,6 +550,24 @@ window-rule {
 
 > ⚠️ **Testing** — `gamescope` adds overhead. KDE Plasma handles this natively via `XGrabKeyboard` support in KWin. xwayland-satellite issue #220 is still open.
 
+### Run Command Dialog (Alt+F2 style)
+
+Install `wofi` for a KDE-style run dialog:
+
+```bash
+sudo pacman -S wofi
+
+# Compact config (~/.config/wofi/config)
+echo 'show=drun,run
+width=600
+height=250
+prompt=Run:
+allow_images=false
+insensitive=true' > ~/.config/wofi/config
+```
+
+Bind `Mod+F2` to wofi run mode (see [Keybind Additions](#keybind-additions)).
+
 ### Keybind Additions
 
 Add these to the `binds {}` block in your niri config:
@@ -557,6 +575,7 @@ Add these to the `binds {}` block in your niri config:
 ```kdl
     // ─── DE Applications ───
     Mod+Return               hotkey-overlay-title="Open Terminal" { spawn "ghostty"; }
+    Mod+F2                    hotkey-overlay-title="Run Command" { spawn "wofi" "--show" "run"; }
     Mod+E                    hotkey-overlay-title="File Manager: Dolphin" { spawn "dolphin"; }
     Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
     Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg lock-screen"; }

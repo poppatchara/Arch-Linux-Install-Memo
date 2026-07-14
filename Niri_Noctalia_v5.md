@@ -543,28 +543,121 @@ Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-man
 
 > ✅ **Working** — installed and tracking windows. Add to `spawn-at-startup` for full restore-on-login.
 
-### Remote Desktop Keyboard Passthrough (Testing)
+### PCoIP Remote Desktop — Keyboard Passthrough Workaround
 
-pcoip-client (HP Anyware) works on niri via XWayland but doesn't capture keyboard shortcuts (Mod keys, Alt+Tab) because xwayland-satellite lacks `xwayland-keyboard-grab` protocol support (tracking: [xwayland-satellite#220](https://github.com/Supreeeme/xwayland-satellite/issues/220)).
+pcoip-client (HP Anyware) runs on Niri via XWayland but does **not** capture keyboard shortcuts (Mod/Super, Alt+Tab, Mod+drag) because:
 
-**Workaround:** wrap it in `gamescope`, a minimal nested compositor that passes all keys through:
+| Layer | Problem | Fix |
+|-------|---------|-----|
+| Niri `binds {}` | 110 `Mod+` binds intercept Super | Comment out all except whitelist |
+| Niri `recent-windows` | Built-in Alt+Tab switcher (since v25.11) | `recent-windows { off }` |
+| Niri default gestures | Mod+MouseLeft (drag-move), Mod+MouseRight (drag-resize) | Override with no-op binds |
+| GNOME portal | `org.gnome.desktop.wm.keybindings` has `<Alt>Tab` | `gsettings set ... "[]"` |
+
+**Approach:** Dual Niri config — swap to a stripped-down config when using PCoIP, restore normal config on exit.
+
+#### 1. Create backup + PCoIP config
+
+Generate PCoIP config from normal config, keeping only Mod+Escape, Mod+Tab, Mod+F active:
 
 ```bash
-sudo pacman -S gamescope
+cp ~/.config/niri/config.kdl ~/.config/niri/config-normal.kdl
 
-# Launch with full keyboard passthrough
-gamescope -- QT_QPA_PLATFORM=xcb pcoip-client
+sed -E '/^    Mod\+/{
+  /Mod\+Escape allow-inhibiting/b
+  /Mod\+Tab /b
+  /Mod\+F /b
+  s/^    /    \/\//
+}' ~/.config/niri/config-normal.kdl > ~/.config/niri/config-pcoip.kdl
 ```
 
+Add recent-windows off + mouse overrides:
+
+Append to end of `config-pcoip.kdl`:
+
 ```kdl
-// Window rule for pcoip-client
-window-rule {
-    match app-id="pcoip-client"
-    open-fullscreen true
+// Disable Niri built-in Alt-Tab switcher
+recent-windows {
+    off
 }
 ```
 
-> ⚠️ **Testing** — `gamescope` adds overhead. KDE Plasma handles this natively via `XGrabKeyboard` support in KWin. xwayland-satellite issue #220 is still open.
+Inside the `binds {}` block (before closing `}`), add:
+
+```kdl
+    Mod+MouseLeft { spawn "true"; }
+    Mod+MouseRight { spawn "true"; }
+```
+
+#### 2. Clear GNOME portal Alt+Tab
+
+```bash
+gsettings set org.gnome.desktop.wm.keybindings switch-applications "[]"
+gsettings set org.gnome.desktop.wm.keybindings switch-applications-backward "[]"
+gsettings set org.cinnamon.desktop.keybindings.wm switch-windows "[]"
+gsettings set org.cinnamon.desktop.keybindings.wm switch-windows-backward "[]"
+```
+
+#### 3. Create wrapper script (`~/.local/bin/pcoip`)
+
+```bash
+#!/bin/bash
+NIRI_CONFIG="$HOME/.config/niri/config.kdl"
+NORMAL_CONFIG="$HOME/.config/niri/config-normal.kdl"
+PCOIP_CONFIG="$HOME/.config/niri/config-pcoip.kdl"
+
+cleanup() { cp "$NORMAL_CONFIG" "$NIRI_CONFIG"; }
+trap cleanup EXIT INT TERM
+
+cp "$PCOIP_CONFIG" "$NIRI_CONFIG"
+sleep 0.5  # wait for Niri auto-reload
+
+QT_QPA_PLATFORM=xcb pcoip-client "$@"
+```
+
+```bash
+chmod +x ~/.local/bin/pcoip
+```
+
+#### 4. Add window rule (to both configs)
+
+```kdl
+window-rule {
+    match app-id="pcoip-client"
+    open-floating true
+    default-column-width { proportion 0.95; }
+    default-window-height { proportion 0.95; }
+}
+```
+
+#### Usage
+
+```bash
+pcoip
+```
+
+| In PCoIP mode | Behavior |
+|---------------|----------|
+| `Mod+Tab` | Niri overview (window switcher) |
+| `Mod+F` | Maximize column |
+| `Mod+Escape` | Toggle keyboard inhibit (escape hatch) |
+| `Alt+Tab` | → Remote session ✅ |
+| All other `Mod+*` | → Remote session ✅ |
+| Mod + mouse drag | → Remote session ✅ |
+
+When PCoIP exits, normal config is automatically restored via `trap cleanup EXIT`.
+
+#### Why Not gamescope?
+
+gamescope was tested but had issues:
+- Alt+Tab **still intercepted** by Niri (host compositor sees keys first)
+- Nested compositor overhead, small default resolution
+- `open-fullscreen` locks user out of desktop
+
+The config-swap approach directly removes the shortcuts from Niri, so keys pass through natively — no nested compositor needed.
+
+> ⚠️ xwayland-satellite issue [#220](https://github.com/Supreeeme/xwayland-satellite/issues/220) (`xwayland-keyboard-grab`) is still open. KDE/KWin handles this natively via `XGrabKeyboard` support.
+
 
 ### Run Command Dialog (Alt+F2 style)
 

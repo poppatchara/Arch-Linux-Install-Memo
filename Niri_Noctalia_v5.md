@@ -514,18 +514,34 @@ sudo pacman -S --noconfirm --needed capitaine-cursors
 
 ### Session Restore (Testing)
 
-Niri has no built-in session restore. Community projects fill the gap:
+Niri has no built-in session restore. [nirinit](https://github.com/amaanq/nirinit) fills the gap — it auto-saves open windows every 5 minutes and restores them when Niri starts.
 
 ```bash
 # 🔒 AUR — Review PKGBUILD before installing
 yay -S nirinit-git
 ```
 
-[nirinit](https://github.com/amaanq/nirinit) — declarative session manager. Define which apps open on which workspaces, and it spawns them on login. Not full state restore (can't restore app content), but brings your window layout back.
+**Auto-start in Niri:**
 
-Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-manager) — auto-saves open windows on exit and restores on login. More like traditional session restore.
+```kdl
+spawn-at-startup "nirinit"
+```
 
-> ⚠️ **Testing** — both are community projects. Test with `nirinit --help` first.
+State is saved to `~/.local/share/nirinit/session.json`. On login, nirinit reads it and re-launches all previously open apps on their correct workspaces. Window sizes and positions are preserved.
+
+**Options:**
+```
+--save-interval 300   # Save interval in seconds (default: 300 = 5 min)
+--debug               # Verbose logging
+```
+
+**Limitations:**
+- Only restores which apps were open, not their content (browsers/editors handle their own tab restore)
+- All restore commands go through Niri's `spawn`, so the app-id must be launchable via desktop entry
+
+Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-manager) — similar approach, auto-saves on exit and restores on login.
+
+> ✅ **Working** — installed and tracking windows. Add to `spawn-at-startup` for full restore-on-login.
 
 ### Remote Desktop Keyboard Passthrough (Testing)
 

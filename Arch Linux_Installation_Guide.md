@@ -500,26 +500,23 @@ arch-chroot /mnt
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. This should be the first thing you do after entering chroot — so every package from §4 onward pulls from CachyOS mirrors.
+> Skip if using Vanilla Arch repos. Run the official installer — it's idempotent, safe to run even if repos were already added in §3.1.
 
 ```bash
-# If repos were already added in §3.1 (CachyOS kernel selected), skip this.
-if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
-  sudo pacman -Syu
-  cd ~
-  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-  tar xf cachyos-repo.tar.xz && cd cachyos-repo
-  sudo ./cachyos-repo.sh
-  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+sudo pacman -Syu
+cd ~
+curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+tar xf cachyos-repo.tar.xz && cd cachyos-repo
+sudo ./cachyos-repo.sh
+cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 
-  # Reinstall everything from CachyOS repos
-  # All packages installed so far (§3) were from vanilla Arch.
-  # CachyOS packages have bumped pkgrel (1.2.3-1 → 1.2.3-1.1),
-  # so pacman sees them as newer and upgrades automatically.
-  sudo pacman -Qqn | sudo pacman -S --noconfirm -
-fi
+# Reinstall everything from CachyOS repos
+# All packages installed so far (§3) were from vanilla Arch.
+# CachyOS packages have bumped pkgrel (1.2.3-1 → 1.2.3-1.1),
+# so pacman sees them as newer and upgrades automatically.
+sudo pacman -Qqn | sudo pacman -S --noconfirm -
 
-# Rank CachyOS mirrors by speed (both methods include this)
+# Rank CachyOS mirrors by speed
 sudo pacman -S --noconfirm --needed cachyos-rate-mirrors
 sudo cachyos-rate-mirrors
 ```

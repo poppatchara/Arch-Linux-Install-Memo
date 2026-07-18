@@ -1025,7 +1025,7 @@ id greetd 2>/dev/null || sudo useradd -r -s /sbin/nologin greetd
 sudo usermod -aG video,seat greetd
 ```
 
-**greetd** is a minimal login daemon. We configure it to use `noctalia-greeter` as its frontend:
+**greetd** is a minimal login daemon. The correct command is `noctalia-greeter-session` (the wrapper that sets up the compositor), not `noctalia-greeter` directly:
 
 ```bash
 sudo tee /etc/greetd/config.toml <<'EOF'
@@ -1033,7 +1033,7 @@ sudo tee /etc/greetd/config.toml <<'EOF'
 vt = 1
 
 [default_session]
-command = "noctalia-greeter"
+command = "/usr/bin/noctalia-greeter-session"
 user = "greetd"
 EOF
 

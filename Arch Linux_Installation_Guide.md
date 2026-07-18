@@ -731,20 +731,24 @@ cp -v /boot/initramfs-*.img /boot/limine/
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. Add now — before installing any heavy packages — so everything from §6 onward pulls from CachyOS mirrors with x86-64-v3/v4 optimized builds.
-
-CachyOS repos rebuild Arch packages with LTO, PGO, BOLT, `-O3`, and specialized instruction sets. Adding them here (after base install, before desktop) avoids version conflicts:
+> Skip if using Vanilla Arch repos. Add now — between base install and desktop — so everything from here on pulls from CachyOS mirrors with x86-64-v3/v4 optimized builds.
 
 ```bash
+# 1. Add CachyOS repos
 sudo pacman -Syu
 cd ~
 curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
 tar xvf cachyos-repo.tar.xz && cd cachyos-repo
 sudo ./cachyos-repo.sh
 cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+
+# 2. Reinstall everything from CachyOS repos
+# All packages installed so far (§3–§5) were from vanilla Arch.
+# This replaces them with CachyOS-optimized builds.
+sudo pacman -Qqn | sudo pacman -S --noconfirm -
 ```
 
-> Now all subsequent `pacman` calls in §6 and §7 get CachyOS-optimized packages.
+> After this, every package on the system is the CachyOS-optimized version. All subsequent `pacman` calls in §6 and §7 will also pull from CachyOS.
 
 ---
 
@@ -1136,11 +1140,6 @@ pacman -Qqe > ~/pkglist.pre-cachy.txt
 # Install CachyOS extras
 sudo pacman -Syu
 sudo pacman -S cachyos-settings cachyos-gaming-meta cachyos-hello
-
-# Optional: rebuild ALL installed packages with CachyOS optimizations
-# This takes a while — only needed if you added repos after initial install.
-# If you added repos at §0.3, everything was already optimized from pacstrap onward.
-# sudo pacman -Qqn | sudo pacman -S -
 ```
 
 ### 9.4 GPU Driver

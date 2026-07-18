@@ -998,14 +998,16 @@ pacman -S --noconfirm --needed \
 
 ### ▸ Shell: Noctalia v5
 
-Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen — all the things a desktop environment typically bundles, but as a compositor-agnostic layer.
+Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen. It's AUR only — you'll come back here after installing `yay` in §9.1.
 
-Install post-reboot (AUR — needs `yay` from §9.1):
+> ⚠️ **Skip for now — return after §9.1 (YAY).** On first boot, log in via TTY (`Ctrl+Alt+F2`), install yay (§9.1), then come back to this section.
 
 ```bash
-# After reboot + yay installed (§9.1):
+# ⬇ Run after §9.1 (yay is installed) ⬇
 yay -S --noconfirm --needed noctalia-git noctalia-greeter
 sudo pacman -S --noconfirm --needed greetd
+# greetd package should create the 'greetd' user — create it if missing
+id greetd 2>/dev/null || sudo useradd -r -s /sbin/nologin greetd
 ```
 
 **greetd** is a minimal login daemon. We configure it to use `noctalia-greeter` as its frontend:
@@ -1035,6 +1037,13 @@ size = 24
 EOF
 
 sudo systemctl enable greetd
+
+# PAM hooks for auto-unlock keyrings at login
+sudo tee -a /etc/pam.d/greetd <<'EOF'
+auth       optional     pam_gnome_keyring.so
+session    optional     pam_gnome_keyring.so auto_start
+session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+EOF
 ```
 
 > If greetd fails with `user 'greetd' not found`: `sudo useradd -r -s /sbin/nologin greetd && sudo systemctl restart greetd`. The package should create this user, but it's sometimes missed on fresh installs.
@@ -1144,14 +1153,9 @@ Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromi
 
 ```bash
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
-
-# PAM hooks for greetd (auto-unlock at login)
-sudo tee -a /etc/pam.d/greetd <<'EOF'
-auth       optional     pam_gnome_keyring.so
-session    optional     pam_gnome_keyring.so auto_start
-session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
-EOF
 ```
+
+> PAM hooks for greetd are added in the greetd setup above — they need `/etc/pam.d/greetd` to exist first.
 
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
@@ -1169,6 +1173,8 @@ reboot
 ```
 
 Remove the USB drive when prompted. Log in as your user.
+
+> 🏔️ **Niri + Noctalia users:** On first boot, greetd won't start (Noctalia isn't installed yet). Log in via TTY: `Ctrl+Alt+F2`.
 
 ---
 
@@ -1193,6 +1199,8 @@ sudo pacman -S --noconfirm --needed git base-devel
 git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd .. && rm -rf yay
 ```
+
+> 📌 **Niri + Noctalia users:** After installing yay, go back to [§7.3 (Noctalia)](#-shell-noctalia-v5) to install `noctalia-git`, `noctalia-greeter`, and `greetd` before running anything else in §9.
 
 > **AUR Security:** The AUR is community-maintained. Always review PKGBUILDs — look for suspicious source URLs, obfuscated commands, or curl-pipe-shell patterns. Packages marked 🔒 below need manual inspection before installing.
 

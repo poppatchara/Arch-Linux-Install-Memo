@@ -1061,7 +1061,7 @@ cursor { xcursor-theme "capitaine-cursors" xcursor-size 24 }
 hotkey-overlay { skip-at-startup }
 ```
 
-> **Full config reference:** See companion guide `Niri_Noctalia_v5.md` for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
+> **Full config reference:** See companion guide [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
 
 ---
 

@@ -398,6 +398,30 @@ for k in "${KERNELS[@]}"; do
 done
 ```
 
+<details>
+<summary>📋 Kernel reference — what each one is best at</summary>
+
+| Kernel | Repo | Scheduler | Best for |
+|--------|------|-----------|----------|
+| `linux-zen` | `[extra]` | EEVDF | Desktop/laptop daily use — lower latency, tuned for interactivity |
+| `linux-cachyos` | `[extra]` | EEVDF | CachyOS defaults — balanced optimization with extra patches |
+| `linux-cachyos-bore` | `[extra]` | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
+| `linux-cachyos-eevdf` | `[extra]` | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
+| `linux` | `[core]` | EEVDF | Maximum stability — vanilla kernel, least patches, slowest to adopt new features |
+| `linux-lts` | `[core]` | EEVDF | Fallback kernel — older version, ultra-stable, ideal rescue boot option |
+
+**Scheduler explainer:**
+- **EEVDF** (Earliest Eligible Virtual Deadline First) — the default Linux scheduler since 6.6. Fair, predictable, good all-rounder.
+- **BORE** (Burst-Oriented Response Enhancer) — prioritizes the currently-focused task. Noticeably snappier for single-app workloads (gaming, DAWs, video editing). Can slightly penalize heavy background tasks.
+
+**CachyOS vs vanilla kernels:**
+CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. Available in `[extra]` — no third-party repo needed.
+
+**Recommended approach:**
+Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` as a third option. GRUB picks the first kernel by default; hold Shift during boot to choose another.
+
+</details>
+
 ### 3.2 vconsole
 
 Sets the default TTY keymap and font. `ter-124n` is a high-DPI-friendly Terminus variant. This only affects the text-mode console (TTY), not your Wayland/X11 sessions:

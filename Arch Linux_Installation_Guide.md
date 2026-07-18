@@ -500,15 +500,18 @@ arch-chroot /mnt
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. Run the official installer — it's idempotent, safe to run even if repos were already added in §3.1.
+> Skip if using Vanilla Arch repos. Run the official installer — skip if repos were already added in §3.1.
 
 ```bash
-sudo pacman -Syu
-cd ~
-curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-tar xf cachyos-repo.tar.xz && cd cachyos-repo
-sudo ./cachyos-repo.sh
-cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+# Add CachyOS repos (skip if already present from §3.1)
+if ! grep -q '\[cachyos\]' /etc/pacman.conf 2>/dev/null; then
+  sudo pacman -Syu
+  cd ~
+  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+  tar xf cachyos-repo.tar.xz && cd cachyos-repo
+  sudo ./cachyos-repo.sh
+  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+fi
 
 # Reinstall everything from CachyOS repos
 # All packages installed so far (§3) were from vanilla Arch.

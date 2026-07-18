@@ -513,6 +513,10 @@ if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
   # so pacman sees them as newer and upgrades automatically.
   sudo pacman -Qqn | sudo pacman -S --noconfirm -
 fi
+
+# Rank CachyOS mirrors by speed (both methods include this)
+sudo pacman -S --noconfirm --needed cachyos-rate-mirrors
+sudo cachyos-rate-mirrors
 ```
 
 > After this, every package on the system is the CachyOS-optimized version.

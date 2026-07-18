@@ -6,6 +6,60 @@ Not the best way. Just the way I like.
 
 ---
 
+## Contents
+
+- [Decision Matrix](#decision-matrix)
+- [§0 — Live ISO Prep](#0--live-iso-prep)
+  - [0.0 SSH Setup](#00-ssh-setup)
+  - [0.1 Pacman Config](#01-pacman-config)
+  - [0.2 Mirror List](#02-mirror-list)
+- [§1 — Partition & Format](#1--partition--format)
+  - [▸ GRUB Layout](#-grub-layout)
+  - [▸ Limine Layout](#-limine-layout)
+- [§2 — Btrfs Subvolumes & Mounts](#2--btrfs-subvolumes--mounts)
+  - [2.1 Common Subvolumes](#21-common-subvolumes)
+  - [▸ 2.2 GRUB Mounts](#-22-grub-mounts)
+  - [▸ 2.3 Limine Mounts](#-23-limine-mounts)
+  - [2.4 fstab](#24-fstab)
+- [§3 — Base Install](#3--base-install)
+  - [3.0 CPU Detection](#30-cpu-detection)
+  - [3.1 Set Kernel Variable](#31-set-kernel-variable)
+  - [3.2 vconsole](#32-vconsole)
+  - [3.3 pacstrap](#33-pacstrap)
+  - [3.4 Enter chroot](#34-enter-chroot)
+- [§4 — Chroot Configuration](#4--chroot-configuration)
+  - [4.1 Safety Check](#41-safety-check)
+  - [4.2 Locale & Timezone](#42-locale--timezone)
+  - [4.3 Hostname](#43-hostname)
+  - [4.4 Users & Sudo](#44-users--sudo)
+  - [4.5 mkinitcpio](#45-mkinitcpio)
+- [§5 — Bootloader](#5--bootloader)
+  - [▸ 5.1 GRUB](#-51-grub)
+  - [▸ 5.2 Limine](#-52-limine)
+- [§6 — Services & QoL](#6--services--qol)
+  - [6.1 Extra Packages](#61-extra-packages)
+  - [6.2 Enable Services](#62-enable-services)
+- [§7 — Desktop Stack](#7--desktop-stack)
+  - [▸ 7.1 KDE Plasma](#-71-kde-plasma)
+  - [▸ 7.2 Compositor: Niri](#-72-compositor-niri)
+  - [▸ 7.3 Shell: Noctalia v5](#-73-shell-noctalia-v5)
+- [§8 — Reboot](#8--reboot)
+- [§9 — Post-Install](#9--post-install)
+  - [9.1 XDG User Dirs](#91-xdg-user-dirs)
+  - [9.2 YAY](#92-yay-aur-helper)
+  - [9.3 CachyOS Repos & Kernel](#93-cachyos-repos--kernel-optional)
+  - [9.4 GPU Driver](#94-gpu-driver)
+  - [9.5 Snapper](#95-snapper)
+  - [9.6 SSH Hardening](#96-ssh-hardening)
+  - [9.7 Extra Packages & Fonts](#97-extra-packages--fonts)
+  - [9.8 pyenv](#98-pyenv)
+  - [9.9 SPDIF Audio Fix](#99-spdif-audio-fix-optional)
+  - [9.10 KWallet](#910-kwallet-kde-only)
+  - [9.11 Cache Cleanup](#911-cache-cleanup)
+- [Credits](#credits)
+
+---
+
 ## Decision Matrix
 
 Choose ONE per row. Each choice maps to the section where it takes effect.

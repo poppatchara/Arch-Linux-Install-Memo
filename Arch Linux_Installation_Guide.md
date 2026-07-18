@@ -1280,27 +1280,36 @@ sudo systemctl enable --now snapper-timeline.timer snapper-cleanup.timer
 
 ### 9.6 SSH Hardening
 
-Lock down SSH to key-based authentication only:
+> ⚠️ **Do this after setting up SSH keys** (§9.2 client keygen + `ssh-copy-id`). Otherwise you'll lock yourself out.
 
 ```bash
 sudo tee -a /etc/ssh/sshd_config <<'EOF'
-PermitRootLogin no
-PasswordAuthentication no
-PermitEmptyPasswords no
-KbdInteractiveAuthentication no
-MaxAuthTries 3
-LoginGraceTime 60
-StrictModes yes
-HostbasedAuthentication no
-IgnoreRhosts yes
-ClientAliveInterval 300
-ClientAliveCountMax 2
+
+# ── Authentication ──
+PermitRootLogin no              # never allow root SSH
+PasswordAuthentication no       # keys only
+KbdInteractiveAuthentication no # disable keyboard-interactive
+PermitEmptyPasswords no         # just in case
+
+# ── Brute-force protection ──
+MaxAuthTries 3                  # default: 6
+LoginGraceTime 60               # seconds to authenticate (default: 120)
+
+# ── Idle timeout ──
+ClientAliveInterval 300         # send keepalive every 5 min
+ClientAliveCountMax 2           # disconnect after 2 missed (10 min)
+
+# ── Optional: change port (security through obscurity) ──
+# Port 2222
 EOF
+
+# If you changed the port, uncomment and restart:
+# sudo sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
 
 sudo systemctl restart sshd
 ```
 
-> ⚠️ **Test before disconnecting!** Open a new terminal and verify key-based login works. If you lock yourself out, you'll need physical access to the machine.
+> After changing the port: `ssh -p 2222 user@host`. Update `~/.ssh/config` on your client with `Port 2222` under the host entry.
 
 ### 9.7 Extra Packages & Fonts
 

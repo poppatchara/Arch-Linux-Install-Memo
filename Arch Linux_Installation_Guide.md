@@ -100,9 +100,9 @@ pacman -Syy
 
 > **Decision: GRUB or Limine?** GRUB reads Btrfs → `/boot` can be a Btrfs subvolume (included in snapshots). Limine only reads FAT → kernel/initramfs must live on the ESP.
 
-### ▸ GRUB Layout
+---
 
-ESP at `/boot/EFI`, swap in middle:
+### ▸ GRUB Layout
 
 | Partition | Size | Type | Mount |
 |-----------|------|------|-------|
@@ -110,30 +110,29 @@ ESP at `/boot/EFI`, swap in middle:
 | p2 | RAM-sized | Linux swap | swap |
 | p3 | Remainder | Btrfs root | `/` |
 
-### ▸ Limine Layout
-
-ESP at `/boot`, swap at end:
-
-| Partition | Size | Type | Mount |
-|-----------|------|------|-------|
-| p1 | 2–4G | EFI System | `/boot` |
-| p2 | Remainder | Btrfs root | `/` |
-| p3 | RAM-sized | Linux swap | swap |
-
-### 1.1 Create Partitions
+#### Step 1 — Create Partitions with cfdisk
 
 ```bash
-cfdisk /dev/nvme0n1  # GPT → create partitions per your chosen layout → Write → Quit
+cfdisk /dev/nvme0n1
 ```
 
-### 1.2 Format & Capture UUIDs
+1. If prompted, select **GPT** label type
+2. **Create p1:** `[New]` → `2G` (or `4G`) → `[Type]` → `EFI System`
+3. **Create p2:** `↓` to free space → `[New]` → (your RAM size, e.g. `32G`) → `[Type]` → `Linux swap`
+4. **Create p3:** `↓` to free space → `[New]` → (accept default = remainder) → `[Type]` → `Linux filesystem`
+5. `[Write]` → type `yes` → `[Quit]`
 
-**GRUB:**
+#### Step 2 — Format
+
 ```bash
 mkfs.fat -F32 -n EFI /dev/nvme0n1p1
 mkswap /dev/nvme0n1p2
 mkfs.btrfs -f -L Arch /dev/nvme0n1p3
+```
 
+#### Step 3 — Capture UUIDs
+
+```bash
 esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
   case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
 done)"
@@ -143,12 +142,39 @@ swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
 ```
 
-**Limine:**
+---
+
+### ▸ Limine Layout
+
+| Partition | Size | Type | Mount |
+|-----------|------|------|-------|
+| p1 | 2–4G | EFI System | `/boot` |
+| p2 | Remainder | Btrfs root | `/` |
+| p3 | RAM-sized | Linux swap | swap |
+
+#### Step 1 — Create Partitions with cfdisk
+
+```bash
+cfdisk /dev/nvme0n1
+```
+
+1. If prompted, select **GPT** label type
+2. **Create p1:** `[New]` → `2G` (or `4G`) → `[Type]` → `EFI System`
+3. **Create p2:** `↓` to free space → `[New]` → (accept default = remainder) → `[Type]` → `Linux filesystem`
+4. **Create p3:** `↓` to free space → `[New]` → (your RAM size, e.g. `32G`) → `[Type]` → `Linux swap`
+5. `[Write]` → type `yes` → `[Quit]`
+
+#### Step 2 — Format
+
 ```bash
 mkfs.fat -F32 -n EFI /dev/nvme0n1p1
 mkfs.btrfs -f -L Arch /dev/nvme0n1p2
 mkswap /dev/nvme0n1p3
+```
 
+#### Step 3 — Capture UUIDs
+
+```bash
 esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
 root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
 swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"

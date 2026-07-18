@@ -8,7 +8,7 @@ Not the best way. Just the way I like.
 
 ## Decision Matrix
 
-Choose ONE per row. Each decision maps to a section.
+Choose ONE per row. Each choice maps to the section where it takes effect.
 
 | # | Decision | A | B | C | § |
 |---|----------|---|---|---|---|
@@ -17,9 +17,11 @@ Choose ONE per row. Each decision maps to a section.
 | 3 | **Desktop** | KDE Plasma | Niri + Noctalia | | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
-> **Kernel & repos are independent.** You can use `linux-cachyos` without CachyOS repos, or CachyOS repos with `linux-zen`.
+> **Kernel & repos are independent.** You can use `linux-cachyos` without CachyOS repos, or CachyOS repos with `linux-zen`. `linux-cachyos` is in the official `[extra]` repo — no third-party repo needed.
 
 ### Recommended Combos
+
+These are the three configurations this guide has been battle-tested with:
 
 | Combo | Kernel | Repos | Desktop | Bootloader |
 |-------|--------|-------|---------|------------|
@@ -31,20 +33,28 @@ Choose ONE per row. Each decision maps to a section.
 
 ## §0 — Live ISO Prep
 
-Boot Arch ISO. Set root password for SSH:
+The Arch ISO boots you into a minimal live environment. We'll configure it for fast package downloads, then SSH in from a client machine so we can copy-paste commands comfortably.
+
+### 0.0 SSH Setup
+
+The live ISO runs an SSH server — you just need to set a root password and find the IP:
 
 ```bash
 passwd
-ip a | grep 'inet '  # note the IP
+ip a | grep 'inet '  # note the IP address
 ```
 
-SSH in from your client machine:
+Now from your client machine (the one with a real keyboard and a browser for reading this guide):
 
 ```bash
 ssh root@<IP>
 ```
 
+Every command from here on runs over SSH. Type carefully — there's no GUI to fall back on.
+
 ### 0.1 Pacman Config
+
+Speed up downloads and enable the `[multilib]` repo (needed for 32-bit libraries like Steam):
 
 ```bash
 conf=/etc/pacman.conf
@@ -60,7 +70,7 @@ pacman -Syy
 
 ### 0.2 Mirror List
 
-Move your country's mirrors before Worldwide:
+Arch ships with a global mirror list. Moving your country's mirrors to the top means faster download speeds:
 
 ```bash
 country=Thailand
@@ -98,11 +108,20 @@ pacman -Syy
 
 ## §1 — Partition & Format
 
-> **Decision: GRUB or Limine?** GRUB reads Btrfs → `/boot` can be a Btrfs subvolume (included in snapshots). Limine only reads FAT → kernel/initramfs must live on the ESP.
+> **Decision: GRUB or Limine?**
+
+The bootloader determines the partition layout. The key difference:
+
+- **GRUB** can read Btrfs natively. This means `/boot` (kernels + initramfs) can live on a Btrfs subvolume, getting included in snapshots and rollbacks.
+- **Limine** only reads FAT. Kernels and initramfs must be copied to the EFI System Partition (FAT32), which is outside snapshot coverage.
+
+This affects where swap goes too — we want swap at the end for Limine (easy to resize away), and in the middle for GRUB (maximizing contiguous Btrfs space, with `/boot/EFI` at the edge).
 
 ---
 
 ### ▸ GRUB Layout
+
+ESP mounted at `/boot/EFI`, swap in the middle, Btrfs takes the rest:
 
 | Partition | Size | Type | Mount |
 |-----------|------|------|-------|
@@ -111,6 +130,8 @@ pacman -Syy
 | p3 | Remainder | Btrfs root | `/` |
 
 #### Step 1 — Create Partitions with cfdisk
+
+`cfdisk` is a terminal-based partition editor. Use arrow keys, Enter, and Tab to navigate:
 
 ```bash
 cfdisk /dev/nvme0n1
@@ -124,6 +145,8 @@ cfdisk /dev/nvme0n1
 
 #### Step 2 — Format
 
+Each partition gets its filesystem. `mkfs.fat` for the ESP (UEFI firmware requirement), `mkswap` for swap, `mkfs.btrfs` for the root. The `-L` label is cosmetic — helps identify the disk in file managers:
+
 ```bash
 mkfs.fat -F32 -n EFI /dev/nvme0n1p1
 mkswap /dev/nvme0n1p2
@@ -131,6 +154,8 @@ mkfs.btrfs -f -L Arch /dev/nvme0n1p3
 ```
 
 #### Step 3 — Capture UUIDs
+
+UUIDs are stable identifiers — unlike `/dev/nvme0n1pN` which can change if disk topology shifts. We auto-detect by partition type so the guide works on any NVMe device:
 
 ```bash
 esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
@@ -146,6 +171,8 @@ root_uuid="$(blkid -s UUID -o value "$root_part")"
 ---
 
 ### ▸ Limine Layout
+
+ESP mounted at `/boot` directly (because Limine reads kernels from FAT), swap at the end:
 
 | Partition | Size | Type | Mount |
 |-----------|------|------|-------|
@@ -175,6 +202,8 @@ mkswap /dev/nvme0n1p3
 
 #### Step 3 — Capture UUIDs
 
+Same auto-detection as GRUB — detects by partition type, not device path:
+
 ```bash
 esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
   case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
@@ -190,9 +219,24 @@ root_uuid="$(blkid -s UUID -o value "$root_part")"
 
 ## §2 — Btrfs Subvolumes & Mounts
 
-> **Decision:** Subvolume layout depends on bootloader. GRUB adds `@boot` for snapshot-able kernels. Limine keeps kernels on FAT ESP.
+> **Decision:** Subvolume layout depends on bootloader.
+
+Btrfs subvolumes are like lightweight partitions inside a single filesystem. They share the same space but can be snapshotted independently. This matters because:
+
+- `@` (root) gets snapshot coverage via Snapper
+- `@var_log` and `@var_cache` are isolated — they change constantly but we don't need to snapshot them
+- `@home` gets light snapshot coverage (optional)
+- `@root` keeps `/root` (the root user's home) separate
+
+The `@` naming convention came from openSUSE's Snapper layout. It's not required, but most tooling expects it.
+
+Mount options:
+- `compress=zstd:1` — transparent compression at level 1 (fast). Btrfs compresses data before writing to disk. Level 1 is near-zero CPU overhead.
+- `noatime` — don't update file access timestamps. Significantly reduces metadata writes, especially on SSDs.
 
 ### 2.1 Common Subvolumes
+
+First, mount the Btrfs root so we can create subvolumes inside it:
 
 ```bash
 mount UUID="${root_uuid}" /mnt
@@ -204,9 +248,11 @@ btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@root
 ```
 
-> Optional: add `@home_cache`, `@home_downloads`, `@home_git` subvolumes if you want to exclude them from snapshots.
+> Optional: add `@home_cache`, `@home_downloads`, `@home_git` subvolumes if you want to exclude those directories from snapshots (they tend to be large and change frequently).
 
 ### ▸ 2.2 GRUB Mounts
+
+GRUB adds `@boot` — this is the key advantage. Kernel updates get snapshotted automatically by `snap-pac`. After creating it, we unmount everything and re-mount each subvolume with the correct options:
 
 ```bash
 btrfs subvolume create /mnt/@boot
@@ -222,7 +268,11 @@ mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 swapon UUID="${swap_uuid}"
 ```
 
+The ESP is mounted at `/boot/EFI` — inside the Btrfs `/boot`. GRUB reads the kernel from Btrfs `/boot`, then chain-loads from the FAT32 ESP at `/boot/EFI`.
+
 ### ▸ 2.3 Limine Mounts
+
+Limine can't read Btrfs, so the ESP is mounted directly at `/boot`. No `@boot` subvolume needed — kernel artifacts get copied to FAT32 in §5.2. We add `@srv` instead for server data separation:
 
 ```bash
 btrfs subvolume create /mnt/@srv
@@ -240,6 +290,8 @@ swapon UUID="${swap_uuid}"
 
 ### 2.4 fstab
 
+`genfstab` generates `/etc/fstab` from the current mount state. Using `-U` writes UUIDs (not device paths). Always glance at the output before moving on — a misconfigured fstab means an unbootable system:
+
 ```bash
 mkdir -p /mnt/etc
 genfstab -U /mnt > /mnt/etc/fstab
@@ -250,15 +302,18 @@ cat /mnt/etc/fstab  # sanity check
 
 ## §3 — Base Install
 
-> **Decision: Kernel.** Pick one. All are in official repos:
-> - `linux-zen` — tuned for desktop responsiveness
-> - `linux-cachyos` — CachyOS optimized (add CachyOS repos in §9, or use `pacman -U` with downloaded package)
-> - `linux` — vanilla stable
-> - `linux-lts` — long-term support
+> **Decision: Kernel.**
 
-> **Decision: Repos.** Vanilla (nothing extra) or CachyOS (add in §9 post-install). Kernel choice is independent of repo choice.
+- `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
+- `linux-cachyos` — CachyOS's optimized kernel with EEVDF scheduler and additional patches. Installable from `[extra]` without CachyOS repos. Can add CachyOS repos later in §9 for the full optimized package set.
+- `linux` — vanilla stable kernel. Conservative, well-tested.
+- `linux-lts` — long-term support. Older but extremely stable. Good fallback.
+
+> **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos (done in §9 post-install). Kernel choice is independent.
 
 ### 3.0 CPU Detection
+
+The `*-ucode` package loads CPU microcode updates at boot — critical for security and stability:
 
 ```bash
 cpu=intel
@@ -277,6 +332,8 @@ KERNEL=linux-zen
 
 ### 3.2 vconsole
 
+Sets the default TTY keymap and font. `ter-124n` is a high-DPI-friendly Terminus variant. This only affects the text-mode console (TTY), not your Wayland/X11 sessions:
+
 ```bash
 cat <<'EOF' > /mnt/etc/vconsole.conf
 KEYMAP=us
@@ -285,6 +342,8 @@ EOF
 ```
 
 ### 3.3 pacstrap
+
+`pacstrap` bootstraps a new Arch system onto `/mnt`. It installs the package group `base`, your chosen kernel, firmware, essential tools, networking, SSH, and PipeWire for audio:
 
 ```bash
 pacstrap -K /mnt \
@@ -300,7 +359,19 @@ cp /etc/pacman.conf /mnt/etc/pacman.conf
 cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 ```
 
+> **What we're installing:**
+> - `base base-devel` — core Arch system + build toolchain
+> - `${KERNEL} ${KERNEL}-headers` — your chosen kernel + headers (needed for DKMS modules like NVIDIA)
+> - `linux-firmware` + microcode — hardware firmware + CPU patches
+> - `efibootmgr btrfs-progs dosfstools` — UEFI boot management + filesystem tools
+> - `networkmanager openssh` — networking + remote access
+> - Editors, git, shell tools — daily driver CLI
+> - `pipewire wireplumber` — modern audio stack (replaces PulseAudio/JACK)
+> - `reflector` — auto-updates pacman mirror list
+
 ### 3.4 Enter chroot
+
+`arch-chroot` switches into the new system — `/mnt` becomes `/`. From here on, we're configuring the installed system, not the live ISO:
 
 ```bash
 arch-chroot /mnt
@@ -310,13 +381,19 @@ arch-chroot /mnt
 
 ## §4 — Chroot Configuration
 
+We're now "inside" the new system. Everything from here through §7 runs in this chroot.
+
 ### 4.1 Safety Check
+
+Verify we're actually in chroot (the root filesystem should be Btrfs, not the live ISO's overlay/squashfs):
 
 ```bash
 [ "$(findmnt -n -o FSTYPE /)" = "btrfs" ] || { echo "ERROR: Not in chroot"; exit 1; }
 ```
 
 ### 4.2 Locale & Timezone
+
+Locale determines language, date/number formatting, and character encoding. We generate four: US English (primary), British English, Japanese, and Thai:
 
 ```bash
 ln -sf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
@@ -332,6 +409,8 @@ echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 
 ### 4.3 Hostname
 
+The system's network name. Change `host_name` to whatever identifies this machine:
+
 ```bash
 host_name="arch"
 echo "${host_name}" > /etc/hostname
@@ -343,6 +422,8 @@ EOF
 ```
 
 ### 4.4 Users & Sudo
+
+Create the root password, then your daily user. The `docker` group is pre-created so you can install Docker later without re-adding yourself to groups:
 
 ```bash
 echo "Set root password:"
@@ -358,7 +439,11 @@ passwd $user
 EDITOR=nvim visudo
 ```
 
+> The group memberships: `wheel` (sudo access), `storage` (disk management), `power` (shutdown/reboot), `audio` (sound), `video` (GPU/backlight), `docker` (container management).
+
 ### 4.5 mkinitcpio
+
+`mkinitcpio` builds the initramfs — the minimal Linux system that loads at boot before your root filesystem is mounted. We configure it to include Btrfs support and handle resume from swap (hibernation):
 
 ```bash
 perl -pi -e '
@@ -370,6 +455,19 @@ perl -pi -e '
 mkinitcpio -P
 ```
 
+> **HOOKS explained:**
+> - `base` — core initramfs infrastructure
+> - `udev` — device detection
+> - `autodetect` — shrinks initramfs by including only currently-used modules
+> - `microcode` — applies CPU microcode before kernel init
+> - `modconf` — loads modules from modprobe.d config
+> - `kms` — early KMS (kernel mode setting) for flicker-free boot
+> - `keyboard keymap consolefont` — early keyboard + font support (needed for LUKS passphrase prompts)
+> - `block encrypt` — block device + encryption support
+> - `filesystems` — mounts root (includes Btrfs detection)
+> - `resume` — hibernation resume from swap
+> - `fsck` — filesystem check
+
 ---
 
 ## §5 — Bootloader
@@ -378,12 +476,16 @@ mkinitcpio -P
 
 ### ▸ 5.1 GRUB
 
+GRUB is the most widely-used Linux bootloader. It reads Btrfs directly, chain-loads from the ESP, and supports snapshot boot entries via `grub-btrfs`.
+
+Install and deploy to the ESP:
+
 ```bash
 pacman -S --noconfirm --needed grub
 grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
 ```
 
-Configure cmdline:
+Now configure the kernel command line — these parameters are passed to the kernel at every boot:
 
 ```bash
 ucode_img="intel"
@@ -396,7 +498,17 @@ sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
 sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
 ```
 
-Add zswap modules to initramfs:
+> **Kernel parameters explained:**
+> - `loglevel=3` — only show errors and warnings (quieter boot)
+> - `resume=UUID=...` — where to resume from for hibernation
+> - `zswap.enabled=1` — enable compressed RAM cache for swap pages (faster than disk swap)
+> - `zswap.compressor=lz4` — use LZ4 compression (fast, decent ratio)
+> - `zswap.max_pool_percent=50` — max 50% of RAM used for compressed swap cache
+> - `zswap.zpool=zsmalloc` — use zsmalloc allocator (efficient for compressed pages)
+> - `iommu=pt` — IOMMU in passthrough mode (needed for GPU passthrough, safe default)
+> - `${ucode_img}_iommu=on` — enable CPU IOMMU (Intel VT-d / AMD-Vi)
+
+Add zswap compression modules to the initramfs so they're available immediately at boot:
 
 ```bash
 perl -0777 -i.bak -pe '
@@ -412,15 +524,19 @@ perl -0777 -i.bak -pe '
 mkinitcpio -P
 ```
 
-Generate config:
+Generate the GRUB configuration file and we're done:
 
 ```bash
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-> **Dual-boot (optional):** `pacman -S --needed os-prober && echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub && grub-mkconfig -o /boot/grub/grub.cfg`
+> **Dual-boot (optional):** If you have Windows or another OS on the same disk, install `os-prober` and regenerate: `pacman -S --needed os-prober && echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub && grub-mkconfig -o /boot/grub/grub.cfg`
 
 ### ▸ 5.2 Limine
+
+Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`.
+
+Install and register with the UEFI firmware:
 
 ```bash
 pacman -S --noconfirm --needed limine
@@ -433,7 +549,9 @@ efibootmgr --create --disk /dev/nvme0n1 --part 1 \
   --unicode
 ```
 
-Copy kernel artifacts to ESP and generate config:
+> `efibootmgr --create` adds a boot entry to your motherboard's NVRAM. The `--unicode` flag enables UTF-8 support in the boot menu.
+
+Now copy kernel, initramfs, and microcode to the ESP. This must be repeated after every kernel update — the pacman hook below handles this:
 
 ```bash
 root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
@@ -447,7 +565,11 @@ lscpu | grep -qi amd && ucode_img="amd"
 cp -v /boot/vmlinuz-* /boot/limine/
 cp -v /boot/initramfs-*.img /boot/limine/
 cp -v "/boot/${ucode_img}-ucode.img" /boot/limine/
+```
 
+Generate `limine.conf`. The `boot():` prefix means "the partition containing this config file" (the ESP):
+
+```bash
 cat <<EOF | tee /boot/limine/limine.conf >/dev/null
 TIMEOUT=3
 DEFAULT_ENTRY=Arch Linux
@@ -467,7 +589,9 @@ DEFAULT_ENTRY=Arch Linux
 EOF
 ```
 
-Pacman hook for auto-copy on Limine updates:
+> The fallback entry uses the larger `-fallback.img` (without microcode, with more modules) and strips optional parameters. It's your rescue option if the main entry fails to boot.
+
+Pacman hook to keep Limine EFI files in sync after updates:
 
 ```bash
 mkdir -p /etc/pacman.d/hooks
@@ -485,7 +609,7 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 EOF
 ```
 
-Add zswap modules to initramfs (same as GRUB):
+Add zswap modules and rebuild (same as GRUB), then re-copy:
 
 ```bash
 perl -0777 -i.bak -pe '
@@ -504,9 +628,13 @@ mkinitcpio -P
 cp -v /boot/initramfs-*.img /boot/limine/
 ```
 
+> ⚠️ **Remember:** After any kernel update, you must re-copy the new initramfs to `/boot/limine/`. The Limine hook only copies its own EFI binary, not kernel artifacts. Consider `limine-mkinitcpio-hook` (AUR) for automation.
+
 ---
 
 ## §6 — Services & QoL
+
+These are the background services that keep your system running. NetworkManager handles all networking (Wi-Fi, Ethernet, VPN), bluetoothd handles Bluetooth, reflector updates your mirror list weekly, sshd lets you SSH in, and fstrim keeps your SSD healthy:
 
 ### 6.1 Extra Packages
 
@@ -519,6 +647,11 @@ pacman -Syu --noconfirm --needed \
   acpi acpid \
   xdg-user-dirs
 ```
+
+> - `sof-firmware` — audio DSP firmware for modern Intel/AMD laptops
+> - `easyeffects` — PipeWire audio effects (EQ, compression, etc.)
+> - `avahi nss-mdns` — mDNS (`.local` hostname resolution, printer discovery)
+> - `xdg-user-dirs` — creates standard folders (Desktop, Documents, Downloads, etc.)
 
 ### 6.2 Enable Services
 
@@ -536,13 +669,21 @@ systemctl enable fstrim.timer
 # systemctl enable acpid
 ```
 
+> - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
+> - `fstrim.timer` — weekly SSD TRIM (maintains performance)
+> - `sshd` — SSH server (we enabled password auth during install; harden in §9.6)
+
 ---
 
 ## §7 — Desktop Stack
 
-> **Decision: KDE Plasma (all-in-one) or Compositor + Shell?**
+> **Decision: KDE Plasma (all-in-one) or Niri compositor + Noctalia shell?**
+
+KDE Plasma is a complete desktop environment — window manager, panel, launcher, system tray, settings, all integrated. Niri + Noctalia splits the job: Niri is the Wayland compositor (manages windows, input, rendering), Noctalia is the shell (bar, launcher, notifications, wallpaper, lock screen).
 
 ### ▸ 7.1 KDE Plasma
+
+Plasma 6.6+ ships `plasma-login-manager` as its native login screen (replaces SDDM). We also need `xdg-desktop-portal` for Flatpak/Snap integration and screen sharing:
 
 ```bash
 # Core login + Wayland
@@ -568,7 +709,13 @@ systemctl enable plasmalogin
 systemctl enable power-profiles-daemon
 ```
 
-**PAM config (MANDATORY):**
+> - `plasma-nm` — NetworkManager applet (Wi-Fi selection, VPN)
+> - `plasma-pa` — audio volume applet
+> - `kscreen` — monitor hotplug handling
+> - `kde-gtk-config breeze-gtk` — makes GTK apps (Firefox, GIMP) match KDE's theme
+> - `power-profiles-daemon` — laptop power modes (balanced/powersave/performance)
+
+**PAM config — MANDATORY.** `plasma-login-manager` does not ship a default PAM file. Without this, the login screen cannot authenticate anyone:
 
 ```bash
 tee /etc/pam.d/plasmalogin <<'EOF'
@@ -582,6 +729,8 @@ password   include      system-login
 EOF
 ```
 
+> `include system-login` pulls in `pam_unix.so` — the actual password checker. Without this file, PLM has no authentication chain and login always fails with "Authentication for user '' failed".
+
 **Desktop Apps:**
 
 ```bash
@@ -591,21 +740,27 @@ pacman -S --noconfirm --needed \
   filelight kcalc btop fastfetch
 ```
 
-**KWallet (optional):**
+> - `kio-extras` — SMB/SFTP/FTP support inside Dolphin's address bar
+> - `ffmpegthumbs` — video thumbnails in Dolphin
+> - `kdegraphics-thumbnailers` — PDF/PS/RAW photo thumbnails
+
+**KWallet (optional):** Stores passwords for KDE apps, VS Code, Git credential helpers, and browser password sync:
 
 ```bash
 pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
 ```
 
+> Auto-unlock requires: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+
 ### ▸ 7.2 Compositor: Niri
 
-Niri is in official repos. Noctalia shell (AUR) is installed post-reboot in §9.
+Niri is a scrollable-tiling Wayland compositor — windows arrange in columns that scroll horizontally. It's in the official `[extra]` repo. The shell (Noctalia) is AUR and gets installed post-reboot.
 
 ```bash
 pacman -S --noconfirm --needed niri
 ```
 
-**Session file (so greetd/noctalia-greeter can launch Niri):**
+**Session file** — tells the display manager (greetd) how to launch this session:
 
 ```bash
 tee /usr/local/bin/niri-session-wrapper << 'EOF'
@@ -626,6 +781,8 @@ DesktopNames=Noctalia
 EOF
 ```
 
+> `niri-session` (not plain `niri`) exports environment variables to systemd correctly — this matters for `xdg-desktop-portal` and other D-Bus services.
+
 **Base Wayland + KDE integration packages:**
 
 ```bash
@@ -639,7 +796,15 @@ pacman -S --noconfirm --needed \
   ghostty libcanberra
 ```
 
-**Desktop Apps (same as KDE, minus konsole — use ghostty):**
+> Key packages:
+> - `xdg-desktop-portal-kde` — screen sharing (OBS, Discord, browsers)
+> - `xwayland-satellite` — run X11 apps under Wayland (multi-window support)
+> - `plasma-integration kded` — KDE file dialogs, trash support, MIME type handling
+> - `qt6ct-kde` — apply KDE color schemes to Qt apps when Plasma isn't running
+> - `ghostty` — GPU-accelerated terminal emulator (we use this instead of Konsole)
+> - `libcanberra` — freedesktop sound feedback (volume change dings)
+
+**Desktop Apps — same as KDE, minus Konsole (ghostty replaces it):**
 
 ```bash
 pacman -S --noconfirm --needed \
@@ -648,11 +813,13 @@ pacman -S --noconfirm --needed \
   filelight kcalc btop fastfetch capitaine-cursors
 ```
 
-> **KDE background services:** Add `spawn-at-startup "kded6"` to Niri config in §7.3.
+> Without `plasma-integration` + `kded6` running (autostarted in §7.3), KDE apps would use ugly fallback themes, lack file dialogs, and have broken trash support.
 
 ### ▸ 7.3 Shell: Noctalia v5
 
-Install post-reboot (AUR, needs yay from §9):
+Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen — all the things a desktop environment typically bundles, but as a compositor-agnostic layer.
+
+Install post-reboot (AUR — needs `yay` from §9.1):
 
 ```bash
 # After reboot + yay installed (§9.1):
@@ -660,7 +827,7 @@ yay -S --noconfirm --needed noctalia-git noctalia-greeter
 sudo pacman -S --noconfirm --needed greetd
 ```
 
-**greetd config:**
+**greetd** is a minimal login daemon. We configure it to use `noctalia-greeter` as its frontend:
 
 ```bash
 sudo tee /etc/greetd/config.toml <<'EOF'
@@ -689,7 +856,11 @@ EOF
 sudo systemctl enable greetd
 ```
 
+> `greetd` runs on virtual terminal 1 (VT 1). The greeter runs as the `greetd` user for security — it never sees your password directly, only passes it to PAM.
+
 **Niri config** (`~/.config/niri/config.kdl`):
+
+This is the complete, bootable configuration. The config language is KDL (a document language, not a programming language — no variables, no logic):
 
 ```kdl
 input {
@@ -782,11 +953,13 @@ cursor { xcursor-theme "capitaine-cursors" xcursor-size 24 }
 hotkey-overlay { skip-at-startup }
 ```
 
-> **Full config reference:** See companion guide `Niri_Noctalia_v5.md` for animations, gaming rules, modular config structure, greeter reference, and troubleshooting.
+> **Full config reference:** See companion guide `Niri_Noctalia_v5.md` for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
 
 ---
 
 ## §8 — Reboot
+
+Time to leave the installer and boot into the real system:
 
 ```bash
 exit          # exit chroot
@@ -795,13 +968,17 @@ swapoff -a
 reboot
 ```
 
-Remove installation media. Log in as your user.
+Remove the USB drive when prompted. Log in as your user.
 
 ---
 
 ## §9 — Post-Install
 
+Everything below runs on the new system, logged in as your user.
+
 ### 9.1 XDG User Dirs
+
+Creates `~/Desktop`, `~/Documents`, `~/Downloads`, etc.:
 
 ```bash
 xdg-user-dirs-update
@@ -809,24 +986,28 @@ xdg-user-dirs-update
 
 ### 9.2 YAY (AUR Helper)
 
+`yay` is a pacman wrapper that also handles the Arch User Repository. It builds packages from source using PKGBUILD scripts:
+
 ```bash
 sudo pacman -S --noconfirm --needed git base-devel
 git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 cd .. && rm -rf yay
 ```
 
-> **AUR Security:** Always review PKGBUILDs. Look for suspicious URLs, obfuscated code, or curl-pipe-bash patterns. Packages marked 🔒 need manual review.
+> **AUR Security:** The AUR is community-maintained. Always review PKGBUILDs — look for suspicious source URLs, obfuscated commands, or curl-pipe-shell patterns. Packages marked 🔒 below need manual inspection before installing.
 
 ### 9.3 CachyOS Repos & Kernel (optional)
 
-> Skip if using Vanilla Arch repos.
+> Skip if using Vanilla Arch repos. You can still use `linux-cachyos` kernel without this step — it's in `[extra]`.
+
+CachyOS repos provide x86-64-v3/v4 optimized packages (LTO, PGO, BOLT, -O3, specialized instruction sets). This rebuilds all your packages with these optimizations:
 
 ```bash
-# Backup
+# Backup current state
 sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
 pacman -Qqe > ~/pkglist.pre-cachy.txt
 
-# Add CachyOS repos
+# Add CachyOS repos (automated script)
 cd ~
 curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
 tar xvf cachyos-repo.tar.xz && cd cachyos-repo
@@ -839,11 +1020,15 @@ sudo pacman -S linux-cachyos linux-cachyos-headers linux-cachyos-eevdf linux-cac
 # Optional: rebuild all packages with CachyOS optimizations
 # sudo pacman -Qqn | sudo pacman -S -
 
-# Optional CachyOS extras
+# Optional extras
 sudo pacman -S cachyos-settings cachyos-gaming-meta cachyos-hello
 ```
 
+> `linux-cachyos-eevdf` is an alternative kernel variant with the EEVDF scheduler. Both can coexist — pick one at boot.
+
 ### 9.4 GPU Driver
+
+Auto-detect your GPU and install the right driver:
 
 ```bash
 # Detect GPU
@@ -857,6 +1042,8 @@ echo "Detected GPU: ${gpu_vendor:-unknown}"
 
 **NVIDIA (if detected):**
 
+`nvidia-open-dkms` is the open-source kernel module (610.x+). It works with all kernels including linux-zen and linux-cachyos because it builds against your running kernel via DKMS:
+
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
   sudo pacman -S --noconfirm --needed \
@@ -864,18 +1051,26 @@ if [ "$gpu_vendor" = "nvidia" ]; then
     nvidia-settings libxnvctrl \
     ocl-icd opencl-nvidia lib32-opencl-nvidia clinfo cuda
 
-  # Gaming extras
+  # Gaming extras — VA-API, Vulkan, DXVK
   sudo pacman -S --noconfirm --needed \
     libva-utils vdpauinfo vulkan-tools \
     libva-nvidia-driver dxvk vkd3d shaderc spirv-tools
+```
 
-  # DRM kernel params (GRUB)
+NVIDIA needs Wayland DRM modesetting enabled on the kernel command line. For GRUB:
+
+```bash
   if grep -q 'GRUB_CMDLINE_LINUX_DEFAULT' /etc/default/grub 2>/dev/null; then
     sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ nvidia-drm.modeset=1 nvidia-drm.fbdev=1"/' /etc/default/grub
     sudo grub-mkconfig -o /boot/grub/grub.cfg
   fi
+```
 
-  # NVIDIA modules + remove kms hook
+> For Limine: add `nvidia-drm.modeset=1 nvidia-drm.fbdev=1` to the `CMDLINE:` line in `/boot/limine/limine.conf`.
+
+Configure mkinitcpio: add NVIDIA modules, remove the generic `kms` hook (NVIDIA provides its own):
+
+```bash
   sudo perl -0777 -i.bak -pe '
     s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
       my @mods = grep { length } split " ", $1;
@@ -891,8 +1086,11 @@ if [ "$gpu_vendor" = "nvidia" ]; then
     }mge;
   ' /etc/mkinitcpio.conf
   sudo mkinitcpio -P
+```
 
-  # Pacman hook for auto-rebuild
+Pacman hook — auto-rebuilds initramfs whenever the NVIDIA driver or kernel is updated:
+
+```bash
   sudo mkdir -p /etc/pacman.d/hooks
   sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'HOOK'
 [Trigger]
@@ -917,42 +1115,54 @@ fi
 
 ### 9.5 Snapper
 
+Snapper manages Btrfs snapshots — point-in-time copies of your subvolumes. Combined with `snap-pac` (automatic pre/post snapshots on every `pacman` transaction) and `grub-btrfs` (boot into snapshots from GRUB), you get a safety net for system updates:
+
 ```bash
 # Install
 sudo pacman -S --noconfirm --needed snapper btrfs-assistant
 yay -S --noconfirm --needed grub-btrfs snap-pac snap-pac-grub snapper-gui-git  # 🔒
+```
 
-# Create configs
+Create configs — one per subvolume you want to snapshot:
+
+```bash
 sudo snapper -c root create-config /
 sudo snapper -c home create-config /home   # skip if you don't want /home snapshots
 
-# GRUB only:
+# GRUB only — /boot is on Btrfs so we can snapshot it too
 sudo snapper -c boot create-config /boot
 sudo systemctl enable --now grub-btrfsd
 ```
 
-**Retention settings:**
+**Retention settings.** Timeline rules control how many snapshots to keep based on age. Number limits are a hard cap — safety net against runaway disk usage:
 
 ```bash
-# root — hourly for quick undo
+# root — hourly for quick undo of bad updates
 sudo snapper -c root set-config TIMELINE_CREATE=yes
 sudo snapper -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=4
 sudo snapper -c root set-config NUMBER_LIMIT=15 NUMBER_LIMIT_IMPORTANT=5
 
-# home — light retention
+# home — daily snapshots only (user data changes slower)
 sudo snapper -c home set-config TIMELINE_CREATE=yes
 sudo snapper -c home set-config TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2
 sudo snapper -c home set-config NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=3
 
-# boot (GRUB) — snap-pac covers kernel updates, no timeline
+# boot (GRUB) — no timeline needed, snap-pac captures kernel updates
 sudo snapper -c boot set-config TIMELINE_CREATE=no 2>/dev/null
 sudo snapper -c boot set-config NUMBER_LIMIT=5 NUMBER_LIMIT_IMPORTANT=3 2>/dev/null
+```
 
-# Enable timers
+> `IMPORTANT` snapshots are pre/post snapshots from `snap-pac`. They're preserved preferentially — you don't want to lose the "before" snapshot of a kernel update.
+
+Enable the timers that create and clean up snapshots:
+
+```bash
 sudo systemctl enable --now snapper-timeline.timer snapper-cleanup.timer
 ```
 
 ### 9.6 SSH Hardening
+
+Lock down SSH to key-based authentication only:
 
 ```bash
 sudo tee -a /etc/ssh/sshd_config <<'EOF'
@@ -972,9 +1182,11 @@ EOF
 sudo systemctl restart sshd
 ```
 
-> ⚠️ **Test before disconnecting!** Open a new terminal and verify key-based login works first.
+> ⚠️ **Test before disconnecting!** Open a new terminal and verify key-based login works. If you lock yourself out, you'll need physical access to the machine.
 
 ### 9.7 Extra Packages & Fonts
+
+Personal pick list — install what you need:
 
 ```bash
 # Core CLI + media
@@ -1001,11 +1213,13 @@ sudo pacman -S --noconfirm --needed \
   ttf-dejavu ttf-ubuntu-font-family \
   terminus-font nerd-fonts ttf-ms-fonts
 
-# Flatpak (optional)
+# Flatpak (optional — for sandboxed apps)
 sudo pacman -S --noconfirm --needed flatpak
 ```
 
 ### 9.8 pyenv
+
+`pyenv` manages multiple Python versions per-user without conflicting with the system Python:
 
 ```bash
 sudo pacman -S --noconfirm --needed openssl zlib xz tk readline sqlite libffi bzip2
@@ -1032,15 +1246,15 @@ pyenv global 3.13.2
 
 ### 9.9 SPDIF Audio Fix (optional)
 
-If your SPDIF DAC drops the first 1–3 seconds of audio:
+Some SPDIF DACs sleep after idle → first 1–3 seconds of audio get cut off. Two fixes:
 
 ```bash
-# Disable codec autosuspend
+# 1. Disable codec autosuspend (system-wide)
 sudo tee /etc/modprobe.d/alsa-no-powersave.conf >/dev/null <<'EOF'
 options snd_hda_intel power_save=0 power_save_controller=N
 EOF
 
-# Stop WirePlumber from suspending sinks
+# 2. Stop WirePlumber from suspending sinks (per-user)
 mkdir -p ~/.config/wireplumber/main.lua.d
 cat <<'EOF' > ~/.config/wireplumber/main.lua.d/51-spdif-nosuspend.lua
 alsa_monitor.rules = alsa_monitor.rules or {}
@@ -1054,7 +1268,7 @@ systemctl --user restart wireplumber
 
 ### 9.10 KWallet (KDE only)
 
-Disable if you don't use it:
+If you don't use KDE's password storage, disable it to avoid repeated unlock prompts:
 
 ```bash
 mkdir -p ~/.config
@@ -1065,6 +1279,8 @@ EOF
 ```
 
 ### 9.11 Cache Cleanup
+
+Clear pacman's package cache to reclaim disk space:
 
 ```bash
 sudo pacman -Scc

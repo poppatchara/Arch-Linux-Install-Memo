@@ -1112,7 +1112,7 @@ overview { workspace-shadow { off } }
 // Blur
 window-rule { background-effect { blur true xray false } }
 layer-rule {
-    match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+    match namespace="^noctalia-(bar-[^"]+|notification|dock|panel|attached-panel|osd)$"
     background-effect { xray false }
 }
 blur { passes 2 offset 3.0 noise 0.03 saturation 1.0 }

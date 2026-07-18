@@ -1290,11 +1290,17 @@ sudo pacman -Scc
 
 ## Credits
 
+Huge thanks to the authors/maintainers of these resources:
+
+- `fstab` notes: <https://gist.github.com/mjkstra/96ce7a5689d753e7a6bdd92cdc169bae#fstab>
+- Arch install walkthrough/reference: <https://github.com/silentz/arch-linux-install-guide>
+- Chroot exit + reboot checklist: <https://gist.github.com/yovko/512326b904d120f3280c163abfbcb787#exit-from-chroot-and-reboot>
+- NVIDIA driver guide: <https://github.com/korvahannu/arch-nvidia-drivers-installation-guide>
+- Noctalia v5 docs: <https://docs.noctalia.dev/v5/>
+- Niri Arch Wiki: <https://wiki.archlinux.org/title/Niri>
+- CachyOS Niri config patterns: <https://github.com/CachyOS/cachyos-niri-noctalia>
 - [Arch Wiki](https://wiki.archlinux.org/)
 - [Limine](https://github.com/limine-bootloader/limine)
 - [CachyOS](https://cachyos.org/)
-- [Noctalia v5 docs](https://docs.noctalia.dev/v5/)
-- [Niri Arch Wiki](https://wiki.archlinux.org/title/Niri)
-- Various gists & community notes linked inline
 
 *Last updated: July 2026*

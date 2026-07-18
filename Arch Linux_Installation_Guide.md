@@ -359,7 +359,9 @@ cat /mnt/etc/fstab  # sanity check
 > **Decision: Kernel.**
 
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
-- `linux-cachyos` — CachyOS's optimized kernel with EEVDF scheduler and additional patches. Installable from `[extra]` without CachyOS repos. Can add CachyOS repos later in §9 for the full optimized package set.
+- `linux-cachyos` — CachyOS's default optimized kernel. Installable from `[extra]` without CachyOS repos.
+- `linux-cachyos-bore` — CachyOS variant with BORE (Burst-Oriented Response Enhancer) scheduler.
+- `linux-cachyos-eevdf` — CachyOS variant with EEVDF scheduler.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
 - `linux-lts` — long-term support. Older but extremely stable. Good fallback.
 
@@ -383,6 +385,8 @@ Install at least one. You can install multiple — common combos: `linux-zen` (d
 KERNELS=(
   linux-zen
   # linux-cachyos
+  # linux-cachyos-bore
+  # linux-cachyos-eevdf
   # linux
   # linux-lts
 )

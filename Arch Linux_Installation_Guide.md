@@ -89,6 +89,7 @@ binds {
     Mod+S       { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma   { spawn-sh "noctalia msg settings-toggle"; }
     Mod+Tab     { toggle-overview; }
+    Mod+Q       { close-window; }
     Mod+Shift+S { spawn "spectacle -r"; }
 
     // Audio & brightness

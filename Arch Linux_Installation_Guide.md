@@ -1021,6 +1021,8 @@ yay -S --noconfirm --needed noctalia-git noctalia-greeter
 sudo pacman -S --noconfirm --needed greetd
 # greetd package should create the 'greetd' user — create it if missing
 id greetd 2>/dev/null || sudo useradd -r -s /sbin/nologin greetd
+# greetd needs video + seat groups to access the GPU and create Wayland sessions
+sudo usermod -aG video,seat greetd
 ```
 
 **greetd** is a minimal login daemon. We configure it to use `noctalia-greeter` as its frontend:

@@ -475,6 +475,9 @@ pacstrap -K /mnt \
 
 cp /etc/pacman.conf /mnt/etc/pacman.conf
 cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
+# Copy CachyOS mirrorlists if they were added in §3.1
+cp /etc/pacman.d/cachyos*-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
+cp /etc/pacman.d/cachyos-v*-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
 ```
 
 > **What we're installing:**

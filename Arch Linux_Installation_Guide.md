@@ -25,6 +25,11 @@ spawn-at-startup "noctalia"
 spawn-at-startup "kded6"
 
 window-rule {
+    geometry-corner-radius 20
+    clip-to-geometry true
+}
+
+window-rule {
     match app-id="dev.noctalia.Noctalia"
     open-floating true
 }

@@ -967,7 +967,7 @@ pacman -S --noconfirm --needed \
   xdg-utils shared-mime-info kde-cli-tools \
   accountsservice qt5-wayland \
   gvfs-mtp gvfs-gphoto2 udiskie \
-  plasma-integration kded qt6ct-kde \
+  plasma-integration kded qt6ct \
   noto-fonts-emoji wl-clipboard adw-gtk-theme \
   ghostty libcanberra
 ```
@@ -979,7 +979,7 @@ pacman -S --noconfirm --needed \
 > - `noto-fonts-emoji` — emoji rendering in terminal, browser, and GTK apps
 > - `xwayland-satellite` — run X11 apps under Wayland (multi-window support)
 > - `plasma-integration kded` — KDE file dialogs, trash support, MIME type handling
-> - `qt6ct-kde` — apply KDE color schemes to Qt apps when Plasma isn't running
+> - `qt6ct` — apply KDE color schemes to Qt apps when Plasma isn't running
 > - `ghostty` — GPU-accelerated terminal emulator (we use this instead of Konsole)
 > - `libcanberra` — freedesktop sound feedback (volume change dings)
 

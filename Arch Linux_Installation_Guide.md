@@ -52,10 +52,12 @@ Not the best way. Just the way I like.
   - [9.4 GPU Driver](#94-gpu-driver)
   - [9.5 Snapper](#95-snapper)
   - [9.6 SSH Hardening](#96-ssh-hardening)
-  - [9.7 Extra Packages & Fonts](#97-extra-packages--fonts)
-  - [9.8 pyenv](#98-pyenv)
-  - [9.9 SPDIF Audio Fix](#99-spdif-audio-fix-optional)
-  - [9.10 Cache Cleanup](#910-cache-cleanup)
+  - [9.7 Firewall](#97-firewall)
+  - [9.8 AppArmor](#98-apparmor-optional)
+  - [9.9 Extra Packages & Fonts](#99-extra-packages--fonts)
+  - [9.10 pyenv](#910-pyenv)
+  - [9.11 SPDIF Audio Fix](#911-spdif-audio-fix-optional)
+  - [9.12 Cache Cleanup](#912-cache-cleanup)
 - [Credits](#credits)
 
 ---
@@ -1327,7 +1329,42 @@ sudo systemctl restart sshd
 
 > After changing the port: `ssh -p 2222 user@host`. Update `~/.ssh/config` on your client with `Port 2222` under the host entry.
 
-### 9.7 Extra Packages & Fonts
+### 9.7 Firewall
+
+`ufw` is a simple frontend for `iptables`/`nftables`. Default deny incoming, allow SSH:
+
+```bash
+sudo pacman -S --noconfirm --needed ufw
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+# If you changed the SSH port:
+# sudo ufw allow 2222/tcp
+sudo ufw enable
+sudo systemctl enable ufw
+```
+
+> For KDE Connect, gaming (Steam), or local dev servers, add specific rules as needed. Desktop firewalls are mostly defense-in-depth — your router already blocks inbound traffic.
+
+### 9.8 AppArmor (optional)
+
+AppArmor restricts what each application can do — it's Mandatory Access Control (MAC) like SELinux but simpler. Enable it with a kernel parameter, then install profiles:
+
+```bash
+# 1. Install
+sudo pacman -S --noconfirm --needed apparmor
+
+# 2. Kernel parameter (GRUB)
+sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ lsm=landlock,lockdown,yama,apparmor,bpf"/' /etc/default/grub
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# 3. Enable and reboot
+sudo systemctl enable apparmor
+```
+
+> After reboot, check: `sudo aa-status`. AppArmor needs profile packages for each app — start with `apparmor-profiles` from AUR. This is advanced; skip if you just want a working desktop.
+
+### 9.9 Extra Packages & Fonts
 
 Personal pick list — install what you need:
 
@@ -1360,7 +1397,7 @@ sudo pacman -S --noconfirm --needed \
 sudo pacman -S --noconfirm --needed flatpak
 ```
 
-### 9.8 pyenv
+### 9.10 pyenv
 
 `pyenv` manages multiple Python versions per-user without conflicting with the system Python:
 
@@ -1387,7 +1424,7 @@ pyenv install 3.13.2
 pyenv global 3.13.2
 ```
 
-### 9.9 SPDIF Audio Fix (optional)
+### 9.11 SPDIF Audio Fix (optional)
 
 Some SPDIF DACs sleep after idle → first 1–3 seconds of audio get cut off. Two fixes:
 
@@ -1409,7 +1446,7 @@ EOF
 systemctl --user restart wireplumber
 ```
 
-### 9.10 Cache Cleanup
+### 9.12 Cache Cleanup
 
 Clear pacman's package cache to reclaim disk space:
 

@@ -28,6 +28,7 @@ Not the best way. Just the way I like.
   - [3.3 pacstrap](#33-pacstrap)
   - [3.4 Enter chroot](#34-enter-chroot)
 - [CachyOS Repos](#cachyos-repos-optional)
+- [YAY (AUR Helper)](#yay-aur-helper)
 - [§4 — Chroot Configuration](#4--chroot-configuration)
   - [4.1 Safety Check](#41-safety-check)
   - [4.2 Locale & Timezone](#42-locale--timezone)
@@ -526,6 +527,20 @@ sudo cachyos-rate-mirrors
 
 > After this, every package on the system is the CachyOS-optimized version.
 
+### YAY (AUR Helper)
+
+`yay` is needed for AUR packages (Noctalia, greetd). Install it now inside chroot so everything is ready before reboot:
+
+```bash
+sudo pacman -S --noconfirm --needed git base-devel
+cd /tmp
+sudo -u pop git clone https://aur.archlinux.org/yay-bin.git
+cd yay-bin && sudo -u pop makepkg -si --noconfirm
+cd ~ && rm -rf /tmp/yay-bin
+```
+
+> We use `yay-bin` (prebuilt) to avoid compiling yay from source. `sudo -u pop` runs the build as your user since `makepkg` refuses to run as root.
+
 ---
 
 ## §4 — Chroot Configuration
@@ -998,12 +1013,10 @@ pacman -S --noconfirm --needed \
 
 ### ▸ Shell: Noctalia v5
 
-Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen. It's AUR only — you'll come back here after installing `yay` in §9.1.
-
-> ⚠️ **Skip for now — return after §9.1 (YAY).** On first boot, log in via TTY (`Ctrl+Alt+F2`), install yay (§9.1), then come back to this section.
+Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen.
 
 ```bash
-# ⬇ Run after §9.1 (yay is installed) ⬇
+# ⬇ Installed here (yay is available from the YAY section above) ⬇
 yay -S --noconfirm --needed noctalia-git noctalia-greeter
 sudo pacman -S --noconfirm --needed greetd
 # greetd package should create the 'greetd' user — create it if missing
@@ -1174,8 +1187,6 @@ reboot
 
 Remove the USB drive when prompted. Log in as your user.
 
-> 🏔️ **Niri + Noctalia users:** On first boot, greetd won't start (Noctalia isn't installed yet). Log in via TTY: `Ctrl+Alt+F2`.
-
 ---
 
 ## §9 — Post-Install
@@ -1192,15 +1203,12 @@ xdg-user-dirs-update
 
 ### 9.2 YAY (AUR Helper)
 
-`yay` is a pacman wrapper that also handles the Arch User Repository. It builds packages from source using PKGBUILD scripts:
+> Already installed in chroot. Skip this — yay is ready to use.
 
 ```bash
-sudo pacman -S --noconfirm --needed git base-devel
-git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
-cd .. && rm -rf yay
+# yay was installed alongside CachyOS setup before §4.
+# Run `yay -Syu` to update AUR packages if needed.
 ```
-
-> 📌 **Niri + Noctalia users:** After installing yay, go back to [§7.3 (Noctalia)](#-shell-noctalia-v5) to install `noctalia-git`, `noctalia-greeter`, and `greetd` before running anything else in §9.
 
 > **AUR Security:** The AUR is community-maintained. Always review PKGBUILDs — look for suspicious source URLs, obfuscated commands, or curl-pipe-shell patterns. Packages marked 🔒 below need manual inspection before installing.
 

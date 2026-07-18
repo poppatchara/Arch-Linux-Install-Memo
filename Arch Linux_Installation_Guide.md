@@ -568,6 +568,17 @@ mkinitcpio -P
 
 > ⚠️ **Pick ONE bootloader below.** These are alternatives — do not install both.
 
+### Clean Old EFI Entries (optional)
+
+UEFI motherboards accumulate stale boot entries from old installs. List them, then delete any you don't need:
+
+```bash
+efibootmgr -v                         # list all entries
+# efibootmgr -b XXXX -B               # delete entry by boot number (e.g. 0001, 0002)
+```
+
+> Keep the entry for your current bootloader. If you see old "Linux Boot Manager", "Windows Boot Manager" from a wiped disk, or duplicates — remove them. The boot order (`BootOrder`) auto-updates.
+
 ### ▸ GRUB
 
 GRUB is the most widely-used Linux bootloader. It reads Btrfs directly, chain-loads from the ESP, and supports snapshot boot entries via `grub-btrfs`.

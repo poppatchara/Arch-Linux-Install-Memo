@@ -384,20 +384,33 @@ Install at least one. You can install multiple — common combos: `linux-zen` (d
 
 ```bash
 # Uncomment the kernels you want:
-# linux, linux-lts, linux-zen, linux-cachyos are in official repos.
-# linux-cachyos-bore, linux-cachyos-eevdf need CachyOS repos — see CachyOS section below.
 KERNELS=(
   linux-zen
-  # linux-cachyos
+  # linux-cachyos        # in [extra] — no extra repo needed
+  # linux-cachyos-bore    # needs CachyOS repos → auto-added below
+  # linux-cachyos-eevdf   # needs CachyOS repos → auto-added below
   # linux
   # linux-lts
 )
 
 # Build kernel package list for pacstrap
 KERNEL_PKGS=()
+NEED_CACHYOS=0
 for k in "${KERNELS[@]}"; do
   KERNEL_PKGS+=("$k" "$k-headers")
+  # Any kernel with a suffix (e.g. linux-cachyos-bore) needs CachyOS repos
+  [[ "$k" == linux-cachyos-* ]] && NEED_CACHYOS=1
 done
+
+# If any selected kernel needs CachyOS repos, add them to the live ISO now
+if [ "$NEED_CACHYOS" -eq 1 ]; then
+  echo "→ CachyOS kernel selected — adding CachyOS repos..."
+  cd ~
+  curl -O https://mirror.cachyos.org/cachyos-repo.tar.xz
+  tar xf cachyos-repo.tar.xz && cd cachyos-repo
+  sudo ./cachyos-repo.sh
+  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+fi
 ```
 
 <details>
@@ -743,16 +756,18 @@ cp -v /boot/initramfs-*.img /boot/limine/
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. Add now — between base install and desktop — so everything from here on pulls from CachyOS mirrors with x86-64-v3/v4 optimized builds.
+> Already added in §3.1 if you selected a CachyOS kernel variant. Otherwise, add now.
 
 ```bash
-# 1. Add CachyOS repos
-sudo pacman -Syu
-cd ~
-curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-tar xvf cachyos-repo.tar.xz && cd cachyos-repo
-sudo ./cachyos-repo.sh
-cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+# 1. Add CachyOS repos (skip if already done in §3.1)
+if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
+  sudo pacman -Syu
+  cd ~
+  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+  tar xvf cachyos-repo.tar.xz && cd cachyos-repo
+  sudo ./cachyos-repo.sh
+  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+fi
 
 # 2. Reinstall everything from CachyOS repos
 # All packages installed so far (§3–§5) were from vanilla Arch.
@@ -761,11 +776,6 @@ cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 # (e.g. vanilla: 1.2.3-1 → cachyos: 1.2.3-1.1), so pacman sees them as
 # newer and upgrades automatically.
 sudo pacman -Qqn | sudo pacman -S --noconfirm -
-
-# 3. Install additional CachyOS kernel variants (optional)
-# These are in CachyOS repos, not [extra] — install them now that repos are added.
-# sudo pacman -S linux-cachyos-bore linux-cachyos-bore-headers
-# sudo pacman -S linux-cachyos-eevdf linux-cachyos-eevdf-headers
 ```
 
 > After this, every package on the system is the CachyOS-optimized version. All subsequent `pacman` calls in §6 and §7 will also pull from CachyOS.

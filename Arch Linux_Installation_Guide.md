@@ -455,7 +455,7 @@ cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 
 > **What we're installing:**
 > - `base base-devel` — core Arch system + build toolchain
-> - `${KERNEL} ${KERNEL}-headers` — your chosen kernel + headers (needed for DKMS modules like NVIDIA)
+> - `${KERNEL_PKGS[*]}` — your chosen kernel(s) + headers (needed for DKMS modules like NVIDIA)
 > - `linux-firmware` + microcode — hardware firmware + CPU patches
 > - `efibootmgr btrfs-progs dosfstools` — UEFI boot management + filesystem tools
 > - `networkmanager openssh` — networking + remote access
@@ -768,7 +768,6 @@ pacman -Syu --noconfirm --needed \
   avahi nss-mdns \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
-  acpi acpid \
   xdg-user-dirs
 ```
 
@@ -790,7 +789,7 @@ systemctl enable fstrim.timer
 # systemctl enable iwd
 # systemctl enable cups
 # systemctl enable avahi-daemon
-# systemctl enable acpid
+# pacman -S --needed acpi  # battery status CLI (systemd-logind handles ACPI events now)
 ```
 
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
@@ -1420,6 +1419,7 @@ yay -S --noconfirm --needed proton-ge-custom-bin  # 🔒
 sudo usermod -aG gamemode $USER
 
 # Fonts
+# noto-fonts-emoji already installed if you chose Niri (§7.2)
 sudo pacman -S --noconfirm --needed \
   noto-fonts noto-fonts-emoji \
   ttf-dejavu ttf-ubuntu-font-family \

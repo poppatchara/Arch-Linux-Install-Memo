@@ -55,8 +55,7 @@ Not the best way. Just the way I like.
   - [9.7 Extra Packages & Fonts](#97-extra-packages--fonts)
   - [9.8 pyenv](#98-pyenv)
   - [9.9 SPDIF Audio Fix](#99-spdif-audio-fix-optional)
-  - [9.10 KWallet](#910-kwallet-kde-only)
-  - [9.11 Cache Cleanup](#911-cache-cleanup)
+  - [9.10 Cache Cleanup](#910-cache-cleanup)
 - [Credits](#credits)
 
 ---
@@ -1393,19 +1392,7 @@ EOF
 systemctl --user restart wireplumber
 ```
 
-### 9.10 KWallet (KDE only)
-
-If you don't use KDE's password storage, disable it to avoid repeated unlock prompts:
-
-```bash
-mkdir -p ~/.config
-cat <<'EOF' >> ~/.config/kwalletrc
-[Wallet]
-Enabled=false
-EOF
-```
-
-### 9.11 Cache Cleanup
+### 9.10 Cache Cleanup
 
 Clear pacman's package cache to reclaim disk space:
 

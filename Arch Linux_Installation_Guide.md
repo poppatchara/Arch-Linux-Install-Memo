@@ -209,16 +209,14 @@ mkfs.btrfs -f -L Arch /dev/nvme0n1p3
 
 #### Step 3 — Capture UUIDs
 
-UUIDs are stable identifiers — unlike `/dev/nvme0n1pN` which can change if disk topology shifts. We auto-detect by partition type so the guide works on any NVMe device:
+UUIDs are stable identifiers — unlike `/dev/nvme0n1pN` which can change if disk topology shifts. We detect by filesystem label (`EFI`) and type (`swap`, `btrfs`) so the guide works on any disk:
 
 ```bash
-esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
-  case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
-done)"
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
+esp_part="$(blkid -L EFI -o device)"
 esp_uuid="$(blkid -s UUID -o value "$esp_part")"
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
 
@@ -256,16 +254,14 @@ mkswap /dev/nvme0n1p3
 
 #### Step 3 — Capture UUIDs
 
-Same auto-detection as GRUB — detects by partition type, not device path:
+Same label-based detection as GRUB:
 
 ```bash
-esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
-  case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
-done)"
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
+esp_part="$(blkid -L EFI -o device)"
 esp_uuid="$(blkid -s UUID -o value "$esp_part")"
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
 

@@ -958,30 +958,22 @@ spawn-at-startup "kded6"
 | **Mime types** | Generic icons | Proper file type icons |
 | **KWallet** | May prompt endlessly | Integrated password storage |
 
-### KWallet (Optional)
+### Secret Storage
 
-KWallet stores passwords for KDE apps (WiFi, email, browser passwords). On Niri+Noctalia with `greetd`, add PAM to greetd (not plasmalogin).
-
-If you want KWallet working:
+KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Code, Chromium, Firefox) need GNOME Keyring via `libsecret`. Install both — they coexist:
 
 ```bash
-sudo pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
+sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
 
-# Add PAM unlock via greetd
-echo 'session    optional     pam_kwallet5.so auto_start' | sudo tee -a /etc/pam.d/greetd
-```
-
-> **Auto-unlock:** Wallet password = login password, blowfish encryption, wallet name `kdewallet`.
-
-If you don't need it, disable to avoid prompts:
-
-```bash
-mkdir -p ~/.config
-cat <<'EOF' >> ~/.config/kwalletrc
-[Wallet]
-Enabled=false
+# PAM hooks for greetd (auto-unlock at login)
+sudo tee -a /etc/pam.d/greetd <<'EOF'
+auth       optional     pam_gnome_keyring.so
+session    optional     pam_gnome_keyring.so auto_start
+session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
 EOF
 ```
+
+> KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
 ### Dolphin "Open With" Blank Popup Fix
 

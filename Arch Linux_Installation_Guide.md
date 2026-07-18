@@ -805,6 +805,7 @@ pacman -Syu --noconfirm --needed \
   avahi nss-mdns \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
+  iwd \
   xdg-user-dirs
 ```
 
@@ -818,6 +819,7 @@ pacman -Syu --noconfirm --needed \
 ```bash
 systemctl enable NetworkManager
 systemctl enable bluetooth
+systemctl enable iwd
 systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer

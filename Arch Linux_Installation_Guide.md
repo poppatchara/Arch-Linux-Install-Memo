@@ -1093,7 +1093,7 @@ hotkey-overlay { skip-at-startup }
 
 Apps like VS Code, Chromium, and Git need a secrets backend to safely store passwords and tokens. Without one, they'll prompt repeatedly or fail silently.
 
-> ⚠️ **GTK apps (Firefox, Chromium, VS Code) use `libsecret` / Secret Service API — not KWallet directly.** On KDE Plasma, a bridge handles this automatically. On Niri + Noctalia without Plasma running, KWallet alone may not work for GTK apps. **GNOME Keyring is the safer choice here.**
+> ⚠️ **GTK apps use `libsecret` / Secret Service API — not KWallet.** KWallet serves KDE apps; GNOME Keyring serves GTK apps. The KDE apps we install here (Dolphin, Kate, Okular, Gwenview) don't store secrets — only Dolphin's saved SMB/SFTP passwords would use KWallet. **GNOME Keyring covers everything we actually need.**
 
 ```bash
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret
@@ -1105,7 +1105,7 @@ session    optional     pam_gnome_keyring.so auto_start
 EOF
 ```
 
-> If you also want KWallet for KDE apps (Dolphin, Kate), install `kwallet kwalletmanager kwallet-pam` — but know that GTK apps will use GNOME Keyring, not KWallet. The two can coexist.
+> If you later need KWallet for Dolphin network passwords or KDE Connect, install `kwallet kwalletmanager kwallet-pam` and add `session optional pam_kwallet5.so auto_start` to `/etc/pam.d/greetd`. The two coexist fine.
 
 ---
 

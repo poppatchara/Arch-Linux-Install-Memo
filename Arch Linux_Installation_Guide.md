@@ -13,7 +13,6 @@ Not the best way. Just the way I like.
   - [0.0 SSH Setup](#00-ssh-setup)
   - [0.1 Pacman Config](#01-pacman-config)
   - [0.2 Mirror List](#02-mirror-list)
-  - [0.3 CachyOS Repos](#03-cachyos-repos-optional)
 - [§1 — Partition & Format](#1--partition--format)
   - [▸ GRUB](#-grub)
   - [▸ Limine](#-limine)
@@ -37,6 +36,7 @@ Not the best way. Just the way I like.
 - [§5 — Bootloader](#5--bootloader)
   - [▸ GRUB](#-grub-1)
   - [▸ Limine](#-limine-1)
+- [CachyOS Repos](#cachyos-repos-optional)
 - [§6 — Services & QoL](#6--services--qol)
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
@@ -158,22 +158,6 @@ cp "$tmpfile" "$mirrorfile"
 rm -f "$tmpfile"
 pacman -Syy
 ```
-
-### 0.3 CachyOS Repos (optional)
-
-> Skip if using Vanilla Arch repos. Add CachyOS repos now so all packages — including pacstrap and everything in chroot — pull from CachyOS mirrors with x86-64-v3/v4 optimized builds.
-
-CachyOS repos rebuild Arch packages with LTO, PGO, BOLT, `-O3`, and specialized instruction sets. Adding them early avoids version mismatches later:
-
-```bash
-cd ~
-curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-tar xvf cachyos-repo.tar.xz && cd cachyos-repo
-sudo ./cachyos-repo.sh
-# The script adds [cachyos] repos to /etc/pacman.conf and installs the keyring
-```
-
-> After pacstrap, we copy `/etc/pacman.conf` to `/mnt/etc/pacman.conf` — so the installed system inherits these repos automatically.
 
 ---
 
@@ -745,6 +729,25 @@ cp -v /boot/initramfs-*.img /boot/limine/
 
 ---
 
+### CachyOS Repos (optional)
+
+> Skip if using Vanilla Arch repos. Add now — before installing any heavy packages — so everything from §6 onward pulls from CachyOS mirrors with x86-64-v3/v4 optimized builds.
+
+CachyOS repos rebuild Arch packages with LTO, PGO, BOLT, `-O3`, and specialized instruction sets. Adding them here (after base install, before desktop) avoids version conflicts:
+
+```bash
+sudo pacman -Syu
+cd ~
+curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+tar xvf cachyos-repo.tar.xz && cd cachyos-repo
+sudo ./cachyos-repo.sh
+cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+```
+
+> Now all subsequent `pacman` calls in §6 and §7 get CachyOS-optimized packages.
+
+---
+
 ## §6 — Services & QoL
 
 These are the background services that keep your system running. NetworkManager handles all networking (Wi-Fi, Ethernet, VPN), bluetoothd handles Bluetooth, reflector updates your mirror list weekly, sshd lets you SSH in, and fstrim keeps your SSD healthy:
@@ -1123,7 +1126,7 @@ cd .. && rm -rf yay
 
 ### 9.3 CachyOS Extras (optional)
 
-> Skip if using Vanilla Arch repos. The CachyOS repos were added in [§0.3](#03-cachyos-repos-optional) — this section installs extra CachyOS packages and optionally rebuilds your system with optimized binaries.
+> Skip if using Vanilla Arch repos. The CachyOS repos were added [after §5](#cachyos-repos-optional) — this section installs extra CachyOS packages and optionally rebuilds your system with optimized binaries.
 
 ```bash
 # Backup before rebuilding

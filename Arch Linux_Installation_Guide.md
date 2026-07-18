@@ -137,9 +137,10 @@ esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
   case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
 done)"
 swap_part="$(blkid -t TYPE=swap -o device | head -1)"
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 esp_uuid="$(blkid -s UUID -o value "$esp_part")"
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
 
 ---
@@ -175,9 +176,14 @@ mkswap /dev/nvme0n1p3
 #### Step 3 — Capture UUIDs
 
 ```bash
-esp_uuid="$(blkid -s UUID -o value /dev/nvme0n1p1)"
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+esp_part="$(lsblk -no PATH,PARTTYPE | while read -r part type; do
+  case "$type" in c12a7328-f81f-11d2-ba4b-00a0c93ec93b) echo "$part"; break ;; esac
+done)"
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
+esp_uuid="$(blkid -s UUID -o value "$esp_part")"
+swap_uuid="$(blkid -s UUID -o value "$swap_part")"
+root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
 
 ---
@@ -430,8 +436,10 @@ efibootmgr --create --disk /dev/nvme0n1 --part 1 \
 Copy kernel artifacts to ESP and generate config:
 
 ```bash
-root_uuid="$(blkid -s UUID -o value /dev/nvme0n1p2)"
-swap_uuid="$(blkid -s UUID -o value /dev/nvme0n1p3)"
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
+swap_part="$(blkid -t TYPE=swap -o device | head -1)"
+root_uuid="$(blkid -s UUID -o value "$root_part")"
+swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"

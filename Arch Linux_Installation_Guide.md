@@ -1037,6 +1037,8 @@ EOF
 sudo systemctl enable greetd
 ```
 
+> If greetd fails with `user 'greetd' not found`: `sudo useradd -r -s /sbin/nologin greetd && sudo systemctl restart greetd`. The package should create this user, but it's sometimes missed on fresh installs.
+
 > `greetd` runs on virtual terminal 1 (VT 1). The greeter runs as the `greetd` user for security — it never sees your password directly, only passes it to PAM.
 
 **Niri config** (`~/.config/niri/config.kdl`):

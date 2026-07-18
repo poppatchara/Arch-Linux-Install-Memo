@@ -13,6 +13,7 @@ Not the best way. Just the way I like.
   - [0.0 SSH Setup](#00-ssh-setup)
   - [0.1 Pacman Config](#01-pacman-config)
   - [0.2 Mirror List](#02-mirror-list)
+  - [0.3 CachyOS Repos](#03-cachyos-repos-optional)
 - [§1 — Partition & Format](#1--partition--format)
   - [▸ GRUB](#-grub)
   - [▸ Limine](#-limine)
@@ -47,7 +48,7 @@ Not the best way. Just the way I like.
 - [§9 — Post-Install](#9--post-install)
   - [9.1 XDG User Dirs](#91-xdg-user-dirs)
   - [9.2 YAY](#92-yay-aur-helper)
-  - [9.3 CachyOS Repos & Kernel](#93-cachyos-repos--kernel-optional)
+  - [9.3 CachyOS Extras](#93-cachyos-extras-optional)
   - [9.4 GPU Driver](#94-gpu-driver)
   - [9.5 Snapper](#95-snapper)
   - [9.6 SSH Hardening](#96-ssh-hardening)
@@ -157,6 +158,22 @@ cp "$tmpfile" "$mirrorfile"
 rm -f "$tmpfile"
 pacman -Syy
 ```
+
+### 0.3 CachyOS Repos (optional)
+
+> Skip if using Vanilla Arch repos. Add CachyOS repos now so all packages — including pacstrap and everything in chroot — pull from CachyOS mirrors with x86-64-v3/v4 optimized builds.
+
+CachyOS repos rebuild Arch packages with LTO, PGO, BOLT, `-O3`, and specialized instruction sets. Adding them early avoids version mismatches later:
+
+```bash
+cd ~
+curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+tar xvf cachyos-repo.tar.xz && cd cachyos-repo
+sudo ./cachyos-repo.sh
+# The script adds [cachyos] repos to /etc/pacman.conf and installs the keyring
+```
+
+> After pacstrap, we copy `/etc/pacman.conf` to `/mnt/etc/pacman.conf` — so the installed system inherits these repos automatically.
 
 ---
 
@@ -1104,35 +1121,24 @@ cd .. && rm -rf yay
 
 > **AUR Security:** The AUR is community-maintained. Always review PKGBUILDs — look for suspicious source URLs, obfuscated commands, or curl-pipe-shell patterns. Packages marked 🔒 below need manual inspection before installing.
 
-### 9.3 CachyOS Repos & Kernel (optional)
+### 9.3 CachyOS Extras (optional)
 
-> Skip if using Vanilla Arch repos. You can still use `linux-cachyos` kernel without this step — it's in `[extra]`.
-
-CachyOS repos provide x86-64-v3/v4 optimized packages (LTO, PGO, BOLT, -O3, specialized instruction sets). This rebuilds all your packages with these optimizations:
+> Skip if using Vanilla Arch repos. The CachyOS repos were added in [§0.3](#03-cachyos-repos-optional) — this section installs extra CachyOS packages and optionally rebuilds your system with optimized binaries.
 
 ```bash
-# Backup current state
+# Backup before rebuilding
 sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
 pacman -Qqe > ~/pkglist.pre-cachy.txt
 
-# Add CachyOS repos (automated script)
-cd ~
-curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-tar xvf cachyos-repo.tar.xz && cd cachyos-repo
-sudo ./cachyos-repo.sh
-
-# Install CachyOS kernels
+# Install CachyOS extras
 sudo pacman -Syu
-sudo pacman -S linux-cachyos linux-cachyos-headers linux-cachyos-eevdf linux-cachyos-eevdf-headers
-
-# Optional: rebuild all packages with CachyOS optimizations
-# sudo pacman -Qqn | sudo pacman -S -
-
-# Optional extras
 sudo pacman -S cachyos-settings cachyos-gaming-meta cachyos-hello
-```
 
-> `linux-cachyos-eevdf` is an alternative kernel variant with the EEVDF scheduler. Both can coexist — pick one at boot.
+# Optional: rebuild ALL installed packages with CachyOS optimizations
+# This takes a while — only needed if you added repos after initial install.
+# If you added repos at §0.3, everything was already optimized from pacstrap onward.
+# sudo pacman -Qqn | sudo pacman -S -
+```
 
 ### 9.4 GPU Driver
 

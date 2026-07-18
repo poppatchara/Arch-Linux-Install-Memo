@@ -275,6 +275,7 @@ Btrfs subvolumes are like lightweight partitions inside a single filesystem. The
 
 - `@` (root) gets snapshot coverage via Snapper
 - `@var_log` and `@var_cache` are isolated — they change constantly but we don't need to snapshot them
+- `@var_tmp` for `/var/tmp` — temporary files, excluded from snapshots
 - `@home` gets light snapshot coverage (optional)
 - `@root` keeps `/root` (the root user's home) separate
 
@@ -295,6 +296,7 @@ btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
+btrfs subvolume create /mnt/@var_tmp
 btrfs subvolume create /mnt/@root
 ```
 
@@ -312,6 +314,7 @@ mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home     UUID="${root_uuid}" /mnt/home
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /mnt/var/log
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
+mount --mkdir -o compress=zstd:1,noatime,subvol=@var_tmp   UUID="${root_uuid}" /mnt/var/tmp
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /mnt/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@boot     UUID="${root_uuid}" /mnt/boot
 mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
@@ -332,6 +335,7 @@ mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
 mount --mkdir -o compress=zstd:1,noatime,subvol=@home     UUID="${root_uuid}" /mnt/home
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /mnt/var/log
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
+mount --mkdir -o compress=zstd:1,noatime,subvol=@var_tmp   UUID="${root_uuid}" /mnt/var/tmp
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /mnt/root
 mount --mkdir -o compress=zstd:1,noatime,subvol=@srv      UUID="${root_uuid}" /mnt/srv
 mount --mkdir UUID="${esp_uuid}" /mnt/boot

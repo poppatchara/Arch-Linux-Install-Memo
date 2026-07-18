@@ -773,9 +773,17 @@ systemctl enable fstrim.timer
 
 ## §7 — Desktop Stack
 
-> ⚠️ **Pick ONE desktop path.** §7.1 is all-in-one. §7.2 + §7.3 go together (compositor → then shell). Do not install both.
+> ⚠️ **Pick ONE path.** KDE is all-in-one — install §7.1 and stop. Niri needs a shell — install §7.2 then §7.3. Do not install both KDE and Niri.
 
-KDE Plasma is a complete desktop environment — window manager, panel, launcher, system tray, settings, all integrated. Niri + Noctalia splits the job: Niri is the Wayland compositor (manages windows, input, rendering), Noctalia is the shell (bar, launcher, notifications, wallpaper, lock screen).
+There are two philosophies:
+
+| Path | Sections | What you get | Login screen |
+|------|----------|-------------|--------------|
+| 🖥️ **KDE Plasma** | §7.1 only | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
+| 🏔️ **Niri + Noctalia** | §7.2 + §7.3 | Scrollable-tiling compositor + native shell | `greetd` + `noctalia-greeter` |
+| 💀 **Niri alone** | §7.2 only | Bare compositor — no bar, no launcher, no wallpaper. You build the rest yourself. | none (start from TTY) |
+
+KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: tiling workflow, lower resource usage, keyboard-driven, but still has a full shell with bar/launcher/notifications. Niri alone is for people who want to hand-pick every component (waybar, fuzzel, swaybg, etc.) — the guide doesn't cover that.
 
 ### ▸ KDE Plasma
 
@@ -910,6 +918,8 @@ pacman -S --noconfirm --needed \
 ```
 
 > Without `plasma-integration` + `kded6` running (autostarted in §7.3), KDE apps would use ugly fallback themes, lack file dialogs, and have broken trash support.
+>
+> **If stopping here (Niri alone):** You now have a bare compositor. Start Niri from TTY with `niri-session`. Install a bar (`waybar`), launcher (`fuzzel`), wallpaper setter (`swaybg`), and notification daemon (`mako`) separately. This guide doesn't cover that path. For a complete desktop, continue to §7.3.
 
 ### ▸ Shell: Noctalia v5
 

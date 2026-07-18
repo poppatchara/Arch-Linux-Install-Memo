@@ -1264,6 +1264,24 @@ HOOK
 fi
 ```
 
+**Intel iGPU / Arc dGPU (if detected):**
+
+Intel graphics drivers are built into the kernel — no kernel module to install. But you'll want Vulkan, hardware video decode, and verification tools:
+
+```bash
+if [ "$gpu_vendor" = "intel" ]; then
+  sudo pacman -S --noconfirm --needed \
+    vulkan-intel intel-media-driver \
+    mesa-utils libva-utils vulkan-tools
+fi
+```
+
+> - `vulkan-intel` — Intel ANV Vulkan driver (games, GPU compute)
+> - `intel-media-driver` — hardware video encode/decode (VA-API — YouTube, OBS, video players)
+> - `mesa-utils` — `glxinfo` for OpenGL verification
+> - `libva-utils` — `vainfo` to verify hardware video support
+> - `vulkan-tools` — `vkcube`, `vulkaninfo` for Vulkan verification
+
 ### 9.5 Snapper
 
 Snapper manages Btrfs snapshots — point-in-time copies of your subvolumes. Combined with `snap-pac` (automatic pre/post snapshots on every `pacman` transaction) and `grub-btrfs` (boot into snapshots from GRUB), you get a safety net for system updates:

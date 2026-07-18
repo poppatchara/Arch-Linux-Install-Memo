@@ -917,21 +917,25 @@ EOF
 
 > `niri-session` (not plain `niri`) exports environment variables to systemd correctly — this matters for `xdg-desktop-portal` and other D-Bus services.
 
-**Base Wayland + KDE integration packages:**
+**Base Wayland + integration packages:**
 
 ```bash
 pacman -S --noconfirm --needed \
-  xdg-desktop-portal xdg-desktop-portal-kde \
+  xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk \
   qt6-wayland xorg-xwayland xwayland-satellite \
   xdg-utils shared-mime-info kde-cli-tools \
   accountsservice qt5-wayland \
   gvfs-mtp gvfs-gphoto2 udiskie \
   plasma-integration kded qt6ct-kde \
+  noto-fonts-emoji wl-clipboard adw-gtk-theme \
   ghostty libcanberra
 ```
 
 > Key packages:
-> - `xdg-desktop-portal-kde` — screen sharing (OBS, Discord, browsers)
+> - `xdg-desktop-portal-gnome` + `-gtk` — screen sharing for OBS, Discord, browsers (GNOME portal works better on non-KDE compositors)
+> - `wl-clipboard` — `wl-copy` / `wl-paste` CLI clipboard for Wayland (scripts, terminal workflows)
+> - `adw-gtk-theme` — GTK apps (Firefox, VS Code) look consistent with the system theme
+> - `noto-fonts-emoji` — emoji rendering in terminal, browser, and GTK apps
 > - `xwayland-satellite` — run X11 apps under Wayland (multi-window support)
 > - `plasma-integration kded` — KDE file dialogs, trash support, MIME type handling
 > - `qt6ct-kde` — apply KDE color schemes to Qt apps when Plasma isn't running
@@ -1151,17 +1155,27 @@ cd .. && rm -rf yay
 
 ### 9.3 CachyOS Extras (optional)
 
-> Skip if using Vanilla Arch repos. The CachyOS repos were added [after §5](#cachyos-repos-optional) — this section installs extra CachyOS packages and optionally rebuilds your system with optimized binaries.
+> Skip if using Vanilla Arch repos. The CachyOS repos were added [after §5](#cachyos-repos-optional).
 
 ```bash
-# Backup before rebuilding
-sudo cp -a /etc/pacman.conf /etc/pacman.conf.pre-cachy
-pacman -Qqe > ~/pkglist.pre-cachy.txt
-
-# Install CachyOS extras
+# Core CachyOS optimizations (always recommended if using CachyOS repos)
 sudo pacman -Syu
-sudo pacman -S cachyos-settings cachyos-gaming-meta cachyos-hello
+sudo pacman -S cachyos-settings
+sudo systemctl enable --now ananicy-cpp
+
+# Optional: gaming meta-package (gamemode, steam, lutris, mangohud, proton-ge...)
+# sudo pacman -S cachyos-gaming-meta
+
+# Optional: welcome app (system info, quick links, post-install tips)
+# sudo pacman -S cachyos-hello
+
+# Optional: userspace OOM killer — kills bloated apps before system freezes,
+# more responsive than kernel OOM. Enable after installing systemd-oomd:
+# sudo pacman -S systemd-oomd
+# sudo systemctl enable --now systemd-oomd
 ```
+
+> `cachyos-settings` pulls in `ananicy-cpp` (auto process priority — games/media get higher priority, background tasks lower), `zram-generator` (compressed RAM swap), and CachyOS-specific defaults. `cachyos-gaming-meta` is a convenience bundle — you can also install gaming packages individually in §9.9.
 
 ### 9.4 GPU Driver
 

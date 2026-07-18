@@ -146,6 +146,7 @@ sudo pacman -S --noconfirm --needed \
   ghostty \
   libcanberra \
   gnome-keyring \
+  xdg-desktop-portal-gnome \
   xdg-desktop-portal-gtk \
   xdg-utils \
   shared-mime-info \
@@ -155,14 +156,19 @@ sudo pacman -S --noconfirm --needed \
   gvfs-mtp \
   gvfs-gphoto2 \
   xwayland-satellite \
-  udiskie
+  udiskie \
+  noto-fonts-emoji \
+  wl-clipboard \
+  adw-gtk-theme
 ```
 
 | Package | Purpose | Why included |
 |---------|---------|-------------|
 | `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
 | `libcanberra` | Sound event player | Freedesktop sound theme — plays feedback for volume, mute, notifications |
-| `gnome-keyring` | Secret portal backend | Required by niri-portals.conf for the Secret portal — password storage for GTK/Flatpak apps |
+| `gnome-keyring` | Secret portal backend | Required for the Secret portal — password storage for GTK/Flatpak apps |
+| `xdg-desktop-portal-gnome` | Screen sharing | GNOME portal backend — more reliable on non-KDE compositors |
+| `xdg-desktop-portal-gtk` | Screen sharing (fallback) | GTK portal backend for apps that don't use the GNOME one |
 | `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
 | `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
 | `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
@@ -170,13 +176,13 @@ sudo pacman -S --noconfirm --needed \
 | `qt5-wayland` | Qt5 Wayland plugin | Some apps (VLC, older Qt5 apps) need this — not all are Qt6 yet |
 | `gvfs-mtp` | Android/phone file transfer | Mount Android devices via MTP in Dolphin |
 | `gvfs-gphoto2` | Camera import | Import photos from digital cameras |
-| `xdg-desktop-portal-gtk` | Screen sharing (GTK) | Required for OBS, Chromium, Discord screenshare |
-| `xdg-desktop-portal-kde` | Screen sharing (KDE) | Better integration on existing KDE setups |
-| `qt6ct-kde` | Qt theme consistency | Apply KDE styles to Qt apps when Plasma isn't running |
 | `xwayland-satellite` | Run X11 applications | Some apps (e.g., older Electron apps) need XWayland |
 | `udiskie` | Auto-mount USB drives | Convenience — tray icon for removable media |
+| `noto-fonts-emoji` | Emoji fonts | Emoji rendering in terminal, browser, GTK apps |
+| `wl-clipboard` | CLI clipboard | `wl-copy` / `wl-paste` — clipboard from terminal and scripts |
+| `adw-gtk-theme` | GTK theme | Makes GTK apps (Firefox, VS Code) match the system look |
 
-**KDE users:** If you already have KDE Plasma, use `xdg-desktop-portal-kde` instead of `-gtk` for better integration:
+**KDE users:** If you already have KDE Plasma, use `xdg-desktop-portal-kde` instead of `-gnome` for better integration:
 
 ```bash
 sudo pacman -S --noconfirm --needed xdg-desktop-portal-kde

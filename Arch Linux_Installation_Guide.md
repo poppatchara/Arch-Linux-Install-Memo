@@ -27,6 +27,7 @@ Not the best way. Just the way I like.
   - [3.2 vconsole](#32-vconsole)
   - [3.3 pacstrap](#33-pacstrap)
   - [3.4 Enter chroot](#34-enter-chroot)
+- [CachyOS Repos](#cachyos-repos-optional)
 - [§4 — Chroot Configuration](#4--chroot-configuration)
   - [4.1 Safety Check](#41-safety-check)
   - [4.2 Locale & Timezone](#42-locale--timezone)
@@ -36,7 +37,6 @@ Not the best way. Just the way I like.
 - [§5 — Bootloader](#5--bootloader)
   - [▸ GRUB](#-grub-1)
   - [▸ Limine](#-limine-1)
-- [CachyOS Repos](#cachyos-repos-optional)
 - [§6 — Services & QoL](#6--services--qol)
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
@@ -493,6 +493,30 @@ cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
 arch-chroot /mnt
 ```
 
+### CachyOS Repos (optional)
+
+> Skip if using Vanilla Arch repos. This should be the first thing you do after entering chroot — so every package from §4 onward pulls from CachyOS mirrors.
+
+```bash
+# If repos were already added in §3.1 (CachyOS kernel selected), skip this.
+if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
+  sudo pacman -Syu
+  cd ~
+  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+  tar xf cachyos-repo.tar.xz && cd cachyos-repo
+  sudo ./cachyos-repo.sh
+  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+
+  # Reinstall everything from CachyOS repos
+  # All packages installed so far (§3) were from vanilla Arch.
+  # CachyOS packages have bumped pkgrel (1.2.3-1 → 1.2.3-1.1),
+  # so pacman sees them as newer and upgrades automatically.
+  sudo pacman -Qqn | sudo pacman -S --noconfirm -
+fi
+```
+
+> After this, every package on the system is the CachyOS-optimized version.
+
 ---
 
 ## §4 — Chroot Configuration
@@ -760,42 +784,6 @@ cp -v /boot/initramfs-*.img /boot/limine/
 ```
 
 > ⚠️ **Remember:** After any kernel update, you must re-copy the new initramfs to `/boot/limine/`. The Limine hook only copies its own EFI binary, not kernel artifacts. Consider `limine-mkinitcpio-hook` (AUR) for automation.
-
----
-
-### CachyOS Repos (optional)
-
-> Already added in §3.1 if you selected a CachyOS kernel variant. Otherwise, add now.
-
-```bash
-# 1. Add CachyOS repos (skip if already done in §3.1)
-if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
-  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-  sudo pacman-key --lsign-key F3B607488DB35A47
-  sudo pacman -U https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
-                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst
-  sudo tee -a /etc/pacman.conf <<'EOF'
-
-[cachyos]
-Include = /etc/pacman.d/cachyos-mirrorlist
-[cachyos-v3]
-Include = /etc/pacman.d/cachyos-v3-mirrorlist
-[cachyos-v4]
-Include = /etc/pacman.d/cachyos-v4-mirrorlist
-EOF
-  sudo pacman -Syy
-fi
-
-# 2. Reinstall everything from CachyOS repos
-# All packages installed so far (§3–§5) were from vanilla Arch.
-# This replaces them with CachyOS-optimized builds.
-# How it works: CachyOS packages have slightly bumped pkgrel numbers
-# (e.g. vanilla: 1.2.3-1 → cachyos: 1.2.3-1.1), so pacman sees them as
-# newer and upgrades automatically.
-sudo pacman -Qqn | sudo pacman -S --noconfirm -
-```
-
-> After this, every package on the system is the CachyOS-optimized version. All subsequent `pacman` calls in §6 and §7 will also pull from CachyOS.
 
 ---
 

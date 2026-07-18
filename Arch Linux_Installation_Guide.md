@@ -23,7 +23,7 @@ Not the best way. Just the way I like.
   - [2.4 fstab](#24-fstab)
 - [§3 — Base Install](#3--base-install)
   - [3.0 CPU Detection](#30-cpu-detection)
-  - [3.1 Set Kernel Variable](#31-set-kernel-variable)
+  - [3.1 Select Kernels](#31-select-kernels)
   - [3.2 vconsole](#32-vconsole)
   - [3.3 pacstrap](#33-pacstrap)
   - [3.4 Enter chroot](#34-enter-chroot)
@@ -62,7 +62,7 @@ Not the best way. Just the way I like.
 
 ## Decision Matrix
 
-Choose ONE per row. Each choice maps to the section where it takes effect.
+Choose ONE per row (multiple kernels OK). Each choice maps to the section where it takes effect.
 
 | # | Decision | A | B | C | § |
 |---|----------|---|---|---|---|
@@ -374,14 +374,24 @@ cpu=intel
 lscpu | grep -qi amd && cpu=amd
 ```
 
-### 3.1 Set Kernel Variable
+### 3.1 Select Kernels
+
+Install at least one. You can install multiple — common combos: `linux-zen` (daily) + `linux-lts` (fallback), or `linux-cachyos` + `linux-zen`.
 
 ```bash
-# Pick ONE:
-KERNEL=linux-zen
-# KERNEL=linux-cachyos
-# KERNEL=linux
-# KERNEL=linux-lts
+# Uncomment the kernels you want:
+KERNELS=(
+  linux-zen
+  # linux-cachyos
+  # linux
+  # linux-lts
+)
+
+# Build kernel package list for pacstrap
+KERNEL_PKGS=()
+for k in "${KERNELS[@]}"; do
+  KERNEL_PKGS+=("$k" "$k-headers")
+done
 ```
 
 ### 3.2 vconsole
@@ -402,7 +412,7 @@ EOF
 ```bash
 pacstrap -K /mnt \
   base base-devel \
-  "${KERNEL}" "${KERNEL}-headers" linux-firmware "${cpu}-ucode" \
+  "${KERNEL_PKGS[@]}" linux-firmware "${cpu}-ucode" \
   efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs \
   networkmanager openssh \
   nvim git sudo man curl \
@@ -605,7 +615,7 @@ efibootmgr --create --disk /dev/nvme0n1 --part 1 \
 
 > `efibootmgr --create` adds a boot entry to your motherboard's NVRAM. The `--unicode` flag enables UTF-8 support in the boot menu.
 
-Now copy kernel, initramfs, and microcode to the ESP. This must be repeated after every kernel update — the pacman hook below handles this:
+Now copy kernel, initramfs, and microcode to the ESP, then generate a `limine.conf` entry for each kernel. The first kernel in your list becomes the default:
 
 ```bash
 root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
@@ -616,34 +626,38 @@ swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"
 
-cp -v /boot/vmlinuz-* /boot/limine/
-cp -v /boot/initramfs-*.img /boot/limine/
+# Copy artifacts
 cp -v "/boot/${ucode_img}-ucode.img" /boot/limine/
-```
 
-Generate `limine.conf`. The `boot():` prefix means "the partition containing this config file" (the ESP):
-
-```bash
-cat <<EOF | tee /boot/limine/limine.conf >/dev/null
+# Generate limine.conf — one entry per kernel
+cat > /boot/limine/limine.conf <<LIMINE_HEADER
 TIMEOUT=3
-DEFAULT_ENTRY=Arch Linux
+DEFAULT_ENTRY=Arch Linux (${KERNELS[0]})
 
-/Arch Linux
+LIMINE_HEADER
+
+for k in "${KERNELS[@]}"; do
+  # Main entry
+  cat >> /boot/limine/limine.conf <<BLOCK
+/Arch Linux (${k})
     PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-${KERNEL}
+    KERNEL_PATH: boot():/limine/vmlinuz-${k}
     MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
-    MODULE_PATH: boot():/limine/initramfs-${KERNEL}.img
+    MODULE_PATH: boot():/limine/initramfs-${k}.img
     CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
 
-/Arch Linux (fallback)
+/Arch Linux (${k} fallback)
     PROTOCOL: linux
-    KERNEL_PATH: boot():/limine/vmlinuz-${KERNEL}
-    MODULE_PATH: boot():/limine/initramfs-${KERNEL}-fallback.img
+    KERNEL_PATH: boot():/limine/vmlinuz-${k}
+    MODULE_PATH: boot():/limine/initramfs-${k}-fallback.img
     CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw
-EOF
+BLOCK
+done
+
+cat /boot/limine/limine.conf  # sanity check
 ```
 
-> The fallback entry uses the larger `-fallback.img` (without microcode, with more modules) and strips optional parameters. It's your rescue option if the main entry fails to boot.
+> The `boot():` prefix means "the partition containing this config file" (the ESP). Each kernel gets two entries — main (with microcode, zswap, IOMMU) and fallback (stripped down, using the larger `-fallback.img` for rescue).
 
 Pacman hook to keep Limine EFI files in sync after updates:
 

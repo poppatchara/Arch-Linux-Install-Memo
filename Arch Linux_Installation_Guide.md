@@ -860,6 +860,8 @@ pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
 
 Niri is a scrollable-tiling Wayland compositor — windows arrange in columns that scroll horizontally. It's in the official `[extra]` repo. The shell (Noctalia) is AUR and gets installed post-reboot.
 
+> 💡 **Terminal & file manager:** This guide uses `ghostty` (GPU-accelerated terminal) and `dolphin` (KDE file manager) — these are my personal preferences. Niri's factory default terminal is `alacritty`, and the typical GNOME-style file manager would be `nautilus`. Swap as you like.
+
 ```bash
 pacman -S --noconfirm --needed niri
 ```

@@ -1065,9 +1065,11 @@ EOF
 
 **Niri config** (`~/.config/niri/config.kdl`):
 
-This is the complete, bootable configuration. The config language is KDL (a document language, not a programming language — no variables, no logic):
+This is the complete, bootable configuration. Write it to your user's home:
 
-```kdl
+```bash
+mkdir -p /home/pop/.config/niri
+tee /home/pop/.config/niri/config.kdl <<'NIRI_EOF'
 input {
     keyboard {
         xkb { layout "us,th" options "grp:lalt_lshift_toggle" }
@@ -1096,10 +1098,7 @@ window-rule {
 debug { honor-xdg-activation-with-invalid-serial }
 
 // Wallpaper — stationary (visible always, doesn't scroll)
-layer-rule {
-    match namespace="^noctalia-wallpaper"
-    place-within-backdrop true
-}
+layer-rule { match namespace="^noctalia-wallpaper" place-within-backdrop true }
 layout {
     gaps 16
     background-color "transparent"
@@ -1156,7 +1155,12 @@ environment {
 cursor { xcursor-theme "capitaine-cursors" xcursor-size 24 }
 
 hotkey-overlay { skip-at-startup }
+NIRI_EOF
+
+chown -R pop:pop /home/pop/.config/niri
 ```
+
+> ⚠️ **seatd conflict:** If you installed CachyOS packages, `seatd` may be pulled in. It conflicts with `systemd-logind` and causes niri to fail with `ENOSYS`. Remove it: `pacman -R seatd` (harmless — systemd-logind handles sessions).
 
 > **Full config reference:** See companion guide [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
 

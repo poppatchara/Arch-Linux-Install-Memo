@@ -1074,7 +1074,7 @@ mkdir -p /home/pop/.config/niri
 tee /home/pop/.config/niri/config.kdl <<'NIRI_EOF'
 input {
     keyboard {
-        xkb { layout "us,th" options "grp:lalt_lshift_toggle" }
+        xkb { layout "us,th"; options "grp:lalt_lshift_toggle" }
         numlock
     }
     touchpad { tap natural-scroll }

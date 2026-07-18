@@ -1,28 +1,38 @@
 # Arch Linux Install Memo 🐧
 
-Personal notes for rebuilding my daily Arch install: UEFI firmware, single NVMe drive, Btrfs root, KDE Plasma desktop.
-
-*Not the best way or most correct way. Just the way I like.*
-
----
-
-## 📖 Guides
-
-| Guide | Bootloader | Kernel | Notes |
-|-------|------------|--------|-------|
-| [**Arch Linux + GRUB + Btrfs**](Arch%20Linux_Zen_Grub_Brtfs.md) ⭐ | GRUB | linux-zen | **Main guide** — includes Snapper, KDE Plasma 6.6+ (Plasma Login Manager), SSH hardening, pyenv |
-| [**Arch Linux + GRUB + CachyOS**](Arch%20Linux_Zen_Grub_CachyOS.md) | GRUB | CachyOS | CachyOS kernels, KDE Plasma, GRUB bootloader, Snapper snapshot integration |
-| [**Niri + Noctalia v5**](Niri_Noctalia_v5.md) 🏔️🆕 | — | linux-zen | **Companion guide** — config, keybinds, tweaks for Niri+Noctalia on existing Plasma setup |
-| [**Arch + Niri + Noctalia v5 (Fresh)**](Arch%20Linux_Zen_Niri_Noctalia.md) 🏔️⭐ | GRUB | linux-zen | **New!** Full fresh install — Niri+Noctalia instead of KDE Plasma, lean but feature-rich |
+Personal notes for rebuilding my daily Arch install: UEFI, single NVMe, Btrfs root.
+Not the best way. Just the way I like.
 
 ---
 
-## 🧱 Base Setup (All Guides)
-- **Partition:** ESP + Btrfs root + swap
-- **Filesystem:** Btrfs with subvolumes (`@`, `@home`, `@var`, `@var_log`, `@var_cache`, `@root`, `@srv`)
-- **Desktop:** KDE Plasma 6.6+ with Plasma Login Manager
-- **GPU:** Auto-detect vendor (NVIDIA/Intel/AMD) — install only if dGPU present
+## 📖 The Guide
+
+| Guide | Description |
+|-------|-------------|
+| [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file |
+| [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
+
+## 🧱 Decision Matrix
+
+| Decision | A | B | C |
+|----------|---|---|---|
+| **Kernel** | linux-zen | linux-cachyos | linux / linux-lts |
+| **Repos** | Vanilla Arch | CachyOS | |
+| **Desktop** | KDE Plasma | Niri + Noctalia | |
+| **Bootloader** | GRUB | Limine | |
+
+All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ---
 
-*Last updated: June 2026*
+## 📁 Archive
+
+Old individual guides (merged into unified guide above):
+
+- `Arch Linux_Zen_Grub_Brtfs.md` — GRUB + linux-zen + KDE
+- `Arch Linux_Zen_Grub_CachyOS.md` — GRUB + CachyOS + KDE
+- `Arch Linux_Zen_Niri_Noctalia.md` — GRUB + linux-zen + Niri+Noctalia
+
+---
+
+*Last updated: July 2026*

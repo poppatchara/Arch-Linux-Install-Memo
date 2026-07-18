@@ -14,8 +14,8 @@ Not the best way. Just the way I like.
   - [0.1 Pacman Config](#01-pacman-config)
   - [0.2 Mirror List](#02-mirror-list)
 - [§1 — Partition & Format](#1--partition--format)
-  - [▸ GRUB Layout](#-grub-layout)
-  - [▸ Limine Layout](#-limine-layout)
+  - [▸ GRUB](#-grub)
+  - [▸ Limine](#-limine)
 - [§2 — Btrfs Subvolumes & Mounts](#2--btrfs-subvolumes--mounts)
   - [2.1 Common Subvolumes](#21-common-subvolumes)
   - [▸ 2.2 GRUB Mounts](#-22-grub-mounts)
@@ -34,15 +34,15 @@ Not the best way. Just the way I like.
   - [4.4 Users & Sudo](#44-users--sudo)
   - [4.5 mkinitcpio](#45-mkinitcpio)
 - [§5 — Bootloader](#5--bootloader)
-  - [▸ 5.1 GRUB](#-51-grub)
-  - [▸ 5.2 Limine](#-52-limine)
+  - [▸ GRUB](#-grub-1)
+  - [▸ Limine](#-limine-1)
 - [§6 — Services & QoL](#6--services--qol)
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
 - [§7 — Desktop Stack](#7--desktop-stack)
-  - [▸ 7.1 KDE Plasma](#-71-kde-plasma)
-  - [▸ 7.2 Compositor: Niri](#-72-compositor-niri)
-  - [▸ 7.3 Shell: Noctalia v5](#-73-shell-noctalia-v5)
+  - [▸ KDE Plasma](#-kde-plasma)
+  - [▸ Compositor: Niri](#-compositor-niri)
+  - [▸ Shell: Noctalia v5](#-shell-noctalia-v5)
 - [§8 — Reboot](#8--reboot)
 - [§9 — Post-Install](#9--post-install)
   - [9.1 XDG User Dirs](#91-xdg-user-dirs)
@@ -162,7 +162,7 @@ pacman -Syy
 
 ## §1 — Partition & Format
 
-> **Decision: GRUB or Limine?**
+> ⚠️ **Pick ONE bootloader below.** These are alternatives — do not install both.
 
 The bootloader determines the partition layout. The key difference:
 
@@ -173,7 +173,7 @@ This affects where swap goes too — we want swap at the end for Limine (easy to
 
 ---
 
-### ▸ GRUB Layout
+### ▸ GRUB
 
 ESP mounted at `/boot/EFI`, swap in the middle, Btrfs takes the rest:
 
@@ -222,7 +222,7 @@ root_uuid="$(blkid -s UUID -o value "$root_part")"
 
 ---
 
-### ▸ Limine Layout
+### ▸ Limine
 
 ESP mounted at `/boot` directly (because Limine reads kernels from FAT), swap at the end:
 
@@ -564,9 +564,9 @@ mkinitcpio -P
 
 ## §5 — Bootloader
 
-> **Decision: GRUB or Limine?**
+> ⚠️ **Pick ONE bootloader below.** These are alternatives — do not install both.
 
-### ▸ 5.1 GRUB
+### ▸ GRUB
 
 GRUB is the most widely-used Linux bootloader. It reads Btrfs directly, chain-loads from the ESP, and supports snapshot boot entries via `grub-btrfs`.
 
@@ -624,7 +624,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 > **Dual-boot (optional):** If you have Windows or another OS on the same disk, install `os-prober` and regenerate: `pacman -S --needed os-prober && echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub && grub-mkconfig -o /boot/grub/grub.cfg`
 
-### ▸ 5.2 Limine
+### ▸ Limine
 
 Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`.
 
@@ -773,11 +773,11 @@ systemctl enable fstrim.timer
 
 ## §7 — Desktop Stack
 
-> **Decision: KDE Plasma (all-in-one) or Niri compositor + Noctalia shell?**
+> ⚠️ **Pick ONE desktop path.** §7.1 is all-in-one. §7.2 + §7.3 go together (compositor → then shell). Do not install both.
 
 KDE Plasma is a complete desktop environment — window manager, panel, launcher, system tray, settings, all integrated. Niri + Noctalia splits the job: Niri is the Wayland compositor (manages windows, input, rendering), Noctalia is the shell (bar, launcher, notifications, wallpaper, lock screen).
 
-### ▸ 7.1 KDE Plasma
+### ▸ KDE Plasma
 
 Plasma 6.6+ ships `plasma-login-manager` as its native login screen (replaces SDDM). We also need `xdg-desktop-portal` for Flatpak/Snap integration and screen sharing:
 
@@ -848,7 +848,7 @@ pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
 
 > Auto-unlock requires: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
-### ▸ 7.2 Compositor: Niri
+### ▸ Compositor: Niri
 
 Niri is a scrollable-tiling Wayland compositor — windows arrange in columns that scroll horizontally. It's in the official `[extra]` repo. The shell (Noctalia) is AUR and gets installed post-reboot.
 
@@ -911,7 +911,7 @@ pacman -S --noconfirm --needed \
 
 > Without `plasma-integration` + `kded6` running (autostarted in §7.3), KDE apps would use ugly fallback themes, lack file dialogs, and have broken trash support.
 
-### ▸ 7.3 Shell: Noctalia v5
+### ▸ Shell: Noctalia v5
 
 Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, dock, notifications, wallpaper, OSD, clipboard manager, night light, and lock screen — all the things a desktop environment typically bundles, but as a compositor-agnostic layer.
 

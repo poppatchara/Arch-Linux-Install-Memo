@@ -1089,6 +1089,37 @@ hotkey-overlay { skip-at-startup }
 
 > **Full config reference:** See companion guide [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
 
+#### Secret Storage
+
+Apps like VS Code, Chromium, and Git need a secrets backend to safely store passwords and tokens. Without one, they'll prompt repeatedly or fail silently.
+
+**KWallet** (KDE-native — already pulled in by Dolphin/Kate deps):
+
+```bash
+sudo pacman -S --noconfirm --needed kwallet kwalletmanager kwallet-pam
+
+# PAM hook for greetd (auto-unlock at login)
+sudo tee -a /etc/pam.d/greetd <<'EOF'
+session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+EOF
+```
+
+> Auto-unlock requires: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+
+**GNOME Keyring** (alternative — if you prefer to avoid KDE deps):
+
+```bash
+sudo pacman -S --noconfirm --needed gnome-keyring libsecret
+
+# PAM hook for greetd
+sudo tee -a /etc/pam.d/greetd <<'EOF'
+auth       optional     pam_gnome_keyring.so
+session    optional     pam_gnome_keyring.so auto_start
+EOF
+```
+
+> Pick one. Both work — KWallet is the path of least resistance since Dolphin/Kate already depend on it.
+
 ---
 
 ## §8 — Reboot

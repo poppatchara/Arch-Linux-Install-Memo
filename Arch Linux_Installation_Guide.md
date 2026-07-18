@@ -745,6 +745,9 @@ cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 # 2. Reinstall everything from CachyOS repos
 # All packages installed so far (§3–§5) were from vanilla Arch.
 # This replaces them with CachyOS-optimized builds.
+# How it works: CachyOS packages have slightly bumped pkgrel numbers
+# (e.g. vanilla: 1.2.3-1 → cachyos: 1.2.3-1.1), so pacman sees them as
+# newer and upgrades automatically.
 sudo pacman -Qqn | sudo pacman -S --noconfirm -
 ```
 

@@ -362,8 +362,8 @@ cat /mnt/etc/fstab  # sanity check
 
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
 - `linux-cachyos` — CachyOS's default optimized kernel. Installable from `[extra]` without CachyOS repos.
-- `linux-cachyos-bore` — CachyOS variant with BORE (Burst-Oriented Response Enhancer) scheduler.
-- `linux-cachyos-eevdf` — CachyOS variant with EEVDF scheduler.
+- `linux-cachyos-bore` — CachyOS variant with BORE scheduler. Needs CachyOS repos.
+- `linux-cachyos-eevdf` — CachyOS variant with EEVDF scheduler. Needs CachyOS repos.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
 - `linux-lts` — long-term support. Older but extremely stable. Good fallback.
 
@@ -384,11 +384,11 @@ Install at least one. You can install multiple — common combos: `linux-zen` (d
 
 ```bash
 # Uncomment the kernels you want:
+# linux, linux-lts, linux-zen, linux-cachyos are in official repos.
+# linux-cachyos-bore, linux-cachyos-eevdf need CachyOS repos — see CachyOS section below.
 KERNELS=(
   linux-zen
   # linux-cachyos
-  # linux-cachyos-bore
-  # linux-cachyos-eevdf
   # linux
   # linux-lts
 )
@@ -407,8 +407,8 @@ done
 |--------|------|-----------|----------|
 | `linux-zen` | `[extra]` | EEVDF | Desktop/laptop daily use — lower latency, tuned for interactivity |
 | `linux-cachyos` | `[extra]` | EEVDF | CachyOS defaults — balanced optimization with extra patches |
-| `linux-cachyos-bore` | `[extra]` | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
-| `linux-cachyos-eevdf` | `[extra]` | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
+| `linux-cachyos-bore` | CachyOS | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
+| `linux-cachyos-eevdf` | CachyOS | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
 | `linux` | `[core]` | EEVDF | Maximum stability — vanilla kernel, least patches, slowest to adopt new features |
 | `linux-lts` | `[core]` | EEVDF | Fallback kernel — older version, ultra-stable, ideal rescue boot option |
 
@@ -761,6 +761,11 @@ cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 # (e.g. vanilla: 1.2.3-1 → cachyos: 1.2.3-1.1), so pacman sees them as
 # newer and upgrades automatically.
 sudo pacman -Qqn | sudo pacman -S --noconfirm -
+
+# 3. Install additional CachyOS kernel variants (optional)
+# These are in CachyOS repos, not [extra] — install them now that repos are added.
+# sudo pacman -S linux-cachyos-bore linux-cachyos-bore-headers
+# sudo pacman -S linux-cachyos-eevdf linux-cachyos-eevdf-headers
 ```
 
 > After this, every package on the system is the CachyOS-optimized version. All subsequent `pacman` calls in §6 and §7 will also pull from CachyOS.

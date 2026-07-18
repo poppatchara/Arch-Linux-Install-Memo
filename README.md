@@ -29,9 +29,9 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 Old individual guides (merged into unified guide above):
 
-- `Arch Linux_Zen_Grub_Brtfs.md` — GRUB + linux-zen + KDE
-- `Arch Linux_Zen_Grub_CachyOS.md` — GRUB + CachyOS + KDE
-- `Arch Linux_Zen_Niri_Noctalia.md` — GRUB + linux-zen + Niri+Noctalia
+- [`archive/Arch Linux_Zen_Grub_Brtfs.md`](archive/Arch%20Linux_Zen_Grub_Brtfs.md) — GRUB + linux-zen + KDE
+- [`archive/Arch Linux_Zen_Grub_CachyOS.md`](archive/Arch%20Linux_Zen_Grub_CachyOS.md) — GRUB + CachyOS + KDE
+- [`archive/Arch Linux_Zen_Niri_Noctalia.md`](archive/Arch%20Linux_Zen_Niri_Noctalia.md) — GRUB + linux-zen + Niri+Noctalia
 
 ---
 

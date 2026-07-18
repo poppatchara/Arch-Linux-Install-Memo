@@ -1253,15 +1253,14 @@ sudo snapper -c boot create-config /boot
 sudo systemctl enable --now grub-btrfsd
 ```
 
-**Retention settings.** Timeline rules control how many snapshots to keep based on age. Number limits are a hard cap — safety net against runaway disk usage:
+**Retention settings.** `snap-pac` hooks already create pre/post snapshots on every `pacman` transaction — that covers `/` and `/boot` for all package updates (kernel, drivers, system tools). Timeline snapshots on top of that are redundant. Just set number limits as a hard cap:
 
 ```bash
-# root — hourly for quick undo of bad updates
-sudo snapper -c root set-config TIMELINE_CREATE=yes
-sudo snapper -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=4
+# root — no timeline, snap-pac handles package updates
+sudo snapper -c root set-config TIMELINE_CREATE=no
 sudo snapper -c root set-config NUMBER_LIMIT=15 NUMBER_LIMIT_IMPORTANT=5
 
-# home — daily snapshots only (user data changes slower)
+# home — optional light timeline (user files aren't covered by snap-pac)
 sudo snapper -c home set-config TIMELINE_CREATE=yes
 sudo snapper -c home set-config TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2
 sudo snapper -c home set-config NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=3
@@ -1271,7 +1270,7 @@ sudo snapper -c boot set-config TIMELINE_CREATE=no 2>/dev/null
 sudo snapper -c boot set-config NUMBER_LIMIT=5 NUMBER_LIMIT_IMPORTANT=3 2>/dev/null
 ```
 
-> `IMPORTANT` snapshots are pre/post snapshots from `snap-pac`. They're preserved preferentially — you don't want to lose the "before" snapshot of a kernel update.
+> `IMPORTANT` snapshots are pre/post pairs from `snap-pac`. Number limits keep them from eating your disk.
 
 Enable the timers that create and clean up snapshots:
 

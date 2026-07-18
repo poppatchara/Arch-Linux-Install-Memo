@@ -405,11 +405,20 @@ done
 # If any selected kernel needs CachyOS repos, add them to the live ISO now
 if [ "$NEED_CACHYOS" -eq 1 ]; then
   echo "→ CachyOS kernel selected — adding CachyOS repos..."
-  cd ~
-  curl -O https://mirror.cachyos.org/cachyos-repo.tar.xz
-  tar xf cachyos-repo.tar.xz && cd cachyos-repo
-  sudo ./cachyos-repo.sh
-  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+  sudo pacman-key --lsign-key F3B607488DB35A47
+  sudo pacman -U https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
+                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst
+  sudo tee -a /etc/pacman.conf <<'EOF'
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+[cachyos-v3]
+Include = /etc/pacman.d/cachyos-v3-mirrorlist
+[cachyos-v4]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+EOF
+  sudo pacman -Syy
 fi
 ```
 
@@ -761,12 +770,20 @@ cp -v /boot/initramfs-*.img /boot/limine/
 ```bash
 # 1. Add CachyOS repos (skip if already done in §3.1)
 if ! grep -q cachyos /etc/pacman.conf 2>/dev/null; then
-  sudo pacman -Syu
-  cd ~
-  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-  tar xvf cachyos-repo.tar.xz && cd cachyos-repo
-  sudo ./cachyos-repo.sh
-  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+  sudo pacman-key --lsign-key F3B607488DB35A47
+  sudo pacman -U https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
+                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst
+  sudo tee -a /etc/pacman.conf <<'EOF'
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+[cachyos-v3]
+Include = /etc/pacman.d/cachyos-v3-mirrorlist
+[cachyos-v4]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+EOF
+  sudo pacman -Syy
 fi
 
 # 2. Reinstall everything from CachyOS repos

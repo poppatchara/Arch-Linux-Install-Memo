@@ -1674,7 +1674,10 @@ Personal pick list — install what you need:
 
 ```bash
 # Core CLI + media
-sudo pacman -S --noconfirm --needed imagemagick vlc gimp obs-studio
+sudo pacman -S --noconfirm --needed imagemagick gimp obs-studio \
+  vlc vlc-plugin-ffmpeg vlc-plugin-mpeg2 vlc-plugin-x264 vlc-plugin-x265 \
+  vlc-plugin-ass vlc-plugin-matroska vlc-plugin-dvd vlc-plugin-bluray \
+  vlc-plugin-srt vlc-plugin-soxr libdvdcss libbluray
 
 # Filesystem / network
 sudo pacman -S --noconfirm --needed gvfs gvfs-smb brightnessctl

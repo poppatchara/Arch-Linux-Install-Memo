@@ -1733,7 +1733,6 @@ flatpak install -y flathub \
   io.github.shonubot.Spruce \
   org.localsend.localsend_app
 ```
-```
 
 ### 9.9 pyenv
 

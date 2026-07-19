@@ -1018,6 +1018,10 @@ Noctalia v5 is a native C++ desktop shell. It provides the bar, app launcher, do
 ```bash
 # ⬇ Installed here (yay is available from the YAY section above) ⬇
 yay -S --noconfirm --needed noctalia-git noctalia-greeter
+
+# Niri config GUI (AUR)
+yay -S --noconfirm --needed nirimod-git
+
 sudo pacman -S --noconfirm --needed greetd
 # greetd package should create the 'greetd' user — create it if missing
 id greetd 2>/dev/null || sudo useradd -r -s /sbin/nologin greetd
@@ -1708,8 +1712,27 @@ sudo pacman -S --noconfirm --needed \
 # Microsoft fonts (AUR)
 yay -S --noconfirm --needed ttf-ms-fonts
 
+# Spell check
+sudo pacman -S --noconfirm --needed hunspell hunspell-en_us hunspell-en_gb
+yay -S --noconfirm --needed hunspell-th  # Thai dictionary
+
 # Flatpak (optional — for sandboxed apps)
 sudo pacman -S --noconfirm --needed flatpak
+
+> Run this from the logged-in session (not SSH):
+
+```bash
+flatpak install -y flathub \
+  io.github.jonmagon.kdiskmark \
+  io.github.flattool.Warehouse \
+  io.missioncenter.MissionCenter \
+  xyz.z3ntu.razergenie \
+  io.github.arunsivaramanneo.GPUViewer \
+  com.kgurgul.cpuinfo \
+  org.raspberrypi.rpi-imager \
+  io.github.shonubot.Spruce \
+  org.localsend.localsend_app
+```
 ```
 
 ### 9.9 pyenv

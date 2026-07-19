@@ -851,7 +851,7 @@ systemctl enable fstrim.timer
 
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
-> - `sshd` — SSH server (we enabled password auth during install; harden in §9.6)
+> - `sshd` — SSH server (we enabled password auth during install; harden in §9.5)
 
 ---
 
@@ -1425,18 +1425,7 @@ Creates `~/Desktop`, `~/Documents`, `~/Downloads`, etc.:
 xdg-user-dirs-update
 ```
 
-### 9.2 YAY (AUR Helper)
-
-> Already installed in chroot. Skip this — yay is ready to use.
-
-```bash
-# yay was installed alongside CachyOS setup before §4.
-# Run `yay -Syu` to update AUR packages if needed.
-```
-
-> **AUR Security:** The AUR is community-maintained. Always review PKGBUILDs — look for suspicious source URLs, obfuscated commands, or curl-pipe-shell patterns. Packages marked 🔒 below need manual inspection before installing.
-
-### 9.3 CachyOS Extras (optional)
+### 9.2 CachyOS Extras (optional)
 
 > Skip if using Vanilla Arch repos. The CachyOS repos were added [after §5](#cachyos-repos-optional).
 
@@ -1458,9 +1447,9 @@ sudo systemctl enable --now ananicy-cpp
 # sudo systemctl enable --now systemd-oomd
 ```
 
-> `cachyos-settings` pulls in `ananicy-cpp` (auto process priority — games/media get higher priority, background tasks lower), `zram-generator` (compressed RAM swap), and CachyOS-specific defaults. `cachyos-gaming-meta` is a convenience bundle — you can also install gaming packages individually in §9.9.
+> `cachyos-settings` pulls in `ananicy-cpp` (auto process priority — games/media get higher priority, background tasks lower), `zram-generator` (compressed RAM swap), and CachyOS-specific defaults. `cachyos-gaming-meta` is a convenience bundle — you can also install gaming packages individually in §9.8.
 
-### 9.4 GPU Driver
+### 9.3 GPU Driver
 
 Auto-detect your GPU and install the right driver:
 
@@ -1565,7 +1554,7 @@ fi
 > - `libva-utils` — `vainfo` to verify hardware video support
 > - `vulkan-tools` — `vkcube`, `vulkaninfo` for Vulkan verification
 
-### 9.5 Snapper
+### 9.4 Snapper
 
 Snapper manages Btrfs snapshots — point-in-time copies of your subvolumes. Combined with `snap-pac` (automatic pre/post snapshots on every `pacman` transaction) and `grub-btrfs` (boot into snapshots from GRUB), you get a safety net for system updates:
 
@@ -1611,9 +1600,9 @@ Enable the timers that create and clean up snapshots:
 sudo systemctl enable --now snapper-timeline.timer snapper-cleanup.timer
 ```
 
-### 9.6 SSH Hardening
+### 9.5 SSH Hardening
 
-> ⚠️ **Do this after setting up SSH keys** (§9.2 client keygen + `ssh-copy-id`). Otherwise you'll lock yourself out.
+> ⚠️ **Do this after setting up SSH keys** (§9.1 client keygen + `ssh-copy-id`). Otherwise you'll lock yourself out.
 
 ```bash
 sudo tee -a /etc/ssh/sshd_config <<'EOF'
@@ -1644,7 +1633,7 @@ sudo systemctl restart sshd
 
 > After changing the port: `ssh -p 2222 user@host`. Update `~/.ssh/config` on your client with `Port 2222` under the host entry.
 
-### 9.7 Firewall
+### 9.6 Firewall
 
 `ufw` is a simple frontend for `iptables`/`nftables`. Default deny incoming, allow SSH:
 
@@ -1661,7 +1650,7 @@ sudo systemctl enable ufw
 
 > For KDE Connect, gaming (Steam), or local dev servers, add specific rules as needed. Desktop firewalls are mostly defense-in-depth — your router already blocks inbound traffic.
 
-### 9.8 AppArmor (optional)
+### 9.7 AppArmor (optional)
 
 AppArmor restricts what each application can do — it's Mandatory Access Control (MAC) like SELinux but simpler. Enable it with a kernel parameter, then install profiles:
 
@@ -1679,7 +1668,7 @@ sudo systemctl enable apparmor
 
 > After reboot, check: `sudo aa-status`. AppArmor needs profile packages for each app — start with `apparmor-profiles` from AUR. This is advanced; skip if you just want a working desktop.
 
-### 9.9 Extra Packages & Fonts
+### 9.8 Extra Packages & Fonts
 
 Personal pick list — install what you need:
 
@@ -1713,7 +1702,7 @@ sudo pacman -S --noconfirm --needed \
 sudo pacman -S --noconfirm --needed flatpak
 ```
 
-### 9.10 pyenv
+### 9.9 pyenv
 
 `pyenv` manages multiple Python versions per-user without conflicting with the system Python:
 
@@ -1740,7 +1729,7 @@ pyenv install 3.13.2
 pyenv global 3.13.2
 ```
 
-### 9.11 SPDIF Audio Fix (optional)
+### 9.10 SPDIF Audio Fix (optional)
 
 Some SPDIF DACs sleep after idle → first 1–3 seconds of audio get cut off. Two fixes:
 
@@ -1762,7 +1751,7 @@ EOF
 systemctl --user restart wireplumber
 ```
 
-### 9.12 Cache Cleanup
+### 9.11 Cache Cleanup
 
 Clear pacman's package cache to reclaim disk space:
 

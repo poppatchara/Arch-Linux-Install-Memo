@@ -1703,7 +1703,10 @@ sudo usermod -aG gamemode $USER
 sudo pacman -S --noconfirm --needed \
   noto-fonts noto-fonts-emoji \
   ttf-dejavu ttf-ubuntu-font-family \
-  terminus-font nerd-fonts ttf-ms-fonts
+  terminus-font nerd-fonts
+
+# Microsoft fonts (AUR)
+yay -S --noconfirm --needed ttf-ms-fonts
 
 # Flatpak (optional — for sandboxed apps)
 sudo pacman -S --noconfirm --needed flatpak

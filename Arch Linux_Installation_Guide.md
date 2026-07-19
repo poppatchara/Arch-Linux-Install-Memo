@@ -1442,8 +1442,8 @@ sudo systemctl enable --now ananicy-cpp
 # sudo pacman -S cachyos-hello
 
 # Optional: userspace OOM killer — kills bloated apps before system freezes,
-# more responsive than kernel OOM. Enable after installing systemd-oomd:
-# sudo pacman -S systemd-oomd
+# more responsive than kernel OOM. Already included in systemd — just enable:
+# (no package needed — built into systemd)
 # sudo systemctl enable --now systemd-oomd
 ```
 

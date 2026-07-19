@@ -1693,6 +1693,10 @@ sudo usermod -aG gamemode $USER
 
 # Fonts
 # noto-fonts-emoji already installed if you chose Niri (§7.2)
+
+# Custom Nerd Font — Thai + Nerd Icons (Ghostty terminal)
+# Download: https://github.com/poppatchara/NotoSansMThaiNerdFont
+# Install: cp -r NotoSansMThaiNerdFont/ ~/.local/share/fonts/ && fc-cache -f
 sudo pacman -S --noconfirm --needed \
   noto-fonts noto-fonts-emoji \
   ttf-dejavu ttf-ubuntu-font-family \

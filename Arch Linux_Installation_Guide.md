@@ -1022,6 +1022,9 @@ yay -S --noconfirm --needed noctalia-git noctalia-greeter
 # Niri config GUI (AUR)
 yay -S --noconfirm --needed nirimod-git
 
+# Idle management — screen off after inactivity
+sudo pacman -S --noconfirm --needed swayidle
+
 sudo pacman -S --noconfirm --needed greetd
 # greetd package should create the 'greetd' user — create it if missing
 id greetd 2>/dev/null || sudo useradd -r -s /sbin/nologin greetd

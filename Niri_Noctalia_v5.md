@@ -18,7 +18,8 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 8. [KDE Integration](#kde-integration)
 9. [Switch to Noctalia Greeter](#switch-to-noctalia-greeter)
 10. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
-11. [Uninstalling](#uninstalling)
+11. [Troubleshooting](#troubleshooting)
+12. [Uninstalling](#uninstalling)
 
 ---
 
@@ -181,6 +182,16 @@ sudo pacman -S --noconfirm --needed \
 | `noto-fonts-emoji` | Emoji fonts | Emoji rendering in terminal, browser, GTK apps |
 | `wl-clipboard` | CLI clipboard | `wl-copy` / `wl-paste` — clipboard from terminal and scripts |
 | `adw-gtk-theme` | GTK theme | Makes GTK apps (Firefox, VS Code) match the system look |
+| `matugen` | Material You color generation | Generates color schemes from wallpaper - Noctalia does not provide this |
+| `cliphist` | Clipboard history manager | Persistent clipboard history - Noctalia built-in clipboard is session-only |
+| `noto-fonts-cjk` | CJK fonts | Chinese, Japanese, Korean text rendering |
+| `perl-file-mimeinfo` | MIME type detection | file --mime-type backend - some apps need this for file type detection |
+| `xsettingsd` | Xsettings daemon | Reads GNOME/GTK settings - some GTK apps rely on this for theme/icons |
+| `network-manager-applet` | Network tray applet | Wi-Fi/Ethernet tray icon - Noctalia tray uses this for NM status |
+| `blueman` | Bluetooth manager | Bluetooth tray applet and device management |
+| `qt5ct` | Qt5 configuration tool | Theme/style editor for Qt5 apps (older KDE apps) |
+| `kvantum` | Qt theme engine | SVG-based Qt theme engine - needed for many custom Qt themes |
+| `fuzzel` | Wayland application launcher | Fallback launcher - Noctalia built-in launcher is primary |
 
 **KDE users:** If you already have KDE Plasma, use `xdg-desktop-portal-kde` instead of `-gnome` for better integration:
 
@@ -1310,6 +1321,42 @@ If you have NVIDIA (from your existing guide):
 | Qt apps look wrong | Missing Qt Wayland support or `qt6ct-kde` | Ensure `qt6-wayland` is installed (pulled by KDE) and `qt6ct-kde` is installed for theme consistency |
 | Dolphin "Open With" empty | Missing `xdg-utils` + `kde-cli-tools` | `sudo pacman -S --noconfirm --needed xdg-utils shared-mime-info kde-cli-tools`, then set defaults with `xdg-mime` (see [Default Applications](#default-applications)) |
 | Wallpaper wrong namespace | Using v4 namespace | Match `^noctalia-wallpaper` (Option 2) or `^noctalia-backdrop` (Option 1) |
+
+---
+
+## Troubleshooting
+
+### polkit-kde-agent -- GUI Auth Dialogs
+
+Some applications (grub-customizer, systemsettings, etc.) need a polkit authentication dialog. Without a polkit agent, these apps either fail silently or show a text prompt in the terminal.
+
+```bash
+sudo pacman -S --noconfirm --needed polkit-kde-agent
+```
+
+Add to your niri config autostart:
+
+```kdl
+spawn-at-startup "/usr/lib/polkit-kde-authentication-agent-1"
+```
+
+### DISPLAY=:0 for X11 Apps
+
+Minimal Wayland compositors like Niri do not set `DISPLAY`. Some X11 apps (including pcoip-client via XWayland) need this variable to find the XWayland display.
+
+Create `~/.config/environment.d/display.conf`:
+
+```
+DISPLAY=:0
+```
+
+And add to `~/.bashrc`:
+
+```bash
+export DISPLAY=:0
+```
+
+> **Note:** `environment.d` files use `KEY=VALUE` syntax and require **absolute paths**. They are read by systemd user services and portals on login.
 
 ---
 

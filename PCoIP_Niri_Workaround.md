@@ -29,11 +29,11 @@ The wrapper auto-detects focus transitions via `niri msg -j event-stream` and sw
 ### Flow
 
 ```
-Launch pcoip → kill nirimod → start focus watcher
+Launch pcoip → kill nirimod → failsafe check → start focus watcher
   ↓
-pcoip-client gains focus → swap to config-pcoip.kdl
+pcoip-client gains focus → save config.kdl → swap to config-pcoip.kdl
   ↓
-pcoip-client loses focus → swap to config-normal.kdl
+pcoip-client loses focus → restore config-normal.kdl
   ↓
 Exit pcoip → cleanup restores config-normal.kdl
 ```
@@ -222,6 +222,15 @@ NORMAL="$HOME/.config/niri/config-normal.kdl"
 PCOIP="$HOME/.config/niri/config-pcoip.kdl"
 STATE_FILE="/tmp/pcoip-focus-state"
 
+# Failsafe: if pcoip config is active but pcoip-client isn't focused, restore normal.
+if [ "$(cat "$STATE_FILE" 2>/dev/null)" = "ON" ]; then
+    FOCUSED_APP=$(niri msg -j focused-window 2>/dev/null | grep -oP '"app_id":\s*"\K[^"]*')
+    if [ "$FOCUSED_APP" != "pcoip-client" ]; then
+        cp "$NORMAL" "$NIRI_CONFIG"
+        echo "[pcoip] Failsafe: restored normal config (stale pcoip state)"
+    fi
+fi
+
 focus_watch() {
     local CURRENT="normal"
 
@@ -238,6 +247,7 @@ focus_watch() {
 
         if [ "$APP_ID" = "pcoip-client" ]; then
             if [ "$CURRENT" != "pcoip" ]; then
+                cp "$NIRI_CONFIG" "$NORMAL"
                 cp "$PCOIP" "$NIRI_CONFIG"
                 CURRENT="pcoip"
                 echo "ON" > "$STATE_FILE"

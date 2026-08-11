@@ -461,11 +461,10 @@ Bind it to a key:
 
 ```lua
 -- ~/.config/hypr/keybinds.lua
-hl.bind(mainMod .. " + Shift + M", hl.dsp.exec_cmd("hyprmod profile next"))   -- cycle profiles
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprmod"))                        -- open settings GUI
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprmod"))   -- open settings GUI
 ```
 
-> **Why profile cycling is useful:** you can save one profile per layout mood (e.g. "Scrolling", "Dwindle", "Gaming") and switch the whole config — including layout — with a single keybind.
+> **Why the GUI only:** HyprMod is a settings tool — tweak options with live preview, save/share profiles. It is **not** used for runtime layout switching (layout stays fixed per workspace via `hl.workspace_rule`).
 
 ---
 

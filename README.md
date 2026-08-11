@@ -33,7 +33,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **Hyprland + Celestia companion added:** New `Hyprland.md` — native scrolling layout (0.55+), Lua config (`hyprland.lua`), Celestia shell (Quickshell-based: bar/launcher/notif/lock/idle/paper/picker in one), SDDM login manager, XWayland notes. Third Desktop option in the decision matrix.
 - **ScrollOverview plugin:** Added §5 to `Hyprland.md` — Niri-style overview (zoom-out all workspaces, trackpad swipe, ALT+Tab visual switcher) via `hyprpm`, with Lua config, submap, gestures, and dispatchers.
 - **Native screenshot stack:** Added `grim` + `slurp` + `satty` + `wl-clipboard` to `Hyprland.md` — Print/SUPER+Print/CTRL+Print binds for region-annotate, fullscreen-annotate, and clipboard copy. No portal needed.
-- **HyprMod GUI settings:** Added §6 to `Hyprland.md` — live-preview settings app, profile switching via CLI (`hyprmod profile next/apply`), keybind `SUPER+Shift+M` to cycle profiles, `SUPER+M` to open GUI.
+- **HyprMod GUI settings:** Added §6 to `Hyprland.md` — live-preview settings app, `SUPER+M` opens the GUI. Settings-only (no layout-switch profile cycling).
 - **Dolphin file manager:** Added to `Hyprland.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet/Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
 
 ### 2026-07-19

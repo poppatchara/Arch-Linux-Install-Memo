@@ -11,6 +11,7 @@ Not the best way. Just the way I like.
 |-------|-------------|
 | [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file |
 | [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
+| [Hyprland + Celestia](Hyprland.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
 
 ## 🧱 Decision Matrix
 
@@ -18,7 +19,7 @@ Not the best way. Just the way I like.
 |----------|---|---|---|
 | **Kernel** | linux-zen | linux-cachyos | linux / linux-lts |
 | **Repos** | Vanilla Arch | CachyOS | |
-| **Desktop** | KDE Plasma | Niri + Noctalia | |
+| **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia |
 | **Bootloader** | GRUB | Limine | |
 
 All 4 decisions are independent. See the unified guide for detailed walkthrough.
@@ -26,6 +27,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 ---
 
 ## 📝 Changelog
+
+### 2026-08-12
+
+- **Hyprland + Celestia companion added:** New `Hyprland.md` — native scrolling layout (0.55+), Lua config (`hyprland.lua`), Celestia shell (Quickshell-based: bar/launcher/notif/lock/idle/paper/picker in one), SDDM login manager, XWayland notes. Third Desktop option in the decision matrix.
 
 ### 2026-07-19
 

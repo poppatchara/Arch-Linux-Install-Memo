@@ -14,12 +14,13 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 2. [Package Stack — Lean But Feature-Rich](#package-stack--lean-but-feature-rich)
 3. [Installation](#installation)
 4. [Configuration (Lua)](#configuration-lua)
-5. [Celestia Shell Setup](#celestia-shell-setup)
-6. [SDDM Login Manager](#sddm-login-manager)
-7. [XWayland](#xwayland)
-8. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-9. [Troubleshooting](#troubleshooting)
-10. [Uninstalling](#uninstalling)
+5. [ScrollOverview — Niri-Style Overview](#scrolloverview--niri-style-overview)
+6. [Celestia Shell Setup](#celestia-shell-setup)
+7. [SDDM Login Manager](#sddm-login-manager)
+8. [XWayland](#xwayland)
+9. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+10. [Troubleshooting](#troubleshooting)
+11. [Uninstalling](#uninstalling)
 
 ---
 
@@ -28,6 +29,7 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 | Component | Package | Source | Purpose |
 |-----------|---------|--------|---------|
 | **Hyprland** | `hyprland` | `extra` (official) | Wayland compositor with native scrolling layout |
+| **ScrollOverview** | `hyprland-scroll-overview` | plugin (hyprpm) | Niri-style overview: zoom out all workspaces, swipe gesture, ALT+Tab switcher |
 | **Celestia shell** | `caelestia-shell` | AUR | Desktop shell: bar, launcher, notifications, lock, idle, wallpaper, picker, dashboard, OSD |
 | **SDDM** | `sddm` | `extra` (official) | Login manager (≥ 0.20.0 to avoid bug #1476) |
 | **XDG Desktop Portal** | `xdg-desktop-portal-hyprland` | `extra` | Screen sharing / portal integration |
@@ -37,6 +39,7 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 **Why this stack:**
 - **Celestia replaces 6 separate tools** — no `hyprlock` / `hypridle` / `hyprpaper` / `hyprpicker` / `waybar` / `mako` needed. One Quickshell-based shell covers bar, launcher, notifications, lock screen, idle, wallpaper, color picker, dashboard, and OSD.
 - **Scrolling layout is native** in Hyprland 0.55+ — the Niri-style infinitely-growing tape paradigm, no `hyprscroller` plugin.
+- **ScrollOverview plugin adds the Niri-style overview** — zoom out to see all workspaces, trackpad swipe, and a visual ALT+Tab switcher (Hyprland has no built-in overview).
 - **No `hyprsunset`** — blue light filtering not needed on this setup.
 
 **Key differences from Niri + Noctalia:**
@@ -50,6 +53,7 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 
 ```
 hyprland                      # compositor (official tagged release — NOT -git)
+hyprland-scroll-overview      # overview plugin (via hyprpm — Niri-style overview)
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
 xdg-desktop-portal-hyprland   # screen share + portal
 hyprpolkitagent               # polkit auth dialogs
@@ -80,7 +84,18 @@ sudo pacman -S xdg-desktop-portal-hyprland hyprpolkitagent sddm
 
 > **Why:** `xdg-desktop-portal-hyprland` (XDPH) enables screen sharing under Wayland (also required for DBus global shortcuts). `hyprpolkitagent` shows GUI auth dialogs (e.g. package managers). `sddm` is the login manager.
 
-### 3. Install Celestia shell (AUR)
+### 3. Install ScrollOverview plugin (Niri-style overview)
+
+```bash
+# Add the plugin repository and build it
+hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
+hyprpm update
+hyprpm enable scrolloverview
+```
+
+> **Why:** Hyprland has no built-in overview (unlike Niri's `Mod+R`). ScrollOverview adds the Niri-style zoomed-out overview of all workspaces, a trackpad swipe gesture, and a visual ALT+Tab switcher. `hyprpm` is Hyprland's bundled plugin manager. If you run a git build of Hyprland, add the `new-release` branch instead: `hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git origin/new-release`.
+
+### 4. Install Celestia shell (AUR)
 
 ```bash
 yay -S caelestia-shell
@@ -207,6 +222,9 @@ hl.bind(mainMod .. " + Shift + F", hl.dsp.layout("fit active"))     -- fit activ
 hl.bind(mainMod .. " + Shift + C", hl.dsp.layout("fit_into_view"))  -- fit active into view
 
 --  Workspaces
+hl.bind(mainMod .. " + G", function()
+  hl.plugin.scrolloverview.overview("toggle all")   -- Niri-style overview
+end)
 for i = 1, 9 do
   hl.bind(mainMod .. " + " .. i, hl.workspace(i))
   hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
@@ -286,6 +304,90 @@ hl.bind(mainMod .. " + P", hl.dsp.global("caelestia:picker"))
 ```
 
 > **Why `hl.dsp.global`:** Celestia registers its actions through the GlobalShortcuts portal (XDPH). `hl.dsp.global("app:action")` binds Hyprland keys to those registered shortcuts. Find the exact action names with `hyprctl globalshortcuts` after launching the shell.
+
+---
+
+## ScrollOverview — Niri-Style Overview
+
+[ScrollOverview](https://github.com/yayuuu/hyprland-scroll-overview) adds what Hyprland lacks out of the box: a **Niri-style overview** — zoom out to see all workspaces at once, like macOS Mission Control. It also provides a trackpad swipe gesture and a visual ALT+Tab switcher.
+
+### 5.1 Basic configuration
+
+```lua
+-- ~/.config/hypr/hyprland.lua
+hl.config({
+  plugin = {
+    scrolloverview = {
+      gesture_distance = 300,  -- how far is the "max" for the gesture
+      scale = 0.5,             -- overview scale [0.1-0.9]
+      workspace_gap = 100,     -- gap between workspace cards, px
+      layout = "vertical",     -- vertical or horizontal
+      wallpaper = 2,           -- 0: global only, 1: per-workspace only, 2: both
+      blur = true,             -- blur the main overview wallpaper only
+      shadow = {
+        enabled = true,
+        range = 50,
+      },
+    },
+  },
+})
+
+-- Toggle overview on all monitors with SUPER+g
+hl.bind("SUPER + g", function()
+  hl.plugin.scrolloverview.overview("toggle all")
+end)
+```
+
+### 5.2 Keybind submap (custom overview navigation)
+
+Defining a `scrolloverview` submap replaces the built-in keyboard navigation while the overview is open. The submap activates automatically when the overview opens:
+
+```lua
+hl.define_submap("scrolloverview", function()
+  hl.bind("left",   hl.plugin.scrolloverview.navigate("left"))
+  hl.bind("right",  hl.plugin.scrolloverview.navigate("right"))
+  hl.bind("up",     hl.plugin.scrolloverview.navigate("up"))
+  hl.bind("down",   hl.plugin.scrolloverview.navigate("down"))
+  hl.bind("return", hl.plugin.scrolloverview.overview("select"))
+  hl.bind("escape", hl.plugin.scrolloverview.overview("off"))
+end)
+```
+
+> **Note:** while the submap is active, regular Hyprland binds are not handled by default — add `{ submap_universal = true }` to any bind that must keep working (e.g. `ALT + 1..0` workspace switching).
+
+### 5.3 Trackpad gestures
+
+```lua
+-- 3-finger vertical swipe opens/closes the overview
+hl.plugin.scrolloverview.gesture({ fingers = 3, direction = "vertical" })
+-- 4-finger swipe with SUPER held, stronger scale
+hl.plugin.scrolloverview.gesture({ fingers = 4, direction = "vertical", mod = "SUPER", scale = 1.5 })
+```
+
+### 5.4 Dispatchers (IPC)
+
+All actions work from Lua or via `hyprctl dispatch` — useful for scripts, bars, launchers:
+
+```bash
+hyprctl dispatch 'hl.plugin.scrolloverview.overview("toggle")'
+hyprctl dispatch 'hl.plugin.scrolloverview.navigate("left")'
+hyprctl dispatch 'hl.plugin.scrolloverview.window("close")'
+```
+
+Available dispatchers: `overview` (`toggle/select/open/close/off`, with optional `all` or monitor name), `navigate` (`left/right/up/down`), `window` (`select`/`close`).
+
+### 5.5 ALT+Tab visual switcher
+
+ScrollOverview can act as a visual ALT+Tab — opens a compact horizontal overview and advances to the next column. The full recipe lives in the plugin's [`ALT-Tab-overview.md`](https://github.com/yayuuu/hyprland-scroll-overview/blob/new-release/docs/wiki/ALT-Tab-overview.md) — it's a Lua module (~60 lines) that tracks selection state and wraps to the first column. Summary: create `~/.config/hypr/scripts/alttab.lua` with `M.next()`, then bind:
+
+```lua
+hl.bind("ALT + Tab", function()
+  hl.plugin.scrolloverview.overview("open")
+  require("scripts.alttab").next()
+end)
+```
+
+> **Why this plugin and not `hyprscroller`:** the scrolling **layout** is already native in 0.55+ — ScrollOverview only fills the *overview* gap (zoom-out, swipe, ALT+Tab). It's the missing piece that makes Hyprland feel like Niri.
 
 ---
 
@@ -412,6 +514,17 @@ Bug [#1476](https://github.com/sddm/sddm/issues/1476) — fixed in SDDM ≥ 0.20
 - Check the autostart hook fired: `hyprctl -j events` and look for startup errors.
 - Quickshell must be the **git** version — `quickshell-git` (tagged release will fail to load Celestia).
 - Missing fonts: Celestia needs `material-symbols` + a Nerd Font (e.g. `caskaydia-cove-nerd`).
+
+### ScrollOverview won't load / `.so` mismatch after Hyprland update
+
+`hyprpm` plugins are built against your exact Hyprland version. After a Hyprland update, rebuild the plugin:
+
+```bash
+hyprpm update      # rebuild + fetch dependencies
+hyprpm enable scrolloverview
+```
+
+If you run a git build of Hyprland, the plugin must come from the `new-release` branch (see §3) — and expect to recompile on every compositor update.
 
 ### XWayland apps blurry on HiDPI
 

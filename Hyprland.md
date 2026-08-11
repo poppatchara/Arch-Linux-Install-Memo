@@ -15,12 +15,13 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 3. [Installation](#installation)
 4. [Configuration (Lua)](#configuration-lua)
 5. [ScrollOverview — Niri-Style Overview](#scrolloverview--niri-style-overview)
-6. [Celestia Shell Setup](#celestia-shell-setup)
-7. [SDDM Login Manager](#sddm-login-manager)
-8. [XWayland](#xwayland)
-9. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-10. [Troubleshooting](#troubleshooting)
-11. [Uninstalling](#uninstalling)
+6. [HyprMod — GUI Settings](#hyprmod--gui-settings)
+7. [Celestia Shell Setup](#celestia-shell-setup)
+8. [SDDM Login Manager](#sddm-login-manager)
+9. [XWayland](#xwayland)
+10. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+11. [Troubleshooting](#troubleshooting)
+12. [Uninstalling](#uninstalling)
 
 ---
 
@@ -57,6 +58,7 @@ hyprland-scroll-overview      # overview plugin (via hyprpm — Niri-style overv
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
 grim slurp satty              # screenshots: capture + region select + native annotation
 wl-clipboard                  # Wayland clipboard (screenshot copy)
+hyprmod                       # GUI settings app (GTK4/libadwaita) — live tweak + profiles
 xdg-desktop-portal-hyprland   # screen share + portal
 hyprpolkitagent               # polkit auth dialogs
 sddm                          # login manager (>= 0.20.0)
@@ -115,7 +117,15 @@ yay -S caelestia-shell
 >
 > Prefer the **stable** package `caelestia-shell` over `caelestia-shell-git` (bleeding edge, unstable).
 
-### 6. Enable SDDM
+### 6. Install HyprMod (GUI settings app)
+
+```bash
+yay -S hyprmod
+```
+
+> **Why:** HyprMod is a native GTK4/libadwaita settings app for Hyprland — tweak any option with **live preview**, undo with Ctrl+Z, and save/share complete configs as **profiles**. It writes only to its own `hyprland-gui.conf`, never touching your main config. Requires Python 3.12+, GTK4, libadwaita (pulled automatically on Arch).
+
+### 7. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -123,7 +133,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 7. Verify
+### 8. Verify
 
 ```bash
 hyprctl version
@@ -403,6 +413,45 @@ end)
 ```
 
 > **Why this plugin and not `hyprscroller`:** the scrolling **layout** is already native in 0.55+ — ScrollOverview only fills the *overview* gap (zoom-out, swipe, ALT+Tab). It's the missing piece that makes Hyprland feel like Niri.
+
+---
+
+## HyprMod — GUI Settings
+
+[HyprMod](https://github.com/BlueManCZ/hyprmod) is a native GTK4/libadwaita settings app for Hyprland. It edits your running compositor **live** — tweak any option, see it change instantly, undo with Ctrl+Z, and save/share complete configurations as `.conf` profiles.
+
+### What it manages
+
+- **General / decoration / animation** options with live preview
+- **Bezier curve editor** — control points + live animation preview
+- **Monitor layout editor** — multi-monitor preview, VRR, 10-bit, HDR controls with safe defaults
+- **Keybind editor** — interactive key capture, incl. mouse-drag (`bindm`) binds
+- **Window / layer / workspace rules** editors with live preview
+- **Autostart** (`exec` / `exec-once`) and environment variables
+- **Lua config support** — migrate and edit `hyprland.lua` (0.55+) directly
+- **Pending Changes page** — review every unsaved edit before saving
+- **Config DNA** — a unique visual fingerprint per profile
+
+> **Why it's safe:** HyprMod writes only to its own `hyprland-gui.conf`, never touching your main `hyprland.lua`. Profiles are plain `.conf` files you can save, name, and share.
+
+### CLI — switch profiles from a keybind
+
+```bash
+hyprmod profile list            # show saved profiles (active marked with *)
+hyprmod profile apply Gaming    # switch to a profile by name (case-insensitive)
+hyprmod profile next            # cycle to the next profile (alphabetical, wraps)
+hyprmod profile previous        # cycle to the previous one
+```
+
+Bind it to a key:
+
+```lua
+-- ~/.config/hypr/keybinds.lua
+hl.bind(mainMod .. " + Shift + M", hl.dsp.exec_cmd("hyprmod profile next"))   -- cycle profiles
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprmod"))                        -- open settings GUI
+```
+
+> **Why profile cycling is useful:** you can save one profile per layout mood (e.g. "Scrolling", "Dwindle", "Gaming") and switch the whole config — including layout — with a single keybind.
 
 ---
 

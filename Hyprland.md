@@ -222,15 +222,15 @@ hl.bind(mainMod .. " + Shift + F", hl.dsp.layout("fit active"))     -- fit activ
 hl.bind(mainMod .. " + Shift + C", hl.dsp.layout("fit_into_view"))  -- fit active into view
 
 --  Workspaces
-hl.bind(mainMod .. " + G", function()
+hl.bind(mainMod .. " + Tab", function()
   hl.plugin.scrolloverview.overview("toggle all")   -- Niri-style overview
 end)
 for i = 1, 9 do
   hl.bind(mainMod .. " + " .. i, hl.workspace(i))
   hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
 end
-hl.bind(mainMod .. " + Tab", hl.dsp.workspace("e+1"))               -- next workspace
-hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))       -- prev workspace
+hl.bind(mainMod .. " + E", hl.dsp.workspace("e+1"))                -- next empty workspace
+hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))      -- prev workspace
 
 --  System
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("caelestia shell lock lock"))   -- lock (Celestia)
@@ -332,8 +332,8 @@ hl.config({
   },
 })
 
--- Toggle overview on all monitors with SUPER+g
-hl.bind("SUPER + g", function()
+-- Toggle overview on all monitors with SUPER+Tab
+hl.bind("SUPER + Tab", function()
   hl.plugin.scrolloverview.overview("toggle all")
 end)
 ```

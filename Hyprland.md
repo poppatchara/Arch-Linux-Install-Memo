@@ -17,11 +17,12 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 5. [ScrollOverview — Niri-Style Overview](#scrolloverview--niri-style-overview)
 6. [HyprMod — GUI Settings](#hyprmod--gui-settings)
 7. [Celestia Shell Setup](#celestia-shell-setup)
-8. [SDDM Login Manager](#sddm-login-manager)
-9. [XWayland](#xwayland)
-10. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-11. [Troubleshooting](#troubleshooting)
-12. [Uninstalling](#uninstalling)
+8. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
+9. [SDDM Login Manager](#sddm-login-manager)
+10. [XWayland](#xwayland)
+11. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+12. [Troubleshooting](#troubleshooting)
+13. [Uninstalling](#uninstalling)
 
 ---
 
@@ -59,6 +60,10 @@ caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/pape
 grim slurp satty              # screenshots: capture + region select + native annotation
 wl-clipboard                  # Wayland clipboard (screenshot copy)
 hyprmod                       # GUI settings app (GTK4/libadwaita) — live tweak + profiles
+dolphin                       # file manager (KDE — familiar, feature-rich)
+xdg-utils                     # MIME type & default apps (xdg-open, xdg-mime)
+gvfs-mtp                      # Android/phone file transfer (mount MTP in Dolphin)
+plasma-integration kded       # KDE file dialogs + Qt platform theme (for Dolphin)
 xdg-desktop-portal-hyprland   # screen share + portal
 hyprpolkitagent               # polkit auth dialogs
 sddm                          # login manager (>= 0.20.0)
@@ -125,7 +130,15 @@ yay -S hyprmod
 
 > **Why:** HyprMod is a native GTK4/libadwaita settings app for Hyprland — tweak any option with **live preview**, undo with Ctrl+Z, and save/share complete configs as **profiles**. It writes only to its own `hyprland-gui.conf`, never touching your main config. Requires Python 3.12+, GTK4, libadwaita (pulled automatically on Arch).
 
-### 7. Enable SDDM
+### 7. Install Dolphin (file manager)
+
+```bash
+sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
+```
+
+> **Why Dolphin:** familiar from the KDE/Niri setup — split view, tabs, terminal panel, search. `xdg-utils` makes "Open With" work (MIME + default apps), `gvfs-mtp` adds Android/phone transfer, `plasma-integration` + `kded` give KDE apps proper theming, file dialogs, trash support, and KIO network transparency. See [KDE Apps on Hyprland](#kde-apps-on-hyprland) below for the full integration setup.
+
+### 8. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -133,7 +146,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 8. Verify
+### 9. Verify
 
 ```bash
 hyprctl version
@@ -249,8 +262,9 @@ for i = 1, 9 do
   hl.bind(mainMod .. " + " .. i, hl.workspace(i))
   hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
 end
-hl.bind(mainMod .. " + E", hl.dsp.workspace("e+1"))                -- next empty workspace
-hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))      -- prev workspace
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))                 -- file manager
+hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                    -- next empty workspace
+hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))          -- prev workspace
 
 --  Screenshots (grim + slurp + satty — native)
 hl.bind("Print", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))              -- region → annotate
@@ -474,6 +488,113 @@ caelestia shell -s                 # list all IPC targets/functions
 4. **Keybinds** — if not using the full caelestia dots, wire global shortcuts yourself (see §4.5). The shell exposes drawers/notifs/lock/mpris/picker/wallpaper targets via IPC.
 
 > **Customization:** do **not** edit files installed by the AUR package — follow the [manual installation section](https://github.com/caelestia-dots/shell#manual-installation) and clone the repo into `~/.config/quickshell/caelestia` for local tweaks.
+
+---
+
+## KDE Apps on Hyprland
+
+KDE apps (Dolphin, Kate, Okular) run fine standalone, but they need background services for full functionality — file dialogs, theme consistency, trash support, network transparency.
+
+### Required Services
+
+```bash
+sudo pacman -S plasma-integration kded
+```
+
+| Package | Provides | What breaks without it |
+|---------|----------|----------------------|
+| `plasma-integration` | Qt Platform Theme | KDE apps use ugly fallback theme, wrong fonts & colors |
+| `kded` | KDE Daemon (`kded6`) | KDE file dialogs fail, mime types wrong, no trash support, `kioclient` broken |
+
+### Autostart KDE Daemon
+
+Add to `~/.config/hypr/keybinds.lua` (or your autostart file):
+
+```lua
+hl.exec("kded6")   -- KDE daemon (file dialogs, trash, KIO)
+```
+
+> **Plasma 5 → 6:** Use `kded6` for Plasma 6 (Arch default). For older Plasma 5 systems: `kded5`.
+
+### What KDE Apps Gain
+
+| Feature | Without Services | With `plasma-integration` + `kded6` |
+|---------|-----------------|--------------------------------------|
+| **Theme** | Qt fallback (ugly) | Breeze theme, colors, fonts |
+| **File Dialogs** | GTK fallback or broken | Native KDE file picker |
+| **Trash** | Delete only (no restore) | Trash support with restore |
+| **Network** | Some KIO fails | Full KIO (sftp, fish, smb) |
+| **Mime types** | Generic icons | Proper file type icons |
+| **KWallet** | May prompt endlessly | Integrated password storage |
+
+### Secret Storage
+
+KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Code, Chromium, Firefox) need GNOME Keyring via `libsecret`. Install both — they coexist:
+
+```bash
+sudo pacman -S gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
+```
+
+> **SDDM auto-unlock:** unlike the Niri guide's greetd setup, SDDM ships with `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch. Verify they're present (`grep -i kwallet /etc/pam.d/sddm`) — if missing, add the same `auth optional` / `session optional` lines from the Niri guide. KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+
+### Dolphin "Open With" Blank Popup Fix
+
+The most common issue: Dolphin shows an empty "Choose Application" dialog when opening files. This happens because KDE 6 renamed `applications.menu` to `plasma-applications.menu`, and `kbuildsycoca6` can't find it without `XDG_MENU_PREFIX=plasma-`.
+
+**Root cause:** `kbuildsycoca6` — the KDE system configuration cache — is what populates Dolphin's "Open With" list. Without the menu file, it builds an empty database. The `plasma-applications.menu` file ships with `plasma-workspace` and lives at `/etc/xdg/menus/`.
+
+**The fix requires three things:**
+
+1. Set `XDG_MENU_PREFIX=plasma-` in your environment (so KDE looks for `plasma-applications.menu` instead of `applications.menu`)
+
+2. Rebuild the KDE cache:
+
+```bash
+XDG_MENU_PREFIX=plasma- kbuildsycoca6 --noincremental
+```
+
+3. Auto-start `kded6` (already done above).
+
+**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND Hyprland's Lua config via `hl.env()` (so compositor-spawned apps see them). Systemd user services and portals can't read the compositor's env.
+
+Create `~/.config/environment.d/10-kde-on-hyprland.conf`:
+
+> **Important:** environment.d files use `KEY=VALUE` syntax and require **absolute paths**. `$HOME` and `%h` do NOT expand here.
+
+```ini
+QT_QPA_PLATFORM=wayland
+QT_QPA_PLATFORMTHEME=kde
+QT_QPA_PLATFORMTHEME_QT6=kde
+QT_STYLE_OVERRIDE=breeze
+XDG_MENU_PREFIX=plasma-
+XDG_DATA_DIRS=/home/$USER/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+QT_AUTO_SCREEN_SCALE_FACTOR=1
+QT_ENABLE_HIGHDPI_SCALING=1
+QT_SCALE_FACTOR_ROUNDING_POLICY=RoundPreferFloor
+GTK_USE_PORTAL=1
+```
+
+Mirror the same in Hyprland's Lua config (`~/.config/hypr/environment.lua` or top of `hyprland.lua`):
+
+```lua
+hl.env("QT_QPA_PLATFORM", "wayland")
+hl.env("QT_QPA_PLATFORMTHEME", "kde")
+hl.env("QT_QPA_PLATFORMTHEME_QT6", "kde")
+hl.env("QT_STYLE_OVERRIDE", "breeze")
+hl.env("XDG_MENU_PREFIX", "plasma-")
+hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
+hl.env("QT_ENABLE_HIGHDPI_SCALING", "1")
+hl.env("QT_SCALE_FACTOR_ROUNDING_POLICY", "RoundPreferFloor")
+hl.env("GTK_USE_PORTAL", "1")
+```
+
+| Variable | Why |
+|----------|-----|
+| `QT_QPA_PLATFORMTHEME=kde` | Use KDE's `plasma-integration` for theming (NOT `gtk3`/`qt6ct`) — lets `systemsettings` control Qt themes |
+| `QT_STYLE_OVERRIDE=breeze` | Forces Breeze widget style even when Plasma isn't running |
+| `XDG_MENU_PREFIX=plasma-` | **Critical:** tells `kbuildsycoca6` to use `/etc/xdg/menus/plasma-applications.menu` — without this, Dolphin's "Open With" is empty |
+| `GTK_USE_PORTAL=1` | Forces GTK apps to use the portal file picker (so they respect your KDE picker preference) |
+| `XDG_DATA_DIRS` | Exposes Flatpak apps to KDE the same way Plasma does |
 
 ---
 

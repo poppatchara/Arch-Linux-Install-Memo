@@ -1,6 +1,8 @@
 # PCoIP Remote Desktop — Niri Keyboard Passthrough Workaround
 
-pcoip-client (HP Anyware) runs on Niri via XWayland but does **not** capture keyboard shortcuts (Mod/Super, Alt+Tab, Mod+drag) because Niri intercepts them at the compositor level.
+pcoip-client (HP Anyware) runs natively on Wayland under Niri but does **not** capture keyboard shortcuts (Mod/Super, Alt+Tab, Mod+drag) because Niri intercepts them at the compositor level.
+
+> **Prerequisite:** the `pcoip-client` package must be built with the native Wayland fix (vendored Qt 6.9 Wayland client + kept Wayland platform plugins). See the [pcoip-client repo](https://github.com/pop/pcoip-client).
 
 ---
 
@@ -161,22 +163,7 @@ These binds are preserved (not commented out) in `config-pcoip.kdl`:
 
 ## Qt Compatibility
 
-pcoip-client bundles **Qt 6.9.3** which conflicts with the system Qt 6.11.0 Wayland plugin (`qt6-wayland`). The bundled Qt loads the system's Wayland plugin, causing crashes or rendering issues.
-
-**Fix:** Force xcb (XWayland) backend with `DISPLAY=:0` and unset KDE Qt environment variables that interfere:
-
-```bash
-unset QT_STYLE_OVERRIDE
-unset QT_SCALE_FACTOR_ROUNDING_POLICY
-unset QT_AUTO_SCREEN_SCALE_FACTOR
-unset QT_ENABLE_HIGHDPI_SCALING
-unset QT_QPA_PLATFORMTHEME
-unset QT_QPA_PLATFORMTHEME_QT6
-
-export QT_QPA_PLATFORM=xcb
-```
-
-The wrapper script handles this automatically before launching `pcoip-client`.
+The pcoip-client package bundles Qt 6.9.3 and now vendors matching Qt 6.9 `libQt6WaylandClient`/`libQt6WaylandEglClientHwIntegration` libs, keeping the upstream Wayland Qt platform plugins. The package wrapper prefers native Wayland when `WAYLAND_DISPLAY` is set and falls back to X11/XCB, so no manual `QT_QPA_PLATFORM` tweaking is needed.
 
 ---
 
@@ -280,7 +267,8 @@ focus_watch &
 WATCH_PID=$!
 trap cleanup EXIT INT TERM
 
-# Unset KDE/Plasma Qt env vars that conflict with pcoip-client bundled Qt 6.9.3
+# Unset KDE/Plasma Qt env vars that conflict with pcoip-client bundled Qt 6.9.3.
+# The package wrapper (/usr/bin/pcoip-client) picks native Wayland automatically.
 unset QT_STYLE_OVERRIDE
 unset QT_SCALE_FACTOR_ROUNDING_POLICY
 unset QT_AUTO_SCREEN_SCALE_FACTOR
@@ -288,7 +276,6 @@ unset QT_ENABLE_HIGHDPI_SCALING
 unset QT_QPA_PLATFORMTHEME
 unset QT_QPA_PLATFORMTHEME_QT6
 
-export QT_QPA_PLATFORM=xcb
 exec pcoip-client "$@"
 ```
 
@@ -309,4 +296,4 @@ pcoip
 | **PCoIP focused** | Whitelist only (~17 active) | → remote | → remote |
 | **Other window** | All 110+ normal | Niri switcher | No-op (permanent) |
 
-> **Note:** xwayland-satellite issue [#220](https://github.com/Supreeeme/xwayland-satellite/issues/220) (`xwayland-keyboard-grab`) is still open. KDE/KWin handles this natively via `XGrabKeyboard` support.
+> **Note:** Niri's `toggle-keyboard-shortcuts-inhibit` escape hatch only toggles an inhibitor the app already requested; HP's client never requests `zwp_keyboard_shortcuts_inhibit_v1`, so the config-swap approach above is required. The client now runs natively on Wayland (no XWayland/xwayland-satellite in the input path).

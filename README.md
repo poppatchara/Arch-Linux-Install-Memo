@@ -32,6 +32,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 - **Hyprland + Celestia companion added:** New `Hyprland.md` — native scrolling layout (0.55+), Lua config (`hyprland.lua`), Celestia shell (Quickshell-based: bar/launcher/notif/lock/idle/paper/picker in one), SDDM login manager, XWayland notes. Third Desktop option in the decision matrix.
 - **ScrollOverview plugin:** Added §5 to `Hyprland.md` — Niri-style overview (zoom-out all workspaces, trackpad swipe, ALT+Tab visual switcher) via `hyprpm`, with Lua config, submap, gestures, and dispatchers.
+- **Native screenshot stack:** Added `grim` + `slurp` + `satty` + `wl-clipboard` to `Hyprland.md` — Print/SUPER+Print/CTRL+Print binds for region-annotate, fullscreen-annotate, and clipboard copy. No portal needed.
 
 ### 2026-07-19
 

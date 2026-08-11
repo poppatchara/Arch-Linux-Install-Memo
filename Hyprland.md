@@ -55,6 +55,8 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 hyprland                      # compositor (official tagged release — NOT -git)
 hyprland-scroll-overview      # overview plugin (via hyprpm — Niri-style overview)
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
+grim slurp satty              # screenshots: capture + region select + native annotation
+wl-clipboard                  # Wayland clipboard (screenshot copy)
 xdg-desktop-portal-hyprland   # screen share + portal
 hyprpolkitagent               # polkit auth dialogs
 sddm                          # login manager (>= 0.20.0)
@@ -95,7 +97,15 @@ hyprpm enable scrolloverview
 
 > **Why:** Hyprland has no built-in overview (unlike Niri's `Mod+R`). ScrollOverview adds the Niri-style zoomed-out overview of all workspaces, a trackpad swipe gesture, and a visual ALT+Tab switcher. `hyprpm` is Hyprland's bundled plugin manager. If you run a git build of Hyprland, add the `new-release` branch instead: `hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git origin/new-release`.
 
-### 4. Install Celestia shell (AUR)
+### 4. Install screenshot stack (native)
+
+```bash
+sudo pacman -S grim slurp satty wl-clipboard
+```
+
+> **Why:** `grim` captures the screen (Wayland-native, freedesktop), `slurp` selects a region, `satty` annotates (native GTK/Adwaita, OpenGL-accelerated, wlroots — Hyprland wiki's recommended annotation tool), `wl-clipboard` copies to the Wayland clipboard. No portal needed — this is the lean, native stack. (Flameshot works but is X11-first and relies on portal support on Wayland.)
+
+### 5. Install Celestia shell (AUR)
 
 ```bash
 yay -S caelestia-shell
@@ -105,7 +115,7 @@ yay -S caelestia-shell
 >
 > Prefer the **stable** package `caelestia-shell` over `caelestia-shell-git` (bleeding edge, unstable).
 
-### 4. Enable SDDM
+### 6. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -113,7 +123,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 5. Verify
+### 7. Verify
 
 ```bash
 hyprctl version
@@ -231,6 +241,11 @@ for i = 1, 9 do
 end
 hl.bind(mainMod .. " + E", hl.dsp.workspace("e+1"))                -- next empty workspace
 hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))      -- prev workspace
+
+--  Screenshots (grim + slurp + satty — native)
+hl.bind("Print", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))              -- region → annotate
+hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd('grim - | satty -f -'))               -- fullscreen → annotate
+hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))         -- region → clipboard
 
 --  System
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("caelestia shell lock lock"))   -- lock (Celestia)

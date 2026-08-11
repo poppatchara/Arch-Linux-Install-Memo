@@ -528,11 +528,13 @@ hl.exec("kded6")   -- KDE daemon (file dialogs, trash, KIO)
 
 ### Secret Storage
 
-KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Code, Chromium, Firefox) need GNOME Keyring via `libsecret`. Install both — they coexist:
+KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Code, Chromium, Firefox) use `libsecret` → the Secret Service DBus API. **KWallet alone covers both** — it ships a Secret Service interface, so GTK apps can use it as their provider. No GNOME Keyring needed (lean):
 
 ```bash
-sudo pacman -S gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
+sudo pacman -S kwallet kwalletmanager kwallet-pam libsecret
 ```
+
+> **Enable the Secret Service interface:** open KWallet settings (System Settings → KDE Wallet) and check **"Enable the KWallet Secret Service interface"** — otherwise GTK apps can't see the wallet. (GNOME Keyring is only needed for `gnome-online-accounts` or if you want a separate secret store.)
 
 > **SDDM auto-unlock:** unlike the Niri guide's greetd setup, SDDM ships with `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch. Verify they're present (`grep -i kwallet /etc/pam.d/sddm`) — if missing, add the same `auth optional` / `session optional` lines from the Niri guide. KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 

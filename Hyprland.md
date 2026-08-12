@@ -241,7 +241,7 @@ hl.config({
 
 ### 4.2 Keybinds (`keybinds.lua`)
 
-> **Niri-style:** these binds mirror the Niri muscle memory — `SUPER+T` terminal, `SUPER+Space` launcher, `SUPER+H/J/K/L` + arrows for column/window focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F`/`SUPER+Shift+F` maximize/fullscreen, `SUPER+C` center, `SUPER+E` file manager, `SUPER+Tab` overview, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
+> **Niri-style:** these binds mirror the Niri muscle memory — `SUPER+T` terminal, `SUPER+Space` launcher, `SUPER+H/J/K/L` + arrows for column/window focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F`/`SUPER+Shift+F` maximize/fullscreen, `SUPER+C` center, `SUPER+E` file manager, `SUPER+Tab` overview, `SUPER+U/I` + `SUPER+Shift+scroll` workspace navigation, `SUPER+scroll` column focus, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
 
 ```lua
 -- ~/.config/hypr/keybinds.lua
@@ -280,6 +280,12 @@ hl.bind(mainMod .. " + Ctrl + Right", hl.dsp.layout("swapcol r"))
 hl.bind(mainMod .. " + period", hl.dsp.layout("move +col"))        -- scroll right by column
 hl.bind(mainMod .. " + comma", hl.dsp.layout("move -col"))         -- scroll left by column
 
+--  Mouse wheel (Niri: Mod+scroll focus column, Mod+Shift+scroll focus workspace)
+hl.bind(mainMod .. " + mouse_down", hl.dsp.layout("focus r"))      -- scroll down → next column
+hl.bind(mainMod .. " + mouse_up", hl.dsp.layout("focus l"))        -- scroll up → prev column
+hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.workspace("+1"))   -- shift+scroll down → next workspace
+hl.bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.workspace("-1"))     -- shift+scroll up → prev workspace
+
 --  Scrolling layout: column width + fit (Niri: Mod+R preset, Mod+F maximize, Mod+Shift+F fullscreen, Mod+C center)
 hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))       -- cycle width presets
 hl.bind(mainMod .. " + F", hl.dsp.layout("fit expand"))            -- maximize window to free space
@@ -296,6 +302,10 @@ for i = 1, 9 do
 end
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))             -- file manager (Niri: Mod+E)
 hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                -- next empty workspace
+hl.bind(mainMod .. " + U", hl.dsp.workspace("+1"))                 -- next workspace (Niri: focus-workspace-down)
+hl.bind(mainMod .. " + I", hl.dsp.workspace("-1"))                 -- prev workspace (Niri: focus-workspace-up)
+hl.bind(mainMod .. " + SHIFT + U", hl.dsp.movetoworkspace("+1"))   -- move window to next workspace
+hl.bind(mainMod .. " + SHIFT + I", hl.dsp.movetoworkspace("-1"))   -- move window to prev workspace
 
 --  Screenshots (Niri: Print full, Mod+Shift+S region)
 hl.bind("Print", hl.dsp.exec_cmd('grim - | satty -f -'))                      -- fullscreen → annotate

@@ -322,6 +322,39 @@ hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     
 >
 > **Keybind callbacks must not block** — the compositor event loop runs them. Use `hl.dsp.exec_cmd(...)` for anything external; don't call `wl-paste`/`io.popen`/network I/O inside a bind function (a hung bind freezes the whole desktop).
 
+#### Niri → Hyprland shortcut map
+
+These binds mirror Niri muscle memory (verified against a real Niri config). `SUPER` = Niri's `Mod`.
+
+| Action | Niri | Hyprland (this guide) |
+|--------|------|----------------------|
+| Terminal | `Mod+T` | `SUPER+T` |
+| Launcher | `Mod+Space` / `Mod+D` | `SUPER+Space` (Walker) |
+| Close window | `Mod+Q` | `SUPER+Q` |
+| Toggle floating | `Mod+V` | `SUPER+V` |
+| File manager | `Mod+E` | `SUPER+E` (Dolphin) |
+| Focus column L/R | `Mod+H/L` + arrows | `SUPER+H/L` + arrows |
+| Focus window U/D | `Mod+J/K` + arrows | `SUPER+J/K` + arrows |
+| First/last column | `Mod+Home/End` | `SUPER+Home/End` |
+| Move column L/R | `Mod+Ctrl+H/L` | `SUPER+Ctrl+H/L` (swapcol) |
+| Scroll column focus | `Mod+WheelScroll*` | `SUPER+mouse_up/down` |
+| Scroll workspace | `Mod+Shift+WheelScroll*` | `SUPER+SHIFT+mouse_up/down` |
+| Column width presets | `Mod+R` / `Mod+Shift+R` | `SUPER+R` (forward) |
+| Maximize | `Mod+F` | `SUPER+F` (`fit expand`) |
+| Fullscreen | `Mod+Shift+F` | `SUPER+Shift+F` |
+| Center column | `Mod+C` | `SUPER+C` (`fit_into_view`) |
+| Overview | `Mod+Tab` / `Mod+O` | `SUPER+Tab` (ScrollOverview) |
+| Workspace 1-9 | `Mod+1..9` | `SUPER+1..9` |
+| Move window to ws | `Mod+Ctrl+1..9` | `SUPER+SHIFT+1..9` |
+| Focus ws up/down | `Mod+U/I` | `SUPER+U/I` |
+| Move to ws up/down | `Mod+Shift+U/I` | `SUPER+SHIFT+U/I` |
+| Screenshot full | `Print` | `Print` (grim + satty) |
+| Screenshot region | `Mod+Shift+S` | `SUPER+Shift+S` |
+| Lock | `Super+Alt+L` | `SUPER+Alt+L` (Celestia) |
+| Logout | `Mod+Shift+E` | `SUPER+Shift+E` |
+
+**Not mapped (Hyprland scrolling has no direct equivalent):** monitor navigation (`Mod+Shift+arrows`), move column to monitor (`Mod+Shift+Ctrl+arrows`), column width ±10% (`Mod+Minus/Equal`), window height ±10%, tabbed display (`Mod+W`), power-off monitors (`Mod+Shift+P`), consume/expel window (`Mod+Comma/Period`). Scroll tape moves are still on `SUPER+period/comma`.
+
 ### 4.3 Rules (`rules.lua`)
 
 ```lua

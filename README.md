@@ -39,6 +39,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **Walker launcher:** Added §8 to `Hyprland.md` — Wayland-native launcher (GTK4/Rust) with elephant backend, `SUPER+Space` now opens Walker (replaces Celestia's built-in launch), providers table (calc/files/runner/clipboard/symbols), TOML config example.
 - **Niri-style keybinds:** Rewrote §4.2 `keybinds.lua` to mirror Niri muscle memory — `SUPER+T` terminal, HJKL+arrows focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F` maximize / `SUPER+Shift+F` fullscreen, `SUPER+C` center, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
 - **Niri-style wheel + workspace binds:** Added to §4.2 — `SUPER+scroll` column focus, `SUPER+Shift+scroll` workspace switch, `SUPER+U/I` prev/next workspace, `SUPER+Shift+U/I` move window to prev/next workspace.
+- **Niri → Hyprland shortcut map:** Added table to §4.2 — full Niri-vs-Hyprland keybind comparison (verified against real Niri config), plus a "not mapped" list (monitor nav, width ±10%, tabbed, etc.).
 
 ### 2026-07-19
 

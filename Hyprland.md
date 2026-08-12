@@ -17,12 +17,13 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 5. [ScrollOverview — Niri-Style Overview](#scrolloverview--niri-style-overview)
 6. [HyprMod — GUI Settings](#hyprmod--gui-settings)
 7. [Celestia Shell Setup](#celestia-shell-setup)
-8. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
-9. [SDDM Login Manager](#sddm-login-manager)
-10. [XWayland](#xwayland)
-11. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-12. [Troubleshooting](#troubleshooting)
-13. [Uninstalling](#uninstalling)
+8. [Walker — Application Launcher](#walker--application-launcher)
+9. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
+10. [SDDM Login Manager](#sddm-login-manager)
+11. [XWayland](#xwayland)
+12. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+13. [Troubleshooting](#troubleshooting)
+14. [Uninstalling](#uninstalling)
 
 ---
 
@@ -57,6 +58,7 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 hyprland                      # compositor (official tagged release — NOT -git)
 hyprland-scroll-overview      # overview plugin (via hyprpm — Niri-style overview)
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
+walker elephant               # launcher + backend daemon (AUR — Wayland-native, GTK4/Rust)
 grim slurp satty              # screenshots: capture + region select + native annotation
 wl-clipboard                  # Wayland clipboard (screenshot copy)
 hyprmod                       # GUI settings app (GTK4/libadwaita) — live tweak + profiles
@@ -138,7 +140,19 @@ sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
 
 > **Why Dolphin:** familiar from the KDE/Niri setup — split view, tabs, terminal panel, search. `xdg-utils` makes "Open With" work (MIME + default apps), `gvfs-mtp` adds Android/phone transfer, `plasma-integration` + `kded` give KDE apps proper theming, file dialogs, trash support, and KIO network transparency. See [KDE Apps on Hyprland](#kde-apps-on-hyprland) below for the full integration setup.
 
-### 8. Enable SDDM
+### 8. Install Walker (application launcher)
+
+```bash
+yay -S walker elephant
+# elephant = backend daemon (data providers); walker = the launcher UI
+systemctl --user enable --now elephant
+```
+
+> **Why Walker:** a fast, Wayland-native launcher (GTK4 layer shell + Rust) by the same author as `hyprscroller`-era tooling. Providers built in: desktop applications, calculator (`=`), file browser (`/`), command runner (`>`), websearch, clipboard history (`:`), symbol picker (`.`), provider list (`;`), Arch package search, window list, and more. Celestia's built-in launcher still exists — Walker just replaces the `SUPER+Space` keybind for a richer, faster launcher.
+>
+> **AUR policy — review the PKGBUILD first:** `walker` is maintained by the project author (benz, 26 votes) — inspect via `yay -G walker elephant` if you want to verify before building.
+
+### 9. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -146,7 +160,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 9. Verify
+### 10. Verify
 
 ```bash
 hyprctl version
@@ -233,7 +247,7 @@ local mainMod = "SUPER"
 
 --  Launch
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd("ghostty"))       -- terminal
-hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("caelestia shell launch"))  -- launcher
+hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (Walker)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("ghostty -e nvim"))     -- editor
 
 --  Window management
@@ -506,6 +520,53 @@ caelestia shell -s                 # list all IPC targets/functions
 4. **Keybinds** — if not using the full caelestia dots, wire global shortcuts yourself (see §4.5). The shell exposes drawers/notifs/lock/mpris/picker/wallpaper targets via IPC.
 
 > **Customization:** do **not** edit files installed by the AUR package — follow the [manual installation section](https://github.com/caelestia-dots/shell#manual-installation) and clone the repo into `~/.config/quickshell/caelestia` for local tweaks.
+
+---
+
+## Walker — Application Launcher
+
+[Walker](https://github.com/abenz1267/walker) is a fast, Wayland-native application launcher (GTK4 layer shell + Rust, GPLv3). It replaces Celestia's built-in launcher on `SUPER+Space`. It needs the **elephant** backend daemon running (installed + enabled in §3 step 8).
+
+### Providers (built-in)
+
+| Prefix | Provider | Example |
+|--------|----------|---------|
+| *(none)* | Desktop applications | `firefox` |
+| `=` | Calculator / unit conversion | `= 42*3` |
+| `/` | File browser | `/home/pop/` |
+| `>` | Command runner | `> systemctl --user restart` |
+| `;` | Provider list | `;` |
+| `:` | Clipboard history | `:` |
+| `.` | Symbol / emoji picker | `.` |
+| — | Websearch, Arch package search (`i:`), windows, bookmarks, bluetooth, snippets, todo, dmenu | — |
+
+### Configuration
+
+Config lives at `~/.config/walker/config.toml` (TOML, not JSON). A minimal sane starting point:
+
+```toml
+# ~/.config/walker/config.toml
+single_click_activation = true
+selection_wrap = true
+exact_search_prefix = "'"   # disable fuzzy search with ' prefix
+
+[providers]
+default = ["desktopapplications", "calc", "websearch", "runner"]
+empty = ["desktopapplications"]
+```
+
+Keybinds inside Walker: `Escape` close, `Down`/`Up` next/previous, `Page_Down`/`Page_Up` jump, `ctrl e` exact search, `alt j` actions, `F1`–`F4` quick activate.
+
+### Service
+
+elephant runs as a user service (starts with the graphical session):
+
+```bash
+systemctl --user enable --now elephant   # already done in §3 step 8
+systemctl --user status elephant         # verify
+```
+
+> **Why Walker over Celestia's launcher:** Celestia's launch is a simple app grid; Walker adds calculator, file browsing, clipboard history, symbol picker, runner, and Arch package search — all in one fuzzy-search box. If you prefer the Celestia launcher, just revert the §4.2 bind to `caelestia shell launch`.
 
 ---
 

@@ -36,6 +36,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **HyprMod GUI settings:** Added §6 to `Hyprland.md` — live-preview settings app, `SUPER+M` opens the GUI. Settings-only (no layout-switch profile cycling).
 - **Dolphin file manager:** Added to `Hyprland.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet-only secret storage via Secret Service interface — no GNOME Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
 - **snappy-switcher (optional):** Added §5.6 to `Hyprland.md` — big per-window thumbnail ALT+Tab alternative to ScrollOverview's built-in switcher, marked optional (default stays ScrollOverview ALT+Tab).
+- **Walker launcher:** Added §8 to `Hyprland.md` — Wayland-native launcher (GTK4/Rust) with elephant backend, `SUPER+Space` now opens Walker (replaces Celestia's built-in launch), providers table (calc/files/runner/clipboard/symbols), TOML config example.
 
 ### 2026-07-19
 

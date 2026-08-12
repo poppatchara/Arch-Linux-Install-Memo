@@ -428,6 +428,25 @@ end)
 
 > **Why this plugin and not `hyprscroller`:** the scrolling **layout** is already native in 0.55+ — ScrollOverview only fills the *overview* gap (zoom-out, swipe, ALT+Tab). It's the missing piece that makes Hyprland feel like Niri.
 
+#### Optional: snappy-switcher (richer thumbnails)
+
+The built-in ALT+Tab shows the workspace tape. If you want **big per-window thumbnails with context grouping**, add [snappy-switcher](https://github.com/OpalAayan/snappy-switcher) — pure C, Wayland layer shell, zero Electron/GTK deps:
+
+```bash
+yay -S snappy-switcher
+```
+
+Autostart the daemon and bind ALT+Tab:
+
+```lua
+hl.exec("snappy-switcher --daemon")
+hl.bind("ALT + Tab", hl.dsp.exec_cmd("snappy-switcher next --mod alt"))
+```
+
+Features: context grouping, 15 themes, dismiss-on-release, MRU ordering, `--workspace` mode.
+
+> **Default choice:** ScrollOverview ALT+Tab (§5.5) — no extra package, same visual language as the overview. Install snappy-switcher only if you want richer thumbnails; it **replaces** the ALT+Tab bind, so remove the ScrollOverview alttab module (or rebind it) to avoid conflicts. Also avoid snappy's `--workspace` mode on `SUPER+Tab` — that collides with the overview toggle.
+
 ---
 
 ## HyprMod — GUI Settings

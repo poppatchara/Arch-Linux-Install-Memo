@@ -35,6 +35,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **Native screenshot stack:** Added `grim` + `slurp` + `satty` + `wl-clipboard` to `Hyprland.md` — Print/SUPER+Print/CTRL+Print binds for region-annotate, fullscreen-annotate, and clipboard copy. No portal needed.
 - **HyprMod GUI settings:** Added §6 to `Hyprland.md` — live-preview settings app, `SUPER+M` opens the GUI. Settings-only (no layout-switch profile cycling).
 - **Dolphin file manager:** Added to `Hyprland.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet-only secret storage via Secret Service interface — no GNOME Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
+- **snappy-switcher (optional):** Added §5.6 to `Hyprland.md` — big per-window thumbnail ALT+Tab alternative to ScrollOverview's built-in switcher, marked optional (default stays ScrollOverview ALT+Tab).
 
 ### 2026-07-19
 

@@ -37,6 +37,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **Dolphin file manager:** Added to `Hyprland.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet-only secret storage via Secret Service interface — no GNOME Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
 - **snappy-switcher (optional):** Added §5.6 to `Hyprland.md` — big per-window thumbnail ALT+Tab alternative to ScrollOverview's built-in switcher, marked optional (default stays ScrollOverview ALT+Tab).
 - **Walker launcher:** Added §8 to `Hyprland.md` — Wayland-native launcher (GTK4/Rust) with elephant backend, `SUPER+Space` now opens Walker (replaces Celestia's built-in launch), providers table (calc/files/runner/clipboard/symbols), TOML config example.
+- **Niri-style keybinds:** Rewrote §4.2 `keybinds.lua` to mirror Niri muscle memory — `SUPER+T` terminal, HJKL+arrows focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F` maximize / `SUPER+Shift+F` fullscreen, `SUPER+C` center, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
 
 ### 2026-07-19
 

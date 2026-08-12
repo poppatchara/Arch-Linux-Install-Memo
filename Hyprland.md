@@ -241,32 +241,50 @@ hl.config({
 
 ### 4.2 Keybinds (`keybinds.lua`)
 
+> **Niri-style:** these binds mirror the Niri muscle memory — `SUPER+T` terminal, `SUPER+Space` launcher, `SUPER+H/J/K/L` + arrows for column/window focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F`/`SUPER+Shift+F` maximize/fullscreen, `SUPER+C` center, `SUPER+E` file manager, `SUPER+Tab` overview, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
+
 ```lua
 -- ~/.config/hypr/keybinds.lua
 local mainMod = "SUPER"
 
---  Launch
-hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd("ghostty"))       -- terminal
+--  Launch (Niri: Mod+T terminal, Mod+Space launcher)
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("ghostty"))             -- terminal
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (Walker)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("ghostty -e nvim"))     -- editor
 
---  Window management
-hl.bind(mainMod .. " + Q", hl.dsp.killactive())                     -- close window
-hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ action = "toggle", layout_aware = true }))
+--  Window management (Niri: Mod+Q close, Mod+V float)
+hl.bind(mainMod .. " + Q", hl.dsp.killactive())                    -- close window
+hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))  -- toggle floating
 
---  Scrolling layout: navigate columns
+--  Scrolling layout: focus columns (Niri: Mod+H/L/Home/End, arrows)
 hl.bind(mainMod .. " + H", hl.dsp.layout("focus l"))
 hl.bind(mainMod .. " + L", hl.dsp.layout("focus r"))
-hl.bind(mainMod .. " + period", hl.dsp.layout("move +col"))         -- scroll right by column
-hl.bind(mainMod .. " + comma", hl.dsp.layout("move -col"))          -- scroll left by column
+hl.bind(mainMod .. " + Left", hl.dsp.layout("focus l"))
+hl.bind(mainMod .. " + Right", hl.dsp.layout("focus r"))
+hl.bind(mainMod .. " + Home", hl.dsp.layout("fit tobeg"))          -- first column
+hl.bind(mainMod .. " + End", hl.dsp.layout("fit toend"))           -- last column
 
---  Scrolling layout: columns
-hl.bind(mainMod .. " + Ctrl + H", hl.dsp.layout("swapcol l"))       -- swap column left
-hl.bind(mainMod .. " + Ctrl + L", hl.dsp.layout("swapcol r"))       -- swap column right
-hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))        -- cycle width presets
-hl.bind(mainMod .. " + Shift + F", hl.dsp.layout("fit active"))     -- fit active column
-hl.bind(mainMod .. " + Shift + C", hl.dsp.layout("fit_into_view"))  -- fit active into view
+--  Scrolling layout: focus window up/down within column (Niri: Mod+J/K, arrows)
+hl.bind(mainMod .. " + J", hl.dsp.focus({ direction = "d" }))
+hl.bind(mainMod .. " + K", hl.dsp.focus({ direction = "u" }))
+hl.bind(mainMod .. " + Down", hl.dsp.focus({ direction = "d" }))
+hl.bind(mainMod .. " + Up", hl.dsp.focus({ direction = "u" }))
+
+--  Scrolling layout: move column l/r (Niri: Mod+Ctrl+H/L = move-column)
+hl.bind(mainMod .. " + Ctrl + H", hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + Ctrl + L", hl.dsp.layout("swapcol r"))
+hl.bind(mainMod .. " + Ctrl + Left", hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + Ctrl + Right", hl.dsp.layout("swapcol r"))
+
+--  Scrolling layout: scroll tape
+hl.bind(mainMod .. " + period", hl.dsp.layout("move +col"))        -- scroll right by column
+hl.bind(mainMod .. " + comma", hl.dsp.layout("move -col"))         -- scroll left by column
+
+--  Scrolling layout: column width + fit (Niri: Mod+R preset, Mod+F maximize, Mod+Shift+F fullscreen, Mod+C center)
+hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))       -- cycle width presets
+hl.bind(mainMod .. " + F", hl.dsp.layout("fit expand"))            -- maximize window to free space
+hl.bind(mainMod .. " + Shift + F", hl.dsp.window.fullscreen({ action = "toggle", layout_aware = true }))  -- fullscreen
+hl.bind(mainMod .. " + C", hl.dsp.layout("fit_into_view"))         -- center/fit active column into view
 
 --  Workspaces
 hl.bind(mainMod .. " + Tab", function()
@@ -276,18 +294,18 @@ for i = 1, 9 do
   hl.bind(mainMod .. " + " .. i, hl.workspace(i))
   hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
 end
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))                 -- file manager
-hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                    -- next empty workspace
-hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.workspace("e-1"))          -- prev workspace
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))             -- file manager (Niri: Mod+E)
+hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                -- next empty workspace
 
---  Screenshots (grim + slurp + satty — native)
-hl.bind("Print", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))              -- region → annotate
-hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd('grim - | satty -f -'))               -- fullscreen → annotate
-hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))         -- region → clipboard
+--  Screenshots (Niri: Print full, Mod+Shift+S region)
+hl.bind("Print", hl.dsp.exec_cmd('grim - | satty -f -'))                      -- fullscreen → annotate
+hl.bind(mainMod .. " + Shift + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))  -- region → annotate
+hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
---  System
-hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("caelestia shell lock lock"))   -- lock (Celestia)
-hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                -- power off
+--  System (Niri: Super+Alt+L lock, Mod+Shift+E logout)
+hl.bind(mainMod .. " + Alt + L", hl.dsp.exec_cmd("caelestia shell lock lock"))  -- lock (Celestia)
+hl.bind(mainMod .. " + Shift + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
+hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
 
 > **Why `layout_aware = true` on fullscreen:** on scrolling workspaces this lets you **scroll away from a fullscreen window without unfullscreening it** (layout-handled fullscreen).

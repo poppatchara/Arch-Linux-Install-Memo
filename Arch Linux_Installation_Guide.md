@@ -852,22 +852,6 @@ sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanag
 >
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
-### ▸ Secret Storage (all paths)
-
-Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromium, Firefox, Git) use `libsecret`. KDE apps (Dolphin network passwords, KDE Connect) use KWallet. Install both — they coexist fine:
-
-```bash
-sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
-```
-
-> PAM hooks for greetd are added in the greetd setup above — they need `/etc/pam.d/greetd` to exist first.
->
-> **Hyprland path (SDDM):** SDDM ships `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch — verify with `grep -i kwallet /etc/pam.d/sddm`; if missing, add the same `auth optional` / `session optional` lines used for greetd above.
->
-> KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
-
----
-
 ## §8 — Reboot
 
 Time to leave the installer and boot into the real system:

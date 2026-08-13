@@ -807,16 +807,19 @@ Only do this if you hit a specific problem (memory footprint, security) and can 
 
 ## PCoIP Keyboard Passthrough
 
-> **Status: work in progress.** The Niri setup uses a dual-config swap (`config-normal.kdl` ↔ `config-pcoip.kdl`) with focus-based auto-swap. Hyprland's equivalent is still being validated — the pattern will differ because Hyprland config hot-reloads and uses Lua.
+> **Status: expected to work — not yet validated on real hardware.** Much simpler than the Niri case: Hyprland ships **integrated XWayland** (pulled by the `hyprland` package) — there is no `xwayland-satellite` involved, so the config-swap hack Niri needs should **not** be required here.
 
-Planned approach (mirroring the Niri workaround):
+The HP PCoIP client runs through the [pcoip-client](https://github.com/poppatchara/pcoip-client) fork (Arch package), which ships a **vendored Qt 6.9 Wayland client**. Two paths:
 
-1. Keep two Lua config variants (`hyprland.lua` ↔ `hyprland-pcoip.lua`).
-2. Watch for the PCoIP client window via `hyprctl -j events` (`windowtitle` / `activewindow` events).
-3. On PCoIP focus: reload config with all `Mod+` binds removed (`hyprctl reload -c hyprland-pcoip.lua` — **verify the exact `--config` reload flag**).
-4. On PCoIP close: reload the normal config.
+1. **Native Wayland (primary):** the wrapper (`~/.local/bin/pcoip`) prefers native Wayland when `WAYLAND_DISPLAY` is set — the client runs as a plain Wayland window. No XWayland, no config swap.
+2. **XWayland fallback:** if the client falls back to X11/XCB, Hyprland's built-in XWayland handles it as a normal X11 window — **no `xwayland-satellite` daemon** (unlike Niri), so no focus-based config swapping is needed.
 
-> ⚠️ The HP PCoIP client **never requests** `zwp_keyboard_shortcuts_inhibit_v1`, so Hyprland's keyboard-shortcut inhibitor (if any) won't trigger — the config-swap approach is still required, same as Niri. **This section is a plan, not a validated recipe — test before relying on it.**
+**Keyboard shortcuts:** Hyprland supports the keyboard-shortcuts-inhibit protocol. The HP client still never requests `zwp_keyboard_shortcuts_inhibit_v1` (same as Niri), but if a specific `SUPER+` bind interferes while the client is focused, two levers exist:
+
+- bind option `dont_inhibit = true` — bypasses the app's inhibit requests for that bind
+- window rule `no_shortcuts_inhibit = true` — disallows the app from inhibiting your shortcuts
+
+> **Test checklist on the real HP Anyware session:** ① client launches under native Wayland (`WAYLAND_DISPLAY` set in the wrapper); ② typing reaches the remote desktop (no local bind swallows keys); ③ if a bind interferes, add a `hl.window_rule({ match = { class = "..." }, no_shortcuts_inhibit = true })` for the client class rather than swapping the whole config.
 
 ---
 

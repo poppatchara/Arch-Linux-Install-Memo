@@ -21,9 +21,10 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 9. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
 10. [SDDM Login Manager](#sddm-login-manager)
 11. [XWayland](#xwayland)
-12. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-13. [Troubleshooting](#troubleshooting)
-14. [Uninstalling](#uninstalling)
+12. [Cursor Themes](#cursor-themes)
+13. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+14. [Troubleshooting](#troubleshooting)
+15. [Uninstalling](#uninstalling)
 
 ---
 
@@ -810,6 +811,39 @@ hl.config({
 hl.config({ xwayland = { enabled = false } })
 ```
 Only do this if you hit a specific problem (memory footprint, security) and can live without X11 apps.
+
+---
+
+## Cursor Themes
+
+Two cursor themes — install both, pick one as active:
+
+| Theme | Style | AUR | Formats |
+|-------|-------|-----|---------|
+| **Phinger** | Windows 11-ish, "most likely the most over-engineered cursor theme" | `phinger-cursors` | XCursor |
+| **Bibata Classic** | Material-based, bold classic outline | `bibata-cursor-git` | **Hyprcursor + XCursor** |
+
+```bash
+yay -S phinger-cursors bibata-cursor-git
+```
+
+**Hyprland native cursor (hyprcursor):** Bibata is the hyprcursor-capable one (Hyprland ≥0.37 uses hyprcursor for its own cursor):
+
+```bash
+hyprctl setcursor Bibata-Modern-Classic 24
+```
+
+> Find the exact installed theme names with `hyprctl setcursor -l` — Bibata ships `Bibata-Modern-*` / `Bibata-Original-*` variants (Classic/Ice/Amber).
+
+**XWayland + GTK apps** use XCursor via env vars (Hyprland also syncs the theme to gsettings when `sync_gsettings_theme` is enabled):
+
+```lua
+-- ~/.config/hypr/hyprland.lua
+hl.env("XCURSOR_THEME", "phinger-cursors")   -- or "Bibata-Modern-Classic"
+hl.env("XCURSOR_SIZE", "24")
+```
+
+> **Switching themes:** keep native (`hyprctl setcursor`) and `XCURSOR_THEME` pointing at the same theme so Wayland and XWayland cursors match. XWayland apps keep the xcursor lookup path — that's why `phinger-cursors` (XCursor-only) still works there.
 
 ---
 

@@ -932,6 +932,7 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   sudo pacman -S --noconfirm --needed \
     libva-utils vdpauinfo vulkan-tools \
     libva-nvidia-driver dxvk vkd3d shaderc spirv-tools
+fi
 ```
 
 NVIDIA needs Wayland DRM modesetting enabled on the kernel command line. For GRUB:
@@ -987,7 +988,6 @@ When = PostTransaction
 NeedsTargets
 Exec = /bin/sh -c 'while read -r trg; do case $trg in linux*) exit 0; esac; done; /usr/bin/mkinitcpio -P'
 HOOK
-fi
 ```
 
 **Intel iGPU / Arc dGPU (if detected):**

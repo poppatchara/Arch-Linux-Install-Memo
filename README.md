@@ -59,7 +59,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 - **Unified rewrite:** Merged all individual guides into one unified guide with decision matrix.
 - **Niri + Noctalia split:** Compositor (§7.2) and shell (§7.3) are now separate sections — ready for future compositors (Hyprland, MangoWC, DMS).
-- **Kernel independence:** Kernel choice is now a free variable — `linux-zen`, `linux-cachyos`, `linux`, `linux-lts` — independent of repo choice.
+- **Kernel independence:** Kernel choice is a free variable — `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch; **any `linux-cachyos*` kernel requires the CachyOS repos**.
 - **UUID auto-detection:** All partition UUIDs now detected by type (ESP GUID / swap / btrfs), no hardcoded `/dev/nvme0n1pN` paths.
 - **Explanations:** Added context, rationale, and "why" throughout every section.
 - **Archived:** Old individual guides moved to `archive/`. Fedora guide removed.

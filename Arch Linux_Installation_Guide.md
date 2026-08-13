@@ -76,7 +76,7 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 | 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
-> **Kernel & repos are independent.** You can use `linux-cachyos` without CachyOS repos, or CachyOS repos with `linux-zen`. `linux-cachyos` is in the official `[extra]` repo — no third-party repo needed.
+> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. You can still use CachyOS repos with `linux-zen` (CachyOS repos serve Arch packages too), but the CachyOS kernels need the CachyOS repo to exist.
 
 ### Recommended Combos
 
@@ -366,7 +366,7 @@ cat /mnt/etc/fstab  # sanity check
 > **Decision: Kernel.**
 
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
-- `linux-cachyos` — CachyOS's default optimized kernel. Installable from `[extra]` without CachyOS repos.
+- `linux-cachyos` — CachyOS's default optimized kernel. **Needs CachyOS repos** — not in `[extra]`.
 - `linux-cachyos-bore` — CachyOS variant with BORE scheduler. Needs CachyOS repos.
 - `linux-cachyos-eevdf` — CachyOS variant with EEVDF scheduler. Needs CachyOS repos.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
@@ -391,7 +391,7 @@ Install at least one. You can install multiple — common combos: `linux-zen` (d
 # Uncomment the kernels you want:
 KERNELS=(
   linux-zen
-  # linux-cachyos        # in [extra] — no extra repo needed
+  # linux-cachyos        # needs CachyOS repos → auto-added below
   # linux-cachyos-bore    # needs CachyOS repos → auto-added below
   # linux-cachyos-eevdf   # needs CachyOS repos → auto-added below
   # linux
@@ -403,8 +403,8 @@ KERNEL_PKGS=()
 NEED_CACHYOS=0
 for k in "${KERNELS[@]}"; do
   KERNEL_PKGS+=("$k" "$k-headers")
-  # Any kernel with a suffix (e.g. linux-cachyos-bore) needs CachyOS repos
-  [[ "$k" == linux-cachyos-* ]] && NEED_CACHYOS=1
+  # Any linux-cachyos* kernel (including the base `linux-cachyos`) needs CachyOS repos
+  [[ "$k" == linux-cachyos* ]] && NEED_CACHYOS=1
 done
 
 # If any selected kernel needs CachyOS repos, add them to the live ISO now
@@ -435,7 +435,7 @@ fi
 | Kernel | Repo | Scheduler | Best for |
 |--------|------|-----------|----------|
 | `linux-zen` | `[extra]` | EEVDF | Desktop/laptop daily use — lower latency, tuned for interactivity |
-| `linux-cachyos` | `[extra]` | EEVDF | CachyOS defaults — balanced optimization with extra patches |
+| `linux-cachyos` | CachyOS | EEVDF | CachyOS defaults — balanced optimization with extra patches |
 | `linux-cachyos-bore` | CachyOS | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
 | `linux-cachyos-eevdf` | CachyOS | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
 | `linux` | `[core]` | EEVDF | Maximum stability — vanilla kernel, least patches, slowest to adopt new features |

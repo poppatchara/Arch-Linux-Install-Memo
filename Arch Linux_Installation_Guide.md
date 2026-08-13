@@ -1159,6 +1159,7 @@ yay -S --noconfirm --needed hunspell-th  # Thai dictionary
 
 # Flatpak (optional — for sandboxed apps)
 sudo pacman -S --noconfirm --needed flatpak
+```
 
 > Run this from the logged-in session (not SSH):
 

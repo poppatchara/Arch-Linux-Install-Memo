@@ -42,6 +42,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **Niri → Hyprland shortcut map:** Added table to §4.2 — full Niri-vs-Hyprland keybind comparison (verified against real Niri config), plus a "not mapped" list (monitor nav, width ±10%, tabbed, etc.).
 - **IPC explainer:** Added "What IPC is" + verification note to the Celestia section.
 - **PCoIP section rewritten:** §9 now reflects Hyprland's integrated XWayland (no xwayland-satellite) — native Wayland path via pcoip-client fork + XWayland fallback, no config-swap hack; keyboard-inhibit levers (`dont_inhibit`, `no_shortcuts_inhibit`) + test checklist.
+- **pixie-sddm theme:** SDDM section now recommends pixie-sddm (Material Design 3 / Pixel UI, AUR `pixie-sddm-git`) with Qt6 prereqs + theme.conf setup.
 
 ### 2026-07-19
 

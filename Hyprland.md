@@ -69,6 +69,7 @@ plasma-integration kded       # KDE file dialogs + Qt platform theme (for Dolphi
 xdg-desktop-portal-hyprland   # screen share + portal
 hyprpolkitagent               # polkit auth dialogs
 sddm                          # login manager (>= 0.20.0)
+pixie-sddm-git                # SDDM theme (AUR — Material Design 3 / Pixel UI)
 ```
 
 **Deliberately NOT installed:** `hyprlock`, `hypridle`, `hyprpaper`, `hyprpicker`, `hyprsunset`, `waybar`, `mako`, `rofi`, `fuzzel` — all provided by Celestia.
@@ -750,18 +751,25 @@ SDDM is the login manager — it lists Hyprland as a session automatically once 
 
 ### Choosing a theme
 
-SDDM themes are plentiful — any theme from the [KDE Store](https://store.kde.org/browse/cat/106/order/latest/) or AUR (`sddm-theme-*`). To set one:
+This guide uses **[pixie-sddm](https://github.com/xCaptaiN09/pixie-sddm)** — a Material Design 3 / Google Pixel-inspired theme (two-tone stacked clock, dynamic color extraction from your wallpaper, blur, circular avatar, Qt6 + Qt5 support).
 
 ```bash
-# Install a theme, e.g.
-yay -S sddm-theme-sugar-dark
+# Prereqs for the Qt6 engine (SDDM on Arch is Qt6)
+sudo pacman -S qt6-declarative qt6-svg
+
+# Install the theme (AUR, maintained by the theme author)
+yay -S pixie-sddm-git
 
 # Point SDDM at it
 sudo sh -c 'echo "[Theme]
-Current=sugar-dark" > /etc/sddm.conf.d/theme.conf'
+Current=pixie" > /etc/sddm.conf.d/theme.conf'
 ```
 
 > **Why drop-in dir:** `/etc/sddm.conf.d/` overrides the packaged defaults without touching `/etc/sddm.conf` — survives package updates.
+>
+> **AUR policy — review the PKGBUILD first:** `pixie-sddm-git` is maintained by the theme author (xCaptaiN09); it installs only to `/usr/share/sddm/themes/pixie`. Verify with `yay -G pixie-sddm-git` if desired.
+>
+> **Other themes:** any SDDM theme from the [KDE Store](https://store.kde.org/browse/cat/106/order/latest/) or AUR (`sddm-theme-*`) works — just change `Current=` accordingly.
 
 ### Verifying the session entry
 

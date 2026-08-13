@@ -507,7 +507,9 @@ arch-chroot /mnt
 
 > Skip if using Vanilla Arch repos. Run the official installer — skip if repos were already added in §3.1.
 >
-> **Note — this script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, use the §3.1 manual path instead (keyring + mirrorlists only, no pacman swap) or edit `/etc/pacman.conf` by hand with only `cachyos-v3`/`cachyos-v4`.
+> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (the §3.1 block is exactly this).
+>
+> **Why §3.1 uses the manual add instead of this script:** §3.1 runs inside the **live ISO**, where the script would install the forked pacman + keyring onto the constrained live environment (no space). The manual add only touches `/etc/pacman.conf` + mirrorlists, which is all `pacstrap` needs to see `linux-cachyos*`. This section runs post-install (in the chroot) where the script is fine.
 
 ```bash
 # Add CachyOS repos (skip if already present from §3.1)

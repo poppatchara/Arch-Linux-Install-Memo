@@ -44,6 +44,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 - **PCoIP section rewritten:** §9 now reflects Hyprland's integrated XWayland (no xwayland-satellite) — native Wayland path via pcoip-client fork + XWayland fallback, no config-swap hack; keyboard-inhibit levers (`dont_inhibit`, `no_shortcuts_inhibit`) + test checklist.
 - **pixie-sddm theme:** SDDM section now recommends pixie-sddm (Material Design 3 / Pixel UI, AUR `pixie-sddm-git`) with Qt6 prereqs + theme.conf setup.
 - **Cursor themes:** New "Cursor Themes" section — Phinger (XCursor) + Bibata Classic (`bibata-cursor-git`, hyprcursor + XCursor), `hyprctl setcursor` for native, `XCURSOR_THEME`/`XCURSOR_SIZE` env for XWayland/GTK.
+- **Live wallpapers (optional):** Celestia section gains mpvpaper how-to — MotionBGs `.mp4` download, `mpvpaper -o loop`, autostart in Lua, layer-shell conflict note with Celestia's static-only wallpaper.
 
 ### 2026-07-19
 

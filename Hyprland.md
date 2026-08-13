@@ -588,6 +588,36 @@ caelestia shell -s                 # list all IPC targets/functions
 
 > **Customization:** do **not** edit files installed by the AUR package — follow the [manual installation section](https://github.com/caelestia-dots/shell#manual-installation) and clone the repo into `~/.config/quickshell/caelestia` for local tweaks.
 
+### Live wallpapers (optional)
+
+Celestia's wallpaper backend is **static images only** (QtQuick `CachingImage` — checked in the shell source). For animated wallpapers, use **mpvpaper** — a video wallpaper daemon for wlroots compositors:
+
+```bash
+# Install
+yay -S mpvpaper
+
+# Download a live wallpaper (e.g. from motionbgs.com — pages expose the .mp4 directly)
+curl -L -o ~/Videos/twilight-at-mount-fuji.mp4 \
+  https://motionbgs.com/media/9962/twilight-at-mount-fuji.960x540.mp4
+
+# Play it fullscreen, looping (HDMI-A-1 = your monitor)
+mpvpaper -o "loop" HDMI-A-1 ~/Videos/twilight-at-mount-fuji.mp4
+
+# Stop
+pkill mpvpaper
+```
+
+**Autostart with Hyprland:**
+
+```lua
+-- ~/.config/hypr/hyprland.lua
+hl.exec_cmd("mpvpaper -o 'loop' HDMI-A-1 ~/Videos/twilight-at-mount-fuji.mp4")
+```
+
+> **⚠️ Conflict with Celestia:** both Celestia's wallpaper and mpvpaper draw on the same layer-shell background layer — running both at once stacks/overlaps them. To use live wallpapers, clear Celestia's wallpaper first (`caelestia shell wallpaper set ""` — verify the empty-value syntax on your install) and let mpvpaper own the background. Re-enable the Celestia wallpaper when you stop mpvpaper.
+>
+> **Performance note:** video wallpapers use a hardware-accelerated mpv context but still cost GPU/VRAM — expect a few percent GPU load while running. The `960x540` MotionBGs preview is lighter than the full-res version.
+
 ---
 
 ## Walker — Application Launcher

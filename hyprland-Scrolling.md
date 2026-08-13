@@ -150,7 +150,7 @@ sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
 ```bash
 yay -S walker elephant
 # elephant = backend daemon (data providers); walker = the launcher UI
-systemctl --user enable --now elephant
+elephant service enable
 ```
 
 > **Why Walker:** a fast, Wayland-native launcher (GTK4 layer shell + Rust) by the same author as `hyprscroller`-era tooling. Providers built in: desktop applications, calculator (`=`), file browser (`/`), command runner (`>`), websearch, clipboard history (`:`), symbol picker (`.`), provider list (`;`), Arch package search, window list, and more. Celestia's built-in launcher still exists — Walker just replaces the `SUPER+Space` keybind for a richer, faster launcher.
@@ -204,8 +204,8 @@ hl.config({
     gaps_in = 5,
     gaps_out = 10,
     layout = "scrolling",          -- native scrolling layout as the default
-    col.active_border = "0xff89b4fa",
-    col.inactive_border = "0xff45475a",
+    ["col.active_border"] = "0xff89b4fa",
+    ["col.inactive_border"] = "0xff45475a",
   },
   decoration = {
     rounding = 10,
@@ -258,7 +258,7 @@ hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("kitty -e nvim"))     -- editor
 
 --  Window management (Niri: Mod+Q close, Mod+V float)
-hl.bind(mainMod .. " + Q", hl.dsp.killactive())                    -- close window
+hl.bind(mainMod .. " + Q", hl.dsp.window.close())                    -- close window
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))  -- toggle floating
 
 --  Scrolling layout: focus columns (Niri: Mod+H/L/Home/End, arrows)
@@ -288,13 +288,13 @@ hl.bind(mainMod .. " + comma", hl.dsp.layout("move -col"))         -- scroll lef
 --  Mouse wheel (Niri: Mod+scroll focus column, Mod+Shift+scroll focus workspace)
 hl.bind(mainMod .. " + mouse_down", hl.dsp.layout("focus r"))      -- scroll down → next column
 hl.bind(mainMod .. " + mouse_up", hl.dsp.layout("focus l"))        -- scroll up → prev column
-hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.workspace("+1"))   -- shift+scroll down → next workspace
-hl.bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.workspace("-1"))     -- shift+scroll up → prev workspace
+hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.focus({ workspace = "+1" }))   -- shift+scroll down → next workspace
+hl.bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.focus({ workspace = "-1" }))     -- shift+scroll up → prev workspace
 
 --  Scrolling layout: column width + fit (Niri: Mod+R preset, Mod+F maximize, Mod+Shift+F fullscreen, Mod+C center)
 hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))       -- cycle width presets
 hl.bind(mainMod .. " + F", hl.dsp.layout("fit expand"))            -- maximize window to free space
-hl.bind(mainMod .. " + Shift + F", hl.dsp.window.fullscreen({ action = "toggle", layout_aware = true }))  -- fullscreen
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ action = "toggle", layout_aware = true }))  -- fullscreen
 hl.bind(mainMod .. " + C", hl.dsp.layout("fit_into_view"))         -- center/fit active column into view
 
 --  Workspaces
@@ -302,24 +302,24 @@ hl.bind(mainMod .. " + Tab", function()
   hl.plugin.scrolloverview.overview("toggle all")   -- Niri-style overview
 end)
 for i = 1, 9 do
-  hl.bind(mainMod .. " + " .. i, hl.workspace(i))
-  hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
+  hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
+  hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = i }))
 end
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))             -- file manager (Niri: Mod+E)
-hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                -- next empty workspace
-hl.bind(mainMod .. " + U", hl.dsp.workspace("+1"))                 -- next workspace (Niri: focus-workspace-down)
-hl.bind(mainMod .. " + I", hl.dsp.workspace("-1"))                 -- prev workspace (Niri: focus-workspace-up)
-hl.bind(mainMod .. " + SHIFT + U", hl.dsp.movetoworkspace("+1"))   -- move window to next workspace
-hl.bind(mainMod .. " + SHIFT + I", hl.dsp.movetoworkspace("-1"))   -- move window to prev workspace
+hl.bind(mainMod .. " + N", hl.dsp.focus({ workspace = "e+1" }))                -- next empty workspace
+hl.bind(mainMod .. " + U", hl.dsp.focus({ workspace = "+1" }))                 -- next workspace (Niri: focus-workspace-down)
+hl.bind(mainMod .. " + I", hl.dsp.focus({ workspace = "-1" }))                 -- prev workspace (Niri: focus-workspace-up)
+hl.bind(mainMod .. " + SHIFT + U", hl.dsp.window.move({ workspace = "+1" }))   -- move window to next workspace
+hl.bind(mainMod .. " + SHIFT + I", hl.dsp.window.move({ workspace = "-1" }))   -- move window to prev workspace
 
 --  Screenshots (Niri: Print full, Mod+Shift+S region)
 hl.bind("Print", hl.dsp.exec_cmd('grim - | satty -f -'))                      -- fullscreen → annotate
-hl.bind(mainMod .. " + Shift + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))  -- region → annotate
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))  -- region → annotate
 hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
 --  System (Niri: Super+Alt+L lock, Mod+Shift+E logout)
-hl.bind(mainMod .. " + Alt + L", hl.dsp.exec_cmd("caelestia shell lock lock"))  -- lock (Celestia)
-hl.bind(mainMod .. " + Shift + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("caelestia shell lock lock"))  -- lock (Celestia)
+hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
 
@@ -375,8 +375,8 @@ hl.window_rule({ match = { title = "^(Open File)" }, float = true })
 hl.workspace_rule({ workspace = "2", layout_opts = { direction = "down" } })
 
 -- Monitor setup (adjust to your hardware)
-hl.monitor("DP-1, 2560x1440@144, 0x0, 1")
-hl.monitor("eDP-1, 1920x1080@60, 2560x0, 1")
+hl.monitor({ output = "DP-1", mode = "2560x1440@144", position = "0x0", scale = 1 })
+hl.monitor({ output = "eDP-1", mode = "1920x1080@60", position = "2560x0", scale = 1 })
 ```
 
 > **Window rules match by** `class`, `title`, `name`, or more (see wiki). Monitor names are `DP-*`, `eDP-*`, `HDMI-A-*` — run `hyprctl monitors` to list yours.
@@ -397,13 +397,13 @@ hl.config({
       "border, 1, 8, default",
     },
   },
-  gestures = {
-    workspace_swipe = true,       -- touchpad 3-finger swipe changes workspace
-  },
 })
+
+-- Touchpad 3-finger swipe between workspaces (Lua gesture API)
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 ```
 
-> **Why gesture config exists:** touchpad swipe between workspaces feels natural on a scrolling layout — set `workspace_swipe = true` and swipe horizontally to move between columns/workspaces.
+> **Why gesture config exists:** touchpad swipe between workspaces feels natural on a scrolling layout — set `hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })` and swipe horizontally to move between columns/workspaces.
 
 ### 4.5 Celestia integration (`celestia.lua`)
 
@@ -670,7 +670,7 @@ Keybinds inside Walker: `Escape` close, `Down`/`Up` next/previous, `Page_Down`/`
 elephant runs as a user service (starts with the graphical session):
 
 ```bash
-systemctl --user enable --now elephant   # already done in §3 step 8
+elephant service enable   # already done in §3 step 8
 systemctl --user status elephant         # verify
 ```
 
@@ -748,7 +748,7 @@ XDG_MENU_PREFIX=plasma- kbuildsycoca6 --noincremental
 
 Create `~/.config/environment.d/10-kde-on-hyprland.conf`:
 
-> **Important:** environment.d files use `KEY=VALUE` syntax and require **absolute paths**. `$HOME` and `%h` do NOT expand here.
+> **Important:** environment.d files use `KEY=VALUE` syntax and require **absolute paths**. `$HOME`, `%h`, **and `$USER` do NOT expand here** — replace `USERNAME` below with your actual username (e.g. `/home/pop/`).
 
 ```ini
 QT_QPA_PLATFORM=wayland
@@ -756,7 +756,7 @@ QT_QPA_PLATFORMTHEME=kde
 QT_QPA_PLATFORMTHEME_QT6=kde
 QT_STYLE_OVERRIDE=breeze
 XDG_MENU_PREFIX=plasma-
-XDG_DATA_DIRS=/home/$USER/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+XDG_DATA_DIRS=/home/USERNAME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
 QT_AUTO_SCREEN_SCALE_FACTOR=1
 QT_ENABLE_HIGHDPI_SCALING=1
 QT_SCALE_FACTOR_ROUNDING_POLICY=RoundPreferFloor
@@ -874,7 +874,7 @@ yay -S phinger-cursors bibata-cursor-git
 hyprctl setcursor Bibata-Modern-Classic 24
 ```
 
-> Find the exact installed theme names with `hyprctl setcursor -l` — Bibata ships `Bibata-Modern-*` / `Bibata-Original-*` variants (Classic/Ice/Amber).
+> Find the exact installed theme names with `ls /usr/share/icons/` (Bibata ships `Bibata-Modern-*` / `Bibata-Original-*` variants; Hyprcursor themes also live in `/usr/share/icons/hyprcursor/`) — Bibata ships `Bibata-Modern-*` / `Bibata-Original-*` variants (Classic/Ice/Amber).
 
 **XWayland + GTK apps** use XCursor via env vars (Hyprland also syncs the theme to gsettings when `sync_gsettings_theme` is enabled):
 

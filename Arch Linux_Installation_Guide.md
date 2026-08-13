@@ -28,7 +28,6 @@ Not the best way. Just the way I like.
   - [3.3 pacstrap](#33-pacstrap)
   - [3.4 Enter chroot](#34-enter-chroot)
 - [CachyOS Repos](#cachyos-repos-optional)
-- [YAY (AUR Helper)](#yay-aur-helper)
 - [§4 — Chroot Configuration](#4--chroot-configuration)
   - [4.1 Safety Check](#41-safety-check)
   - [4.2 Locale & Timezone](#42-locale--timezone)
@@ -41,6 +40,7 @@ Not the best way. Just the way I like.
 - [§6 — Services & QoL](#6--services--qol)
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
+  - [6.3 YAY (AUR Helper)](#63-yay-aur-helper)
 - [§7 — Desktop Stack](#7--desktop-stack)
   - [▸ KDE Plasma](#-kde-plasma)
   - [▸ Compositor: Niri](#-compositor-niri)
@@ -50,17 +50,16 @@ Not the best way. Just the way I like.
 - [§8 — Reboot](#8--reboot)
 - [§9 — Post-Install](#9--post-install)
   - [9.1 XDG User Dirs](#91-xdg-user-dirs)
-  - [9.2 YAY](#92-yay-aur-helper)
-  - [9.3 CachyOS Extras](#93-cachyos-extras-optional)
-  - [9.4 GPU Driver](#94-gpu-driver)
-  - [9.5 Snapper](#95-snapper)
-  - [9.6 SSH Hardening](#96-ssh-hardening)
-  - [9.7 Firewall](#97-firewall)
-  - [9.8 AppArmor](#98-apparmor-optional)
-  - [9.9 Extra Packages & Fonts](#99-extra-packages--fonts)
-  - [9.10 pyenv](#910-pyenv)
-  - [9.11 SPDIF Audio Fix](#911-spdif-audio-fix-optional)
-  - [9.12 Cache Cleanup](#912-cache-cleanup)
+  - [9.2 CachyOS Extras](#92-cachyos-extras-optional)
+  - [9.3 GPU Driver](#93-gpu-driver)
+  - [9.4 Snapper](#94-snapper)
+  - [9.5 SSH Hardening](#95-ssh-hardening)
+  - [9.6 Firewall](#96-firewall)
+  - [9.7 AppArmor](#97-apparmor-optional)
+  - [9.8 Extra Packages & Fonts](#98-extra-packages--fonts)
+  - [9.9 pyenv](#99-pyenv)
+  - [9.10 SPDIF Audio Fix](#910-spdif-audio-fix-optional)
+  - [9.11 Cache Cleanup](#911-cache-cleanup)
 - [Credits](#credits)
 
 ---
@@ -500,20 +499,6 @@ sudo mkinitcpio -P
 
 > GRUB picks the first installed kernel by default; hold Shift during boot to choose. Keep at least one fallback kernel until the new one boots cleanly.
 
-### YAY (AUR Helper)
-
-`yay` is needed for AUR packages (Noctalia, greetd). Install it now inside chroot so everything is ready before reboot:
-
-```bash
-sudo pacman -S --noconfirm --needed git base-devel
-cd /tmp
-sudo -u pop git clone https://aur.archlinux.org/yay-bin.git
-cd yay-bin && sudo -u pop makepkg -si --noconfirm
-cd ~ && rm -rf /tmp/yay-bin
-```
-
-> We use `yay-bin` (prebuilt) to avoid compiling yay from source. `sudo -u pop` runs the build as your user since `makepkg` refuses to run as root.
-
 ---
 
 ## §4 — Chroot Configuration
@@ -825,6 +810,20 @@ systemctl enable fstrim.timer
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
 > - `sshd` — SSH server (we enabled password auth during install; harden in §9.5)
+
+### 6.3 YAY (AUR Helper)
+
+`yay` is needed for AUR packages in §7 (Noctalia, greetd, Celestia, HyprMod, etc.). Install it now inside chroot so §7 can use it:
+
+```bash
+sudo pacman -S --noconfirm --needed git base-devel
+cd /tmp
+sudo -u pop git clone https://aur.archlinux.org/yay-bin.git
+cd yay-bin && sudo -u pop makepkg -si --noconfirm
+cd ~ && rm -rf /tmp/yay-bin
+```
+
+> We use `yay-bin` (prebuilt) to avoid compiling yay from source. `sudo -u pop` runs the build as your user since `makepkg` refuses to run as root.
 
 ---
 

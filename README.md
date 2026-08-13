@@ -20,7 +20,7 @@ Not the best way. Just the way I like.
 |----------|---|---|---|
 | **Kernel** | linux-zen | linux-cachyos | linux / linux-lts |
 | **Repos** | Vanilla Arch | CachyOS | |
-| **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia |
+| **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling)* |
 | **Bootloader** | GRUB | Limine | |
 
 All 4 decisions are independent. See the unified guide for detailed walkthrough.
@@ -31,6 +31,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ### 2026-08-13
 
+- **Main guide §7 now covers Hyprland:** `Arch Linux_Installation_Guide.md` gains a **▸ Hyprland + Celestia** section — package matrix (which packages each route installs/drops), shared base install, Route A (scrolling + ScrollOverview) vs Route B (native tiling, no plugin), SDDM + pixie theme setup, and pointers to the two companion guides. Decision Matrix + Recommended Combos updated; Secret Storage promoted to shared (all paths) with a SDDM/KWallet note. No conflicts: KDE→plasmalogin, Niri→greetd, Hyprland→sddm.
 - **Native Tiling companion added:** New `Hyprland-Tiling.md` — same stack as `Hyprland.md` but classic tiling: **dwindle** default (+ tweaks), **master** as optional per-workspace layout, `hjkl`/arrow keybinds (focus/move/resize), `SUPER+Tab` cycle windows, no ScrollOverview/plugin. Cursor themes (Phinger/Bibata), pixie-sddm, and live wallpapers (mpvpaper) included.
 - **pixie-sddm theme:** SDDM section now recommends pixie-sddm (Material Design 3 / Pixel UI, AUR `pixie-sddm-git`) with Qt6 prereqs + theme.conf setup.
 - **Cursor themes:** New "Cursor Themes" section — Phinger (XCursor) + Bibata Classic (`bibata-cursor-git`, hyprcursor + XCursor), `hyprctl setcursor` for native, `XCURSOR_THEME`/`XCURSOR_SIZE` env for XWayland/GTK.

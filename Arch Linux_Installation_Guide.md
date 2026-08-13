@@ -45,6 +45,8 @@ Not the best way. Just the way I like.
   - [▸ KDE Plasma](#-kde-plasma)
   - [▸ Compositor: Niri](#-compositor-niri)
   - [▸ Shell: Noctalia v5](#-shell-noctalia-v5)
+  - [▸ Hyprland + Celestia](#-hyprland--celestia)
+  - [▸ Secret Storage (all paths)](#-secret-storage-all-paths)
 - [§8 — Reboot](#8--reboot)
 - [§9 — Post-Install](#9--post-install)
   - [9.1 XDG User Dirs](#91-xdg-user-dirs)
@@ -71,7 +73,7 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 |---|----------|---|---|---|---|
 | 1 | **Kernel** | `linux-zen` | `linux-cachyos` | `linux` / `linux-lts` | §3 |
 | 2 | **Repos** | Vanilla Arch | CachyOS repos | | §9 |
-| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | | §7 |
+| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
 > **Kernel & repos are independent.** You can use `linux-cachyos` without CachyOS repos, or CachyOS repos with `linux-zen`. `linux-cachyos` is in the official `[extra]` repo — no third-party repo needed.
@@ -84,6 +86,8 @@ These are the three configurations this guide has been battle-tested with:
 |-------|--------|-------|---------|------------|
 | ⭐ **KDE Daily** | linux-zen | Vanilla | KDE Plasma | GRUB |
 | 🏔️ **Niri Lean** | linux-zen | Vanilla | Niri+Noctalia | GRUB |
+| 🪟 **Hyprland Scrolling** | linux-zen | Vanilla | Hyprland + Celestia (Route A) | GRUB |
+| 🪟 **Hyprland Tiling** | linux-zen | Vanilla | Hyprland + Celestia (Route B) | GRUB |
 | 🚀 **CachyOS KDE** | linux-cachyos | CachyOS | KDE Plasma | Limine |
 
 ---
@@ -857,17 +861,19 @@ systemctl enable fstrim.timer
 
 ## §7 — Desktop Stack
 
-> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Do not install both KDE and Niri.
+> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Celestia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
 
-There are two philosophies:
+There are three philosophies:
 
 | Path | What to install | What you get | Login screen |
 |------|----------------|-------------|--------------|
 | 🖥️ **KDE Plasma** | Just the KDE section | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
 | 🏔️ **Niri + Noctalia** | Niri section + Noctalia section | Scrollable-tiling compositor + native shell | `greetd` + `noctalia-greeter` |
+| 🪟 **Hyprland + Celestia (Scrolling)** | Hyprland section, Route A | Tiling compositor with Niri-style scrolling tape + Celestia shell | `sddm` |
+| 🪟 **Hyprland + Celestia (Tiling)** | Hyprland section, Route B | Tiling compositor with classic dwindle/master layout + Celestia shell | `sddm` |
 | 💀 **Niri alone** | Just the Niri section | Bare compositor — no bar, no launcher, no wallpaper. You build the rest yourself. | none (start from TTY) |
 
-KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: tiling workflow, lower resource usage, keyboard-driven, but still has a full shell with bar/launcher/notifications. Niri alone is for people who want to hand-pick every component (waybar, fuzzel, swaybg, etc.) — the guide doesn't cover that.
+KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell with bar/launcher/notifications. Hyprland + Celestia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies (Niri-style scrolling tape or classic dwindle/master tiling), and the same lean Celestia shell — detailed config lives in the companion guides `Hyprland.md` (scrolling) and `Hyprland-Tiling.md` (tiling). Niri alone is for people who want to hand-pick every component (waybar, fuzzel, swaybg, etc.) — the guide doesn't cover that.
 
 ### ▸ KDE Plasma
 
@@ -1391,7 +1397,91 @@ chown -R pop:pop /home/pop/.config/niri
 
 > **Full config reference:** See companion guide [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) for animations, gaming window rules, modular config splitting, greeter reference, and troubleshooting.
 
-#### Secret Storage
+### ▸ Hyprland + Celestia
+
+Hyprland is a tiling Wayland compositor (official `extra` repo, not `-git`). It has **two layout routes** — pick ONE:
+
+| Route | Layout | Keybinds | Plugin | Companion guide |
+|-------|--------|----------|--------|-----------------|
+| **A — Scrolling** | Niri-style infinitely-growing tape | Niri-style (columns, tape moves) | `hyprland-scroll-overview` (hyprpm) | [`Hyprland.md`](Hyprland.md) |
+| **B — Native Tiling** | `dwindle` (default) + `master` optional | Classic `hjkl` (focus/move/resize) | none | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) |
+
+#### Package matrix
+
+| Package | Source | A Scrolling | B Tiling | Notes |
+|---------|--------|:---:|:---:|-------|
+| `hyprland` | extra | ✅ | ✅ | compositor (pulls `xorg-xwayland`) |
+| `hyprland-scroll-overview` | hyprpm | ✅ | — | Niri-style overview — **Route A only** |
+| `caelestia-shell` | AUR | ✅ | ✅ | shell: bar/launcher/notif/lock/idle/paper/picker |
+| `walker elephant` | AUR | ✅ | ✅ | launcher + backend daemon |
+| `grim slurp satty wl-clipboard` | extra | ✅ | ✅ | screenshots (native) |
+| `hyprmod` | AUR | ✅ | ✅ | GUI settings app (live preview + profiles) |
+| `dolphin xdg-utils gvfs-mtp plasma-integration kded` | extra | ✅ | ✅ | file manager + KDE app integration |
+| `xdg-desktop-portal-hyprland hyprpolkitagent` | extra | ✅ | ✅ | screen share/portal + polkit dialogs |
+| `sddm` | extra | ✅ | ✅ | login manager (≥ 0.20.0) |
+| `pixie-sddm-git` | AUR | ✅ | ✅ | SDDM theme (Material Design 3 / Pixel UI) |
+
+> **The only difference between routes is the overview plugin** (A adds it, B doesn't) and the config file you follow. Everything else is shared.
+
+#### 1. Install shared base
+
+```bash
+# Core compositor (pulls xorg-xwayland, aquamarine, hyprutils...)
+pacman -S --noconfirm --needed hyprland
+
+# Ecosystem (official)
+pacman -S --noconfirm --needed \
+  xdg-desktop-portal-hyprland hyprpolkitagent sddm \
+  grim slurp satty wl-clipboard \
+  dolphin xdg-utils gvfs-mtp plasma-integration kded
+
+# AUR (yay is available from the YAY section above)
+yay -S --noconfirm caelestia-shell hyprmod walker elephant pixie-sddm-git
+```
+
+> **AUR policy — review PKGBUILDs first** (June 2026 AUR malware incident): use `yay -G caelestia-shell` etc. to inspect before building. Celestia needs `quickshell-git` (tagged release fails) — expect a longer install.
+
+#### 2. Route A only — ScrollOverview plugin
+
+```bash
+hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
+hyprpm update
+hyprpm enable scrolloverview
+```
+
+> Skip this for Route B — the plugin is what makes Route A "scrolling". `hyprpm` is Hyprland's bundled plugin manager.
+
+#### 3. Enable SDDM (login manager)
+
+```bash
+systemctl enable sddm
+```
+
+> **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` is current (0.21+) — satisfied.
+
+#### 4. Theme the login screen (pixie-sddm)
+
+```bash
+# Qt6 prereqs for the SDDM theme engine
+pacman -S --noconfirm --needed qt6-declarative qt6-svg
+
+# Point SDDM at the pixie theme
+tee /etc/sddm.conf.d/theme.conf <<'EOF'
+[Theme]
+Current=pixie
+EOF
+```
+
+#### 5. Configure — follow the companion guide for your route
+
+Hyprland ≥ 0.55 uses **Lua** config (`~/.config/hypr/hyprland.lua`) with hot-reload on save. The companion guides cover everything — layout settings, keybinds, rules, animations, Celestia IPC, cursor themes (Phinger/Bibata), live wallpapers (mpvpaper), XWayland, PCoIP, troubleshooting:
+
+- **Route A (scrolling):** follow [`Hyprland.md`](Hyprland.md) — scrolling layout config, Niri-style keybinds, ScrollOverview setup
+- **Route B (tiling):** follow [`Hyprland-Tiling.md`](Hyprland-Tiling.md) — dwindle/master layout, `hjkl` keybinds, no plugin
+
+> **No conflict with the other paths:** each path uses its own login manager — KDE → `plasmalogin`, Niri → `greetd`, Hyprland → `sddm`. Enable exactly one. The KDE packages in the matrix (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* Hyprland — they don't pull the Plasma desktop, so they don't conflict with the other routes.
+
+### ▸ Secret Storage (all paths)
 
 Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromium, Firefox, Git) use `libsecret`. KDE apps (Dolphin network passwords, KDE Connect) use KWallet. Install both — they coexist fine:
 
@@ -1400,7 +1490,9 @@ sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanag
 ```
 
 > PAM hooks for greetd are added in the greetd setup above — they need `/etc/pam.d/greetd` to exist first.
-
+>
+> **Hyprland path (SDDM):** SDDM ships `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch — verify with `grep -i kwallet /etc/pam.d/sddm`; if missing, add the same `auth optional` / `session optional` lines used for greetd above.
+>
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
 ---

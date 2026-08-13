@@ -58,6 +58,7 @@ Installing Hyprland (native tiling Wayland compositor — **dwindle** default, *
 ```
 hyprland                      # compositor (official tagged release — NOT -git)
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
+kitty                         # terminal (GPU-accelerated — SUPER+T / SUPER+B binds)
 walker elephant               # launcher + backend daemon (AUR — Wayland-native, GTK4/Rust)
 grim slurp satty              # screenshots: capture + region select + native annotation
 wl-clipboard                  # Wayland clipboard (screenshot copy)
@@ -91,7 +92,7 @@ This pulls `xorg-xwayland` (XWayland support), `aquamarine`, `hyprutils`, `hyprl
 ### 2. Install the ecosystem packages
 
 ```bash
-sudo pacman -S xdg-desktop-portal-hyprland hyprpolkitagent sddm
+sudo pacman -S xdg-desktop-portal-hyprland hyprpolkitagent sddm kitty
 ```
 
 > **Why:** `xdg-desktop-portal-hyprland` (XDPH) enables screen sharing under Wayland (also required for DBus global shortcuts). `hyprpolkitagent` shows GUI auth dialogs (e.g. package managers). `sddm` is the login manager.
@@ -251,9 +252,9 @@ hl.workspace_rule({ workspace = "2", layout = "master", layout_opts = {
 local mainMod = "SUPER"
 
 --  Launch
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("ghostty"))             -- terminal
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("kitty"))             -- terminal
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (Walker)
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("ghostty -e nvim"))     -- editor
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("kitty -e nvim"))     -- editor
 
 --  Window management
 hl.bind(mainMod .. " + Q", hl.dsp.killactive())                    -- close window

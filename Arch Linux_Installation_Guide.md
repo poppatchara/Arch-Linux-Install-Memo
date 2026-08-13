@@ -409,12 +409,22 @@ done
 
 # If any selected kernel needs CachyOS repos, add them to the live ISO now
 if [ "$NEED_CACHYOS" -eq 1 ]; then
-  echo "→ CachyOS kernel selected — adding CachyOS repos (cachyos-repo.sh)..."
-  cd ~
-  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-  tar xf cachyos-repo.tar.xz && cd cachyos-repo
-  sudo ./cachyos-repo.sh
-  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
+  echo "→ CachyOS kernel selected — adding CachyOS repos..."
+  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+  sudo pacman-key --lsign-key F3B607488DB35A47
+  sudo pacman -U https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
+                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst \
+                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-27-1-any.pkg.tar.zst \
+                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-27-1-any.pkg.tar.zst
+  sudo tee -a /etc/pacman.conf <<'EOF'
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+[cachyos-v3]
+Include = /etc/pacman.d/cachyos-v3-mirrorlist
+[cachyos-v4]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+EOF
   sudo pacman -Syy
 fi
 ```
@@ -497,7 +507,7 @@ arch-chroot /mnt
 
 > Skip if using Vanilla Arch repos. Run the official installer — skip if repos were already added in §3.1.
 >
-> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (see the old §3.1 block in git history). Since §3.1 and this section both call the same script, choosing a `linux-cachyos*` kernel means you get the fork automatically — that's the "stick with CachyOS all the way" trade-off.
+> **Note — this script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, use the §3.1 manual path instead (keyring + mirrorlists only, no pacman swap) or edit `/etc/pacman.conf` by hand with only `cachyos-v3`/`cachyos-v4`.
 
 ```bash
 # Add CachyOS repos (skip if already present from §3.1)

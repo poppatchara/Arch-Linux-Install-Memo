@@ -1203,6 +1203,8 @@ pyenv install 3.13.2
 pyenv global 3.13.2
 ```
 
+> **CachyOS note:** if you added the CachyOS repos, `zlib` is replaced by **`zlib-ng-compat`** (zlib-ng build, same ABI — provides `zlib`, `libz.so`, and headers, just faster). If pacman prompts "zlib and zlib-ng-compat are in conflict. Remove zlib?" answer **yes** — it's expected, and pyenv compiles fine against zlib-ng-compat.
+
 ### 9.10 SPDIF Audio Fix (optional)
 
 Some SPDIF DACs sleep after idle → first 1–3 seconds of audio get cut off. Two fixes:

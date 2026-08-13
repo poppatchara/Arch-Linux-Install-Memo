@@ -9,7 +9,8 @@ Not the best way. Just the way I like.
 
 | Guide | Description |
 |-------|-------------|
-| [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file |
+| [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file; §7 links to each desktop guide |
+| [KDE Plasma](KDE_Plasma.md) 🖥️ | Companion — KDE install, mandatory PAM config, apps, KWallet (+ [theming](KDE_Theming.md)) |
 | [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
 | [Hyprland + Celestia](Hyprland.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
 | [Hyprland + Celestia — Native Tiling](Hyprland-Tiling.md) 🪟 | Companion — Hyprland dwindle/master tiling, Lua config, Celestia shell, SDDM |

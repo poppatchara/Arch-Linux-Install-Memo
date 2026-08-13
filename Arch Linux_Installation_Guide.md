@@ -467,6 +467,11 @@ cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 # so pacman sees them as newer and upgrades automatically.
 sudo pacman -Qqn | sudo pacman -S --noconfirm -
 
+# Replace zlib with CachyOS's zlib-ng-compat (same ABI, faster — avoids
+# "Remove zlib?" conflict prompts on every later pacman command).
+# --ask=4 answers YES to the conflict/remove prompt (--noconfirm alone answers N).
+sudo pacman -S --noconfirm --ask=4 zlib-ng-compat lib32-zlib-ng-compat
+
 # Rank CachyOS mirrors by speed
 sudo pacman -S --noconfirm --needed cachyos-rate-mirrors
 sudo cachyos-rate-mirrors
@@ -1203,7 +1208,7 @@ pyenv install 3.13.2
 pyenv global 3.13.2
 ```
 
-> **CachyOS note:** if you added the CachyOS repos, `zlib` is replaced by **`zlib-ng-compat`** (zlib-ng build, same ABI — provides `zlib`, `libz.so`, and headers, just faster). If pacman prompts "zlib and zlib-ng-compat are in conflict. Remove zlib?" answer **yes** — it's expected, and pyenv compiles fine against zlib-ng-compat.
+> **CachyOS note:** `zlib` is already replaced by **`zlib-ng-compat`** in the CachyOS Repos section (same ABI, faster). Nothing to do here — pyenv compiles fine against it.
 
 ### 9.10 SPDIF Audio Fix (optional)
 

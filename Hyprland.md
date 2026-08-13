@@ -407,6 +407,14 @@ hl.config({
 
 ### 4.5 Celestia integration (`celestia.lua`)
 
+First, enable the **polkit authentication agent** — a user service that shows GUI auth dialogs (e.g. package manager prompts, system settings). It starts automatically with the Hyprland graphical session:
+
+```bash
+systemctl --user enable --now hyprpolkitagent
+```
+
+> **Why:** `hyprpolkitagent` ships a systemd user unit (`/usr/lib/systemd/user/hyprpolkitagent.service`, `WantedBy=graphical-session.target`) but it is **disabled by default** — without enabling it, apps that need root privileges have no GUI auth dialog (the Hyprland welcome screen flags it as "Authentication agent missing"). The binary lives at `/usr/lib/hyprpolkitagent/hyprpolkitagent`, not in `$PATH`.
+
 ```lua
 -- ~/.config/hypr/celestia.lua
 local mainMod = "SUPER"

@@ -578,6 +578,10 @@ caelestia shell picker open        # color picker
 caelestia shell -s                 # list all IPC targets/functions
 ```
 
+> **What IPC is:** IPC = *Inter-Process Communication*. `caelestia shell ...` sends commands over DBus/socket to the **already-running shell process** — it does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("caelestia shell lock lock")` tells the running shell to lock the screen.
+>
+> **Verify the commands before relying on them:** run `caelestia shell -s` to list the actual IPC targets/actions, then test each command (e.g. `caelestia shell lock lock`) manually. The syntax in this guide is taken from the project docs but **not yet verified on a live install** — confirm it matches your shell version, especially before wiring it into keybinds (§4.2 uses `caelestia shell lock lock` on `SUPER+Alt+L`).
+
 4. **Keybinds** — if not using the full caelestia dots, wire global shortcuts yourself (see §4.5). The shell exposes drawers/notifs/lock/mpris/picker/wallpaper targets via IPC.
 
 > **Customization:** do **not** edit files installed by the AUR package — follow the [manual installation section](https://github.com/caelestia-dots/shell#manual-installation) and clone the repo into `~/.config/quickshell/caelestia` for local tweaks.

@@ -8,7 +8,7 @@ Personal notes for rebuilding a daily Arch Linux install: UEFI, single NVMe, Btr
 Not the best way. Just the way the owner likes it.
 
 - **Unified guide**: `Arch Linux_Installation_Guide.md` — all decisions in one file (§0–§8)
-- **Companion files**: one per desktop/compositor stack (e.g. `Niri_Noctalia_v5.md`, future `Hyprland.md`)
+- **Companion files**: one per desktop/compositor stack (e.g. `Niri_Noctalia_v5.md`, future `hyprland-Scrolling.md`)
 - **Decision matrix**: in `README.md` — every setup choice (kernel, repos, desktop, bootloader) is a free variable decided there
 
 ## Repository Layout

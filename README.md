@@ -12,7 +12,7 @@ Not the best way. Just the way I like.
 | [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file; §7 links to each desktop guide |
 | [KDE Plasma](KDE_Plasma.md) 🖥️ | Companion — KDE install, mandatory PAM config, apps, KWallet (+ [theming](KDE_Theming.md)) |
 | [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
-| [Hyprland + Celestia](Hyprland.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
+| [Hyprland + Celestia](hyprland-Scrolling.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
 | [Hyprland + Celestia — Native Tiling](Hyprland-Tiling.md) 🪟 | Companion — Hyprland dwindle/master tiling, Lua config, Celestia shell, SDDM |
 
 ## 🧱 Decision Matrix
@@ -33,20 +33,20 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 ### 2026-08-13
 
 - **Main guide §7 now covers Hyprland:** `Arch Linux_Installation_Guide.md` gains a **▸ Hyprland + Celestia** section — package matrix (which packages each route installs/drops), shared base install, Route A (scrolling + ScrollOverview) vs Route B (native tiling, no plugin), SDDM + pixie theme setup, and pointers to the two companion guides. Decision Matrix + Recommended Combos updated; Secret Storage promoted to shared (all paths) with a SDDM/KWallet note. No conflicts: KDE→plasmalogin, Niri→greetd, Hyprland→sddm.
-- **Native Tiling companion added:** New `Hyprland-Tiling.md` — same stack as `Hyprland.md` but classic tiling: **dwindle** default (+ tweaks), **master** as optional per-workspace layout, `hjkl`/arrow keybinds (focus/move/resize), `SUPER+Tab` cycle windows, no ScrollOverview/plugin. Cursor themes (Phinger/Bibata), pixie-sddm, and live wallpapers (mpvpaper) included.
+- **Native Tiling companion added:** New `Hyprland-Tiling.md` — same stack as `hyprland-Scrolling.md` but classic tiling: **dwindle** default (+ tweaks), **master** as optional per-workspace layout, `hjkl`/arrow keybinds (focus/move/resize), `SUPER+Tab` cycle windows, no ScrollOverview/plugin. Cursor themes (Phinger/Bibata), pixie-sddm, and live wallpapers (mpvpaper) included.
 - **pixie-sddm theme:** SDDM section now recommends pixie-sddm (Material Design 3 / Pixel UI, AUR `pixie-sddm-git`) with Qt6 prereqs + theme.conf setup.
 - **Cursor themes:** New "Cursor Themes" section — Phinger (XCursor) + Bibata Classic (`bibata-cursor-git`, hyprcursor + XCursor), `hyprctl setcursor` for native, `XCURSOR_THEME`/`XCURSOR_SIZE` env for XWayland/GTK.
 - **Live wallpapers (optional):** Celestia section gains mpvpaper how-to — MotionBGs `.mp4` download, `mpvpaper -o loop`, autostart in Lua, layer-shell conflict note with Celestia's static-only wallpaper.
 
 ### 2026-08-12
 
-- **Hyprland + Celestia companion added:** New `Hyprland.md` — native scrolling layout (0.55+), Lua config (`hyprland.lua`), Celestia shell (Quickshell-based: bar/launcher/notif/lock/idle/paper/picker in one), SDDM login manager, XWayland notes. Third Desktop option in the decision matrix.
-- **ScrollOverview plugin:** Added §5 to `Hyprland.md` — Niri-style overview (zoom-out all workspaces, trackpad swipe, ALT+Tab visual switcher) via `hyprpm`, with Lua config, submap, gestures, and dispatchers.
-- **Native screenshot stack:** Added `grim` + `slurp` + `satty` + `wl-clipboard` to `Hyprland.md` — Print/SUPER+Print/CTRL+Print binds for region-annotate, fullscreen-annotate, and clipboard copy. No portal needed.
-- **HyprMod GUI settings:** Added §6 to `Hyprland.md` — live-preview settings app, `SUPER+M` opens the GUI. Settings-only (no layout-switch profile cycling).
-- **Dolphin file manager:** Added to `Hyprland.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet-only secret storage via Secret Service interface — no GNOME Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
-- **snappy-switcher (optional):** Added §5.6 to `Hyprland.md` — big per-window thumbnail ALT+Tab alternative to ScrollOverview's built-in switcher, marked optional (default stays ScrollOverview ALT+Tab).
-- **Walker launcher:** Added §8 to `Hyprland.md` — Wayland-native launcher (GTK4/Rust) with elephant backend, `SUPER+Space` now opens Walker (replaces Celestia's built-in launch), providers table (calc/files/runner/clipboard/symbols), TOML config example.
+- **Hyprland + Celestia companion added:** New `hyprland-Scrolling.md` — native scrolling layout (0.55+), Lua config (`hyprland.lua`), Celestia shell (Quickshell-based: bar/launcher/notif/lock/idle/paper/picker in one), SDDM login manager, XWayland notes. Third Desktop option in the decision matrix.
+- **ScrollOverview plugin:** Added §5 to `hyprland-Scrolling.md` — Niri-style overview (zoom-out all workspaces, trackpad swipe, ALT+Tab visual switcher) via `hyprpm`, with Lua config, submap, gestures, and dispatchers.
+- **Native screenshot stack:** Added `grim` + `slurp` + `satty` + `wl-clipboard` to `hyprland-Scrolling.md` — Print/SUPER+Print/CTRL+Print binds for region-annotate, fullscreen-annotate, and clipboard copy. No portal needed.
+- **HyprMod GUI settings:** Added §6 to `hyprland-Scrolling.md` — live-preview settings app, `SUPER+M` opens the GUI. Settings-only (no layout-switch profile cycling).
+- **Dolphin file manager:** Added to `hyprland-Scrolling.md` — `SUPER+E` opens Dolphin (Hyprland convention; "next empty workspace" moved to `SUPER+N`), full KDE Apps on Hyprland section (plasma-integration + kded6, KWallet-only secret storage via Secret Service interface — no GNOME Keyring, "Open With" fix, dual env via `environment.d` + `hl.env()`).
+- **snappy-switcher (optional):** Added §5.6 to `hyprland-Scrolling.md` — big per-window thumbnail ALT+Tab alternative to ScrollOverview's built-in switcher, marked optional (default stays ScrollOverview ALT+Tab).
+- **Walker launcher:** Added §8 to `hyprland-Scrolling.md` — Wayland-native launcher (GTK4/Rust) with elephant backend, `SUPER+Space` now opens Walker (replaces Celestia's built-in launch), providers table (calc/files/runner/clipboard/symbols), TOML config example.
 - **Niri-style keybinds:** Rewrote §4.2 `keybinds.lua` to mirror Niri muscle memory — `SUPER+T` terminal, HJKL+arrows focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F` maximize / `SUPER+Shift+F` fullscreen, `SUPER+C` center, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
 - **Niri-style wheel + workspace binds:** Added to §4.2 — `SUPER+scroll` column focus, `SUPER+Shift+scroll` workspace switch, `SUPER+U/I` prev/next workspace, `SUPER+Shift+U/I` move window to prev/next workspace.
 - **Niri → Hyprland shortcut map:** Added table to §4.2 — full Niri-vs-Hyprland keybind comparison (verified against real Niri config), plus a "not mapped" list (monitor nav, width ±10%, tabbed, etc.).

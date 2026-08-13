@@ -71,12 +71,12 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 
 | # | Decision | A | B | C | § |
 |---|----------|---|---|---|---|
-| 1 | **Kernel** | `linux-zen` | `linux-cachyos` | `linux` / `linux-lts` | §3 |
-| 2 | **Repos** | Vanilla Arch | CachyOS repos | | §9 |
+| 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(post-chroot)* | `linux` / `linux-lts` | §3 + CachyOS Repos |
+| 2 | **Repos** | Vanilla Arch | CachyOS repos | | CachyOS Repos *(post-chroot)* |
 | 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
-> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. You can still use CachyOS repos with `linux-zen` (CachyOS repos serve Arch packages too), but the CachyOS kernels need the CachyOS repo to exist.
+> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. The live ISO stage always installs a vanilla kernel; if you want `linux-cachyos*`, add the repos **post-chroot** (CachyOS Repos section) and swap the kernel there.
 
 ### Recommended Combos
 
@@ -366,13 +366,11 @@ cat /mnt/etc/fstab  # sanity check
 > **Decision: Kernel.**
 
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
-- `linux-cachyos` — CachyOS's default optimized kernel. **Needs CachyOS repos** — not in `[extra]`.
-- `linux-cachyos-bore` — CachyOS variant with BORE scheduler. Needs CachyOS repos.
-- `linux-cachyos-eevdf` — CachyOS variant with EEVDF scheduler. Needs CachyOS repos.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
 - `linux-lts` — long-term support. Older but extremely stable. Good fallback.
+- `linux-cachyos*` (cachyos / bore / eevdf) — NOT available in the live ISO. Install these **after chroot** in the [CachyOS Repos](#cachyos-repos-optional) section.
 
-> **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos (done in §9 post-install). Kernel choice is independent.
+> **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos — done **post-chroot** in the [CachyOS Repos](#cachyos-repos-optional) section. The live ISO stage always uses vanilla repos (simpler, no space pressure); if you want a `linux-cachyos*` kernel you install a vanilla kernel now, then swap kernels after the repos are added.
 
 ### 3.0 CPU Detection
 
@@ -385,48 +383,23 @@ lscpu | grep -qi amd && cpu=amd
 
 ### 3.1 Select Kernels
 
-Install at least one. You can install multiple — common combos: `linux-zen` (daily) + `linux-lts` (fallback), or `linux-cachyos` + `linux-zen`.
+Install at least one. You can install multiple — common combos: `linux-zen` (daily) + `linux-lts` (fallback).
+
+> `linux-cachyos*` kernels can't be selected here — they need CachyOS repos which are only added post-chroot. Install a vanilla kernel now; swap to `linux-cachyos*` in the [CachyOS Repos](#cachyos-repos-optional) section if you want it.
 
 ```bash
-# Uncomment the kernels you want:
+# Uncomment the kernels you want (vanilla only — see note above):
 KERNELS=(
   linux-zen
-  # linux-cachyos        # needs CachyOS repos → auto-added below
-  # linux-cachyos-bore    # needs CachyOS repos → auto-added below
-  # linux-cachyos-eevdf   # needs CachyOS repos → auto-added below
   # linux
   # linux-lts
 )
 
 # Build kernel package list for pacstrap
 KERNEL_PKGS=()
-NEED_CACHYOS=0
 for k in "${KERNELS[@]}"; do
   KERNEL_PKGS+=("$k" "$k-headers")
-  # Any linux-cachyos* kernel (including the base `linux-cachyos`) needs CachyOS repos
-  [[ "$k" == linux-cachyos* ]] && NEED_CACHYOS=1
 done
-
-# If any selected kernel needs CachyOS repos, add them to the live ISO now
-if [ "$NEED_CACHYOS" -eq 1 ]; then
-  echo "→ CachyOS kernel selected — adding CachyOS repos..."
-  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-  sudo pacman-key --lsign-key F3B607488DB35A47
-  sudo pacman -U https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
-                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst \
-                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-27-1-any.pkg.tar.zst \
-                  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-27-1-any.pkg.tar.zst
-  sudo tee -a /etc/pacman.conf <<'EOF'
-
-[cachyos]
-Include = /etc/pacman.d/cachyos-mirrorlist
-[cachyos-v3]
-Include = /etc/pacman.d/cachyos-v3-mirrorlist
-[cachyos-v4]
-Include = /etc/pacman.d/cachyos-v4-mirrorlist
-EOF
-  sudo pacman -Syy
-fi
 ```
 
 <details>
@@ -435,9 +408,9 @@ fi
 | Kernel | Repo | Scheduler | Best for |
 |--------|------|-----------|----------|
 | `linux-zen` | `[extra]` | EEVDF | Desktop/laptop daily use — lower latency, tuned for interactivity |
-| `linux-cachyos` | CachyOS | EEVDF | CachyOS defaults — balanced optimization with extra patches |
-| `linux-cachyos-bore` | CachyOS | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
-| `linux-cachyos-eevdf` | CachyOS | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
+| `linux-cachyos` | CachyOS repos | EEVDF | CachyOS defaults — balanced optimization with extra patches |
+| `linux-cachyos-bore` | CachyOS repos | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
+| `linux-cachyos-eevdf` | CachyOS repos | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
 | `linux` | `[core]` | EEVDF | Maximum stability — vanilla kernel, least patches, slowest to adopt new features |
 | `linux-lts` | `[core]` | EEVDF | Fallback kernel — older version, ultra-stable, ideal rescue boot option |
 
@@ -446,10 +419,10 @@ fi
 - **BORE** (Burst-Oriented Response Enhancer) — prioritizes the currently-focused task. Noticeably snappier for single-app workloads (gaming, DAWs, video editing). Can slightly penalize heavy background tasks.
 
 **CachyOS vs vanilla kernels:**
-CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. Available in `[extra]` — no third-party repo needed.
+CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — install them post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
 
 **Recommended approach:**
-Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` as a third option. GRUB picks the first kernel by default; hold Shift during boot to choose another.
+Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` after the CachyOS repos are set up. GRUB picks the first kernel by default; hold Shift during boot to choose another.
 
 </details>
 
@@ -505,27 +478,23 @@ arch-chroot /mnt
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. Run the official installer — skip if repos were already added in §3.1.
+> Skip if using Vanilla Arch repos. This is the **only** place CachyOS repos are added (the live ISO stage always uses vanilla repos — no space pressure, simpler pacstrap).
 >
-> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (the §3.1 block is exactly this).
->
-> **Why §3.1 uses the manual add instead of this script:** §3.1 runs inside the **live ISO**, where the script would install the forked pacman + keyring onto the constrained live environment (no space). The manual add only touches `/etc/pacman.conf` + mirrorlists, which is all `pacstrap` needs to see `linux-cachyos*`. This section runs post-install (in the chroot) where the script is fine.
+> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (the old §3.1 block in git history is exactly this).
 
 ```bash
-# Add CachyOS repos (skip if already present from §3.1)
-if ! grep -q '\[cachyos\]' /etc/pacman.conf 2>/dev/null; then
-  # Trust the CachyOS signing key FIRST — without --lsign-key, pacman rejects the
-  # repo with "signature ... is unknown trust" (the official script usually does this,
-  # but if the keyserver hiccups you're stuck — doing it manually is idempotent)
-  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-  sudo pacman-key --lsign-key F3B607488DB35A47
-  sudo pacman -Syu
-  cd ~
-  curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
-  tar xf cachyos-repo.tar.xz && cd cachyos-repo
-  sudo ./cachyos-repo.sh
-  cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
-fi
+# Trust the CachyOS signing key FIRST — without --lsign-key, pacman rejects the
+# repo with "signature ... is unknown trust" (the official script usually does this,
+# but if the keyserver hiccups you're stuck — doing it manually is idempotent)
+sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+sudo pacman-key --lsign-key F3B607488DB35A47
+sudo pacman -Syu
+
+cd ~
+curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz
+tar xf cachyos-repo.tar.xz && cd cachyos-repo
+sudo ./cachyos-repo.sh
+cd ~ && rm -rf cachyos-repo cachyos-repo.tar.xz
 
 # Reinstall everything from CachyOS repos
 # All packages installed so far (§3) were from vanilla Arch.
@@ -539,6 +508,24 @@ sudo cachyos-rate-mirrors
 ```
 
 > After this, every package on the system is the CachyOS-optimized version.
+
+#### Optional: swap to a CachyOS kernel
+
+If you want a `linux-cachyos*` kernel (instead of the vanilla one from §3.1), install it now — the repos are live:
+
+```bash
+# Pick your variant — linux-cachyos (default), linux-cachyos-bore (gaming/audio), linux-cachyos-eevdf
+sudo pacman -S --noconfirm linux-cachyos-bore linux-cachyos-bore-headers
+
+# Regenerate the bootloader entries
+sudo mkinitcpio -P
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# Optional: drop the vanilla kernel you installed in §3.1 (keep linux-lts as a fallback if you have it)
+# sudo pacman -R --noconfirm linux-zen linux-zen-headers
+```
+
+> GRUB picks the first installed kernel by default; hold Shift during boot to choose. Keep at least one fallback kernel until the new one boots cleanly.
 
 ### YAY (AUR Helper)
 

@@ -12,6 +12,7 @@ Not the best way. Just the way I like.
 | [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file |
 | [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
 | [Hyprland + Celestia](Hyprland.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
+| [Hyprland + Celestia — Native Tiling](Hyprland-Tiling.md) 🪟 | Companion — Hyprland dwindle/master tiling, Lua config, Celestia shell, SDDM |
 
 ## 🧱 Decision Matrix
 
@@ -27,6 +28,13 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 ---
 
 ## 📝 Changelog
+
+### 2026-08-13
+
+- **Native Tiling companion added:** New `Hyprland-Tiling.md` — same stack as `Hyprland.md` but classic tiling: **dwindle** default (+ tweaks), **master** as optional per-workspace layout, `hjkl`/arrow keybinds (focus/move/resize), `SUPER+Tab` cycle windows, no ScrollOverview/plugin. Cursor themes (Phinger/Bibata), pixie-sddm, and live wallpapers (mpvpaper) included.
+- **pixie-sddm theme:** SDDM section now recommends pixie-sddm (Material Design 3 / Pixel UI, AUR `pixie-sddm-git`) with Qt6 prereqs + theme.conf setup.
+- **Cursor themes:** New "Cursor Themes" section — Phinger (XCursor) + Bibata Classic (`bibata-cursor-git`, hyprcursor + XCursor), `hyprctl setcursor` for native, `XCURSOR_THEME`/`XCURSOR_SIZE` env for XWayland/GTK.
+- **Live wallpapers (optional):** Celestia section gains mpvpaper how-to — MotionBGs `.mp4` download, `mpvpaper -o loop`, autostart in Lua, layer-shell conflict note with Celestia's static-only wallpaper.
 
 ### 2026-08-12
 

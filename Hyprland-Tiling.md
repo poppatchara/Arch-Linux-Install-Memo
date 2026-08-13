@@ -1,10 +1,10 @@
-# Hyprland + Celestia Shell 🪟🪽
+# Hyprland + Celestia Shell — Native Tiling 🪟🪽
 
-Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling Layout**) with the Celestia shell on an existing Arch Linux install. Celestia is a Quickshell-based desktop shell — bar, launcher, notifications, lock screen, idle, wallpaper, and color picker all in one.
-
-> **Prefer classic tiling?** There's a companion guide — `Hyprland-Tiling.md` — for native dwindle/master tiling with `hjkl` window management.
+Installing Hyprland (native tiling Wayland compositor — **dwindle** default, **master** optional) with the Celestia shell on an existing Arch Linux install. Celestia is a Quickshell-based desktop shell — bar, launcher, notifications, lock screen, idle, wallpaper, and color picker all in one.
 
 > **This guide targets Hyprland 0.55+.** Since 0.55, Hyprland's config language is **Lua** (`hyprland.lua`) — the old hyprlang syntax (`hyprland.conf`) is deprecated. Check your version with `hyprctl version` before following any config examples.
+>
+> **Prefer scrolling?** There's a companion guide — `Hyprland.md` — for the Niri-style scrolling layout with ScrollOverview.
 >
 > **Sources:** [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11), [Celestia shell repo](https://github.com/caelestia-dots/shell), [SDDM](https://github.com/sddm/sddm).
 
@@ -16,17 +16,16 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 2. [Package Stack — Lean But Feature-Rich](#package-stack--lean-but-feature-rich)
 3. [Installation](#installation)
 4. [Configuration (Lua)](#configuration-lua)
-5. [ScrollOverview — Niri-Style Overview](#scrolloverview--niri-style-overview)
-6. [HyprMod — GUI Settings](#hyprmod--gui-settings)
-7. [Celestia Shell Setup](#celestia-shell-setup)
-8. [Walker — Application Launcher](#walker--application-launcher)
-9. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
-10. [SDDM Login Manager](#sddm-login-manager)
-11. [XWayland](#xwayland)
-12. [Cursor Themes](#cursor-themes)
-13. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-14. [Troubleshooting](#troubleshooting)
-15. [Uninstalling](#uninstalling)
+5. [HyprMod — GUI Settings](#hyprmod--gui-settings)
+6. [Celestia Shell Setup](#celestia-shell-setup)
+7. [Walker — Application Launcher](#walker--application-launcher)
+8. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
+9. [SDDM Login Manager](#sddm-login-manager)
+10. [XWayland](#xwayland)
+11. [Cursor Themes](#cursor-themes)
+12. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+13. [Troubleshooting](#troubleshooting)
+14. [Uninstalling](#uninstalling)
 
 ---
 
@@ -34,8 +33,7 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 
 | Component | Package | Source | Purpose |
 |-----------|---------|--------|---------|
-| **Hyprland** | `hyprland` | `extra` (official) | Wayland compositor with native scrolling layout |
-| **ScrollOverview** | `hyprland-scroll-overview` | plugin (hyprpm) | Niri-style overview: zoom out all workspaces, swipe gesture, ALT+Tab switcher |
+| **Hyprland** | `hyprland` | `extra` (official) | Wayland compositor with native tiling (dwindle + master) |
 | **Celestia shell** | `caelestia-shell` | AUR | Desktop shell: bar, launcher, notifications, lock, idle, wallpaper, picker, dashboard, OSD |
 | **SDDM** | `sddm` | `extra` (official) | Login manager (≥ 0.20.0 to avoid bug #1476) |
 | **XDG Desktop Portal** | `xdg-desktop-portal-hyprland` | `extra` | Screen sharing / portal integration |
@@ -44,14 +42,14 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 
 **Why this stack:**
 - **Celestia replaces 6 separate tools** — no `hyprlock` / `hypridle` / `hyprpaper` / `hyprpicker` / `waybar` / `mako` needed. One Quickshell-based shell covers bar, launcher, notifications, lock screen, idle, wallpaper, color picker, dashboard, and OSD.
-- **Scrolling layout is native** in Hyprland 0.55+ — the Niri-style infinitely-growing tape paradigm, no `hyprscroller` plugin.
-- **ScrollOverview plugin adds the Niri-style overview** — zoom out to see all workspaces, trackpad swipe, and a visual ALT+Tab switcher (Hyprland has no built-in overview).
+- **Native tiling is built in** — `dwindle` (the default) for automatic tiling, `master` as an alternative layout for a master-window + stack arrangement. No plugins needed.
 - **No `hyprsunset`** — blue light filtering not needed on this setup.
 
 **Key differences from Niri + Noctalia:**
 - Config is **Lua** (`~/.config/hypr/hyprland.lua`), not KDL/TOML
-- Scrolling layout is **built into the compositor**, not a shell feature
+- Tiling is **built into the compositor**, not a shell feature
 - Celestia is **Quickshell/QML** (like Noctalia v4, not the v5 C++ rewrite)
+- Keyboard-driven tiling like Niri, but with the classic `hjkl`/arrow window management (no tape/columns paradigm)
 
 ---
 
@@ -59,7 +57,6 @@ Installing Hyprland (scrolling-tiling Wayland compositor with native **Scrolling
 
 ```
 hyprland                      # compositor (official tagged release — NOT -git)
-hyprland-scroll-overview      # overview plugin (via hyprpm — Niri-style overview)
 caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
 walker elephant               # launcher + backend daemon (AUR — Wayland-native, GTK4/Rust)
 grim slurp satty              # screenshots: capture + region select + native annotation
@@ -99,18 +96,7 @@ sudo pacman -S xdg-desktop-portal-hyprland hyprpolkitagent sddm
 
 > **Why:** `xdg-desktop-portal-hyprland` (XDPH) enables screen sharing under Wayland (also required for DBus global shortcuts). `hyprpolkitagent` shows GUI auth dialogs (e.g. package managers). `sddm` is the login manager.
 
-### 3. Install ScrollOverview plugin (Niri-style overview)
-
-```bash
-# Add the plugin repository and build it
-hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
-hyprpm update
-hyprpm enable scrolloverview
-```
-
-> **Why:** Hyprland has no built-in overview (unlike Niri's `Mod+R`). ScrollOverview adds the Niri-style zoomed-out overview of all workspaces, a trackpad swipe gesture, and a visual ALT+Tab switcher. `hyprpm` is Hyprland's bundled plugin manager. If you run a git build of Hyprland, add the `new-release` branch instead: `hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git origin/new-release`.
-
-### 4. Install screenshot stack (native)
+### 3. Install screenshot stack (native)
 
 ```bash
 sudo pacman -S grim slurp satty wl-clipboard
@@ -118,7 +104,7 @@ sudo pacman -S grim slurp satty wl-clipboard
 
 > **Why:** `grim` captures the screen (Wayland-native, freedesktop), `slurp` selects a region, `satty` annotates (native GTK/Adwaita, OpenGL-accelerated, wlroots — Hyprland wiki's recommended annotation tool), `wl-clipboard` copies to the Wayland clipboard. No portal needed — this is the lean, native stack. (Flameshot works but is X11-first and relies on portal support on Wayland.)
 
-### 5. Install Celestia shell (AUR)
+### 4. Install Celestia shell (AUR)
 
 ```bash
 yay -S caelestia-shell
@@ -128,7 +114,7 @@ yay -S caelestia-shell
 >
 > Prefer the **stable** package `caelestia-shell` over `caelestia-shell-git` (bleeding edge, unstable).
 
-### 6. Install HyprMod (GUI settings app)
+### 5. Install HyprMod (GUI settings app)
 
 ```bash
 yay -S hyprmod
@@ -136,7 +122,7 @@ yay -S hyprmod
 
 > **Why:** HyprMod is a native GTK4/libadwaita settings app for Hyprland — tweak any option with **live preview**, undo with Ctrl+Z, and save/share complete configs as **profiles**. It writes only to its own `hyprland-gui.conf`, never touching your main config. Requires Python 3.12+, GTK4, libadwaita (pulled automatically on Arch).
 
-### 7. Install Dolphin (file manager)
+### 6. Install Dolphin (file manager)
 
 ```bash
 sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
@@ -144,7 +130,7 @@ sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
 
 > **Why Dolphin:** familiar from the KDE/Niri setup — split view, tabs, terminal panel, search. `xdg-utils` makes "Open With" work (MIME + default apps), `gvfs-mtp` adds Android/phone transfer, `plasma-integration` + `kded` give KDE apps proper theming, file dialogs, trash support, and KIO network transparency. See [KDE Apps on Hyprland](#kde-apps-on-hyprland) below for the full integration setup.
 
-### 8. Install Walker (application launcher)
+### 7. Install Walker (application launcher)
 
 ```bash
 yay -S walker elephant
@@ -156,7 +142,7 @@ systemctl --user enable --now elephant
 >
 > **AUR policy — review the PKGBUILD first:** `walker` is maintained by the project author (benz, 26 votes) — inspect via `yay -G walker elephant` if you want to verify before building.
 
-### 9. Enable SDDM
+### 8. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -164,7 +150,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 10. Verify
+### 9. Verify
 
 ```bash
 hyprctl version
@@ -180,7 +166,7 @@ Hyprland 0.55+ reads `~/.config/hypr/hyprland.lua` (not `.conf`). It hot-reloads
 ```
 ~/.config/hypr/
 ├── hyprland.lua          # main: hl.config + require all
-├── keybinds.lua          # hl.bind() — scrolling binds included
+├── keybinds.lua          # hl.bind() — tiling binds included
 ├── rules.lua             # hl.window_rule + hl.workspace_rule
 ├── animations.lua        # hl.animation + hl.gesture
 └── celestia.lua          # shell autostart + global shortcut binds
@@ -202,7 +188,7 @@ hl.config({
     border_size = 2,
     gaps_in = 5,
     gaps_out = 10,
-    layout = "scrolling",          -- native scrolling layout as the default
+    layout = "dwindle",            -- native tiling: "dwindle" (default) | "master"
     col.active_border = "0xff89b4fa",
     col.inactive_border = "0xff45475a",
   },
@@ -227,151 +213,164 @@ hl.config({
   },
 })
 
--- Scrolling layout (native, 0.55+)
+-- Dwindle layout (default) — sensible tweaks
 hl.config({
-  scrolling = {
-    direction = "right",           -- new windows appear + scroll to the right
-    column_width = 0.5,            -- default column width [0.1-1.0]
-    follow_focus = true,           -- auto-scroll to keep focused window visible
-    follow_min_visible = 0.4,      -- min visible fraction before following
-    wrap_focus = true,             -- focus l/r wraps at the ends
-    wrap_swapcol = true,
-    fullscreen_on_one_column = true,
+  dwindle = {
+    pseudotile = true,             -- floating-size windows still tile around them
+    preserve_split = true,         -- keep split direction when moving windows
   },
 })
 ```
 
-> **Scrolling layout explained:** windows live on an infinitely growing tape (Niri-style). `direction` controls where new windows appear and which way the layout scrolls. `follow_focus` keeps the focused window in view automatically — hard input (binds/clicks) always follows, `follow_min_visible` only applies to soft input.
+> **Dwindle explained:** Hyprland's default automatic tiler — new windows split the focused window (alternating split direction), the tree stays balanced, and `SUPER+Shift+Space` swaps the focused window with the master. It "just works" with zero config; the two tweaks above keep it predictable.
+
+#### Master layout (optional alternative)
+
+Prefer a **master window + stack** arrangement instead of dwindle's binary tree? Switch the global layout, or per-workspace via `hl.workspace_rule` (see §4.3):
+
+```lua
+-- Option A: master everywhere
+hl.config({ general = { layout = "master" } })
+
+-- Option B: master only on workspace 2 (dwindle elsewhere)
+hl.workspace_rule({ workspace = "2", layout = "master", layout_opts = {
+  mfact = 0.6,                     -- master takes 60% of the screen
+  new_status = "slave",            -- new windows join the stack (not master)
+  orientation = "left",            -- master on the left, stack on the right
+} })
+```
+
+> **Master options:** `mfact` (master fraction 0–1), `new_status` (`master`/`slave`), `always_show_focus`, `orientation` (`left`/`right`/`top`/`bottom`). With master, `SUPER+Shift+Space` promotes the focused stack window to master.
 
 ### 4.2 Keybinds (`keybinds.lua`)
 
-> **Niri-style:** these binds mirror the Niri muscle memory — `SUPER+T` terminal, `SUPER+Space` launcher, `SUPER+H/J/K/L` + arrows for column/window focus, `SUPER+Home/End` first/last column, `SUPER+Ctrl+H/L` move column, `SUPER+F`/`SUPER+Shift+F` maximize/fullscreen, `SUPER+C` center, `SUPER+E` file manager, `SUPER+Tab` overview, `SUPER+U/I` + `SUPER+Shift+scroll` workspace navigation, `SUPER+scroll` column focus, `SUPER+Shift+S` region screenshot, `Super+Alt+L` lock, `SUPER+Shift+E` logout.
+> **Native tiling:** classic `hjkl`/arrow window management — `SUPER+H/J/K/L` + arrows focus, `SUPER+Shift+…` move, `SUPER+Ctrl+…` resize, `SUPER+Space` launcher, `SUPER+F` fullscreen, `SUPER+Tab` cycle windows. Workspace navigation keeps the Niri-era `SUPER+U/I` + `SUPER+Shift+scroll` habits.
 
 ```lua
 -- ~/.config/hypr/keybinds.lua
 local mainMod = "SUPER"
 
---  Launch (Niri: Mod+T terminal, Mod+Space launcher)
+--  Launch
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("ghostty"))             -- terminal
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (Walker)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("ghostty -e nvim"))     -- editor
 
---  Window management (Niri: Mod+Q close, Mod+V float)
+--  Window management
 hl.bind(mainMod .. " + Q", hl.dsp.killactive())                    -- close window
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))  -- toggle floating
 
---  Scrolling layout: focus columns (Niri: Mod+H/L/Home/End, arrows)
-hl.bind(mainMod .. " + H", hl.dsp.layout("focus l"))
-hl.bind(mainMod .. " + L", hl.dsp.layout("focus r"))
-hl.bind(mainMod .. " + Left", hl.dsp.layout("focus l"))
-hl.bind(mainMod .. " + Right", hl.dsp.layout("focus r"))
-hl.bind(mainMod .. " + Home", hl.dsp.layout("fit tobeg"))          -- first column
-hl.bind(mainMod .. " + End", hl.dsp.layout("fit toend"))           -- last column
-
---  Scrolling layout: focus window up/down within column (Niri: Mod+J/K, arrows)
+--  Focus window (hjkl + arrows)
+hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "l" }))
+hl.bind(mainMod .. " + L", hl.dsp.focus({ direction = "r" }))
 hl.bind(mainMod .. " + J", hl.dsp.focus({ direction = "d" }))
 hl.bind(mainMod .. " + K", hl.dsp.focus({ direction = "u" }))
+hl.bind(mainMod .. " + Left", hl.dsp.focus({ direction = "l" }))
+hl.bind(mainMod .. " + Right", hl.dsp.focus({ direction = "r" }))
 hl.bind(mainMod .. " + Down", hl.dsp.focus({ direction = "d" }))
 hl.bind(mainMod .. " + Up", hl.dsp.focus({ direction = "u" }))
 
---  Scrolling layout: move column l/r (Niri: Mod+Ctrl+H/L = move-column)
-hl.bind(mainMod .. " + Ctrl + H", hl.dsp.layout("swapcol l"))
-hl.bind(mainMod .. " + Ctrl + L", hl.dsp.layout("swapcol r"))
-hl.bind(mainMod .. " + Ctrl + Left", hl.dsp.layout("swapcol l"))
-hl.bind(mainMod .. " + Ctrl + Right", hl.dsp.layout("swapcol r"))
+--  Move window (hjkl + arrows)
+hl.bind(mainMod .. " + SHIFT + H", hl.dsp.window.move({ direction = "l" }))
+hl.bind(mainMod .. " + SHIFT + L", hl.dsp.window.move({ direction = "r" }))
+hl.bind(mainMod .. " + SHIFT + J", hl.dsp.window.move({ direction = "d" }))
+hl.bind(mainMod .. " + SHIFT + K", hl.dsp.window.move({ direction = "u" }))
+hl.bind(mainMod .. " + SHIFT + Left", hl.dsp.window.move({ direction = "l" }))
+hl.bind(mainMod .. " + SHIFT + Right", hl.dsp.window.move({ direction = "r" }))
+hl.bind(mainMod .. " + SHIFT + Down", hl.dsp.window.move({ direction = "d" }))
+hl.bind(mainMod .. " + SHIFT + Up", hl.dsp.window.move({ direction = "u" }))
 
---  Scrolling layout: scroll tape
-hl.bind(mainMod .. " + period", hl.dsp.layout("move +col"))        -- scroll right by column
-hl.bind(mainMod .. " + comma", hl.dsp.layout("move -col"))         -- scroll left by column
+--  Resize window (40px steps)
+hl.bind(mainMod .. " + CTRL + H", hl.dsp.window.resize({ x = -40, y = 0 }))
+hl.bind(mainMod .. " + CTRL + L", hl.dsp.window.resize({ x = 40, y = 0 }))
+hl.bind(mainMod .. " + CTRL + J", hl.dsp.window.resize({ x = 0, y = 40 }))
+hl.bind(mainMod .. " + CTRL + K", hl.dsp.window.resize({ x = 0, y = -40 }))
 
---  Mouse wheel (Niri: Mod+scroll focus column, Mod+Shift+scroll focus workspace)
-hl.bind(mainMod .. " + mouse_down", hl.dsp.layout("focus r"))      -- scroll down → next column
-hl.bind(mainMod .. " + mouse_up", hl.dsp.layout("focus l"))        -- scroll up → prev column
-hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.workspace("+1"))   -- shift+scroll down → next workspace
-hl.bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.workspace("-1"))     -- shift+scroll up → prev workspace
+--  Swap with master (dwindle: swap window to master slot; master: promote to master)
+hl.bind(mainMod .. " + SHIFT + Space", hl.dsp.window.swap({ next = true }))
 
---  Scrolling layout: column width + fit (Niri: Mod+R preset, Mod+F maximize, Mod+Shift+F fullscreen, Mod+C center)
-hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))       -- cycle width presets
-hl.bind(mainMod .. " + F", hl.dsp.layout("fit expand"))            -- maximize window to free space
-hl.bind(mainMod .. " + Shift + F", hl.dsp.window.fullscreen({ action = "toggle", layout_aware = true }))  -- fullscreen
-hl.bind(mainMod .. " + C", hl.dsp.layout("fit_into_view"))         -- center/fit active column into view
+--  Layout & view
+hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ action = "toggle" }))  -- fullscreen
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fake_fullscreen({ action = "toggle" }))  -- borderless fullscreen
+hl.bind(mainMod .. " + C", hl.dsp.window.center())                     -- center floating window
+hl.bind(mainMod .. " + P", hl.dsp.window.pin({ action = "toggle" }))   -- pin (sticky across workspaces)
+
+--  Cycle windows (ALT+Tab is built-in; SUPER+Tab cycles tiled only)
+hl.bind(mainMod .. " + Tab", hl.dsp.cyclenext())
 
 --  Workspaces
-hl.bind(mainMod .. " + Tab", function()
-  hl.plugin.scrolloverview.overview("toggle all")   -- Niri-style overview
-end)
 for i = 1, 9 do
   hl.bind(mainMod .. " + " .. i, hl.workspace(i))
   hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.movetoworkspace(i))
 end
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))             -- file manager (Niri: Mod+E)
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("dolphin"))             -- file manager
 hl.bind(mainMod .. " + N", hl.dsp.workspace("e+1"))                -- next empty workspace
-hl.bind(mainMod .. " + U", hl.dsp.workspace("+1"))                 -- next workspace (Niri: focus-workspace-down)
-hl.bind(mainMod .. " + I", hl.dsp.workspace("-1"))                 -- prev workspace (Niri: focus-workspace-up)
+hl.bind(mainMod .. " + U", hl.dsp.workspace("+1"))                 -- next workspace
+hl.bind(mainMod .. " + I", hl.dsp.workspace("-1"))                 -- prev workspace
 hl.bind(mainMod .. " + SHIFT + U", hl.dsp.movetoworkspace("+1"))   -- move window to next workspace
 hl.bind(mainMod .. " + SHIFT + I", hl.dsp.movetoworkspace("-1"))   -- move window to prev workspace
 
---  Screenshots (Niri: Print full, Mod+Shift+S region)
+--  Mouse wheel (workspace navigation)
+hl.bind(mainMod .. " + mouse_down", hl.dsp.workspace("+1"))        -- scroll down → next workspace
+hl.bind(mainMod .. " + mouse_up", hl.dsp.workspace("-1"))          -- scroll up → prev workspace
+hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.workspace("e+1"))  -- shift+scroll down → next empty
+hl.bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.workspace("e-1"))    -- shift+scroll up → prev empty
+
+--  Screenshots
 hl.bind("Print", hl.dsp.exec_cmd('grim - | satty -f -'))                      -- fullscreen → annotate
 hl.bind(mainMod .. " + Shift + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty -f -'))  -- region → annotate
 hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
---  System (Niri: Super+Alt+L lock, Mod+Shift+E logout)
+--  System
 hl.bind(mainMod .. " + Alt + L", hl.dsp.exec_cmd("caelestia shell lock lock"))  -- lock (Celestia)
 hl.bind(mainMod .. " + Shift + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
 
-> **Why `layout_aware = true` on fullscreen:** on scrolling workspaces this lets you **scroll away from a fullscreen window without unfullscreening it** (layout-handled fullscreen).
->
 > **Keybind callbacks must not block** — the compositor event loop runs them. Use `hl.dsp.exec_cmd(...)` for anything external; don't call `wl-paste`/`io.popen`/network I/O inside a bind function (a hung bind freezes the whole desktop).
 
-#### Niri → Hyprland shortcut map
+#### Keybind summary
 
-These binds mirror Niri muscle memory (verified against a real Niri config). `SUPER` = Niri's `Mod`.
+`SUPER` is the main mod. Tiling follows classic Hyprland (hjkl) rather than Niri's tape paradigm:
 
-| Action | Niri | Hyprland (this guide) |
-|--------|------|----------------------|
-| Terminal | `Mod+T` | `SUPER+T` |
-| Launcher | `Mod+Space` / `Mod+D` | `SUPER+Space` (Walker) |
-| Close window | `Mod+Q` | `SUPER+Q` |
-| Toggle floating | `Mod+V` | `SUPER+V` |
-| File manager | `Mod+E` | `SUPER+E` (Dolphin) |
-| Focus column L/R | `Mod+H/L` + arrows | `SUPER+H/L` + arrows |
-| Focus window U/D | `Mod+J/K` + arrows | `SUPER+J/K` + arrows |
-| First/last column | `Mod+Home/End` | `SUPER+Home/End` |
-| Move column L/R | `Mod+Ctrl+H/L` | `SUPER+Ctrl+H/L` (swapcol) |
-| Scroll column focus | `Mod+WheelScroll*` | `SUPER+mouse_up/down` |
-| Scroll workspace | `Mod+Shift+WheelScroll*` | `SUPER+SHIFT+mouse_up/down` |
-| Column width presets | `Mod+R` / `Mod+Shift+R` | `SUPER+R` (forward) |
-| Maximize | `Mod+F` | `SUPER+F` (`fit expand`) |
-| Fullscreen | `Mod+Shift+F` | `SUPER+Shift+F` |
-| Center column | `Mod+C` | `SUPER+C` (`fit_into_view`) |
-| Overview | `Mod+Tab` / `Mod+O` | `SUPER+Tab` (ScrollOverview) |
-| Workspace 1-9 | `Mod+1..9` | `SUPER+1..9` |
-| Move window to ws | `Mod+Ctrl+1..9` | `SUPER+SHIFT+1..9` |
-| Focus ws up/down | `Mod+U/I` | `SUPER+U/I` |
-| Move to ws up/down | `Mod+Shift+U/I` | `SUPER+SHIFT+U/I` |
-| Screenshot full | `Print` | `Print` (grim + satty) |
-| Screenshot region | `Mod+Shift+S` | `SUPER+Shift+S` |
-| Lock | `Super+Alt+L` | `SUPER+Alt+L` (Celestia) |
-| Logout | `Mod+Shift+E` | `SUPER+Shift+E` |
-
-**Not mapped (Hyprland scrolling has no direct equivalent):** monitor navigation (`Mod+Shift+arrows`), move column to monitor (`Mod+Shift+Ctrl+arrows`), column width ±10% (`Mod+Minus/Equal`), window height ±10%, tabbed display (`Mod+W`), power-off monitors (`Mod+Shift+P`), consume/expel window (`Mod+Comma/Period`). Scroll tape moves are still on `SUPER+period/comma`.
+| Action | Keybind |
+|--------|---------|
+| Terminal | `SUPER+T` |
+| Launcher (Walker) | `SUPER+Space` |
+| Editor | `SUPER+B` |
+| Close window | `SUPER+Q` |
+| Toggle floating | `SUPER+V` |
+| Focus window L/R/U/D | `SUPER+H/L/J/K` + arrows |
+| Move window L/R/U/D | `SUPER+Shift+H/L/J/K` + arrows |
+| Resize window | `SUPER+Ctrl+H/L/J/K` (40px) |
+| Swap with master | `SUPER+Shift+Space` |
+| Fullscreen | `SUPER+F` |
+| Fake fullscreen | `SUPER+Shift+F` |
+| Center floating | `SUPER+C` |
+| Pin window | `SUPER+P` |
+| Cycle windows | `SUPER+Tab` |
+| Workspace 1–9 | `SUPER+1..9` |
+| Move window to ws | `SUPER+Shift+1..9` |
+| Focus ws up/down | `SUPER+U/I` (or `SUPER+scroll`) |
+| Move to ws up/down | `SUPER+Shift+U/I` |
+| Next empty ws | `SUPER+N` |
+| File manager | `SUPER+E` |
+| Screenshot full/region/clip | `Print` / `SUPER+Shift+S` / `Ctrl+Print` |
+| Lock | `SUPER+Alt+L` |
+| Logout / Power | `SUPER+Shift+E` / `SUPER+X` |
 
 ### 4.3 Rules (`rules.lua`)
 
 ```lua
 -- ~/.config/hypr/rules.lua
--- Per-app scrolling column width
-hl.window_rule({ name = "kitty_starting_width", match = { class = "kitty" }, scrolling_width = 0.5 })
-
 -- Float certain dialogs
 hl.window_rule({ match = { class = "pavucontrol" }, float = true })
 hl.window_rule({ match = { title = "^(Open File)" }, float = true })
 
--- Per-workspace scrolling direction (e.g. workspace 2 grows downward)
-hl.workspace_rule({ workspace = "2", layout_opts = { direction = "down" } })
+-- Center new floating windows
+hl.window_rule({ match = { class = ".*" }, center = true })
+
+-- Per-workspace layout: master on workspace 2, dwindle elsewhere (optional)
+hl.workspace_rule({ workspace = "2", layout = "master", layout_opts = { mfact = 0.6 } })
 
 -- Monitor setup (adjust to your hardware)
 hl.monitor("DP-1, 2560x1440@144, 0x0, 1")
@@ -402,7 +401,7 @@ hl.config({
 })
 ```
 
-> **Why gesture config exists:** touchpad swipe between workspaces feels natural on a scrolling layout — set `workspace_swipe = true` and swipe horizontally to move between columns/workspaces.
+> **Why gesture config exists:** touchpad swipe between workspaces works the same on tiling layouts — set `workspace_swipe = true` and swipe horizontally (3 fingers) to move between workspaces.
 
 ### 4.5 Celestia integration (`celestia.lua`)
 
@@ -416,115 +415,12 @@ hl.on("hyprland.start", function()
 end)
 
 -- Global shortcuts registered by Celestia (via DBus GlobalShortcuts portal)
-hl.bind(mainMod .. " + Space", hl.dsp.global("caelestia:toggleLauncher"))
-hl.bind(mainMod .. " + L", hl.dsp.global("caelestia:lock"))
-hl.bind(mainMod .. " + P", hl.dsp.global("caelestia:picker"))
+-- NOTE: don't collide with keybinds.lua — launcher (SUPER+Space) is Walker,
+-- lock (SUPER+Alt+L) is the `caelestia shell lock lock` command in keybinds.lua.
+hl.bind(mainMod .. " + Alt + P", hl.dsp.global("caelestia:picker"))
 ```
 
 > **Why `hl.dsp.global`:** Celestia registers its actions through the GlobalShortcuts portal (XDPH). `hl.dsp.global("app:action")` binds Hyprland keys to those registered shortcuts. Find the exact action names with `hyprctl globalshortcuts` after launching the shell.
-
----
-
-## ScrollOverview — Niri-Style Overview
-
-[ScrollOverview](https://github.com/yayuuu/hyprland-scroll-overview) adds what Hyprland lacks out of the box: a **Niri-style overview** — zoom out to see all workspaces at once, like macOS Mission Control. It also provides a trackpad swipe gesture and a visual ALT+Tab switcher.
-
-### 5.1 Basic configuration
-
-```lua
--- ~/.config/hypr/hyprland.lua
-hl.config({
-  plugin = {
-    scrolloverview = {
-      gesture_distance = 300,  -- how far is the "max" for the gesture
-      scale = 0.5,             -- overview scale [0.1-0.9]
-      workspace_gap = 100,     -- gap between workspace cards, px
-      layout = "vertical",     -- vertical or horizontal
-      wallpaper = 2,           -- 0: global only, 1: per-workspace only, 2: both
-      blur = true,             -- blur the main overview wallpaper only
-      shadow = {
-        enabled = true,
-        range = 50,
-      },
-    },
-  },
-})
-
--- Toggle overview on all monitors with SUPER+Tab
-hl.bind("SUPER + Tab", function()
-  hl.plugin.scrolloverview.overview("toggle all")
-end)
-```
-
-### 5.2 Keybind submap (custom overview navigation)
-
-Defining a `scrolloverview` submap replaces the built-in keyboard navigation while the overview is open. The submap activates automatically when the overview opens:
-
-```lua
-hl.define_submap("scrolloverview", function()
-  hl.bind("left",   hl.plugin.scrolloverview.navigate("left"))
-  hl.bind("right",  hl.plugin.scrolloverview.navigate("right"))
-  hl.bind("up",     hl.plugin.scrolloverview.navigate("up"))
-  hl.bind("down",   hl.plugin.scrolloverview.navigate("down"))
-  hl.bind("return", hl.plugin.scrolloverview.overview("select"))
-  hl.bind("escape", hl.plugin.scrolloverview.overview("off"))
-end)
-```
-
-> **Note:** while the submap is active, regular Hyprland binds are not handled by default — add `{ submap_universal = true }` to any bind that must keep working (e.g. `ALT + 1..0` workspace switching).
-
-### 5.3 Trackpad gestures
-
-```lua
--- 3-finger vertical swipe opens/closes the overview
-hl.plugin.scrolloverview.gesture({ fingers = 3, direction = "vertical" })
--- 4-finger swipe with SUPER held, stronger scale
-hl.plugin.scrolloverview.gesture({ fingers = 4, direction = "vertical", mod = "SUPER", scale = 1.5 })
-```
-
-### 5.4 Dispatchers (IPC)
-
-All actions work from Lua or via `hyprctl dispatch` — useful for scripts, bars, launchers:
-
-```bash
-hyprctl dispatch 'hl.plugin.scrolloverview.overview("toggle")'
-hyprctl dispatch 'hl.plugin.scrolloverview.navigate("left")'
-hyprctl dispatch 'hl.plugin.scrolloverview.window("close")'
-```
-
-Available dispatchers: `overview` (`toggle/select/open/close/off`, with optional `all` or monitor name), `navigate` (`left/right/up/down`), `window` (`select`/`close`).
-
-### 5.5 ALT+Tab visual switcher
-
-ScrollOverview can act as a visual ALT+Tab — opens a compact horizontal overview and advances to the next column. The full recipe lives in the plugin's [`ALT-Tab-overview.md`](https://github.com/yayuuu/hyprland-scroll-overview/blob/new-release/docs/wiki/ALT-Tab-overview.md) — it's a Lua module (~60 lines) that tracks selection state and wraps to the first column. Summary: create `~/.config/hypr/scripts/alttab.lua` with `M.next()`, then bind:
-
-```lua
-hl.bind("ALT + Tab", function()
-  hl.plugin.scrolloverview.overview("open")
-  require("scripts.alttab").next()
-end)
-```
-
-> **Why this plugin and not `hyprscroller`:** the scrolling **layout** is already native in 0.55+ — ScrollOverview only fills the *overview* gap (zoom-out, swipe, ALT+Tab). It's the missing piece that makes Hyprland feel like Niri.
-
-#### Optional: snappy-switcher (richer thumbnails)
-
-The built-in ALT+Tab shows the workspace tape. If you want **big per-window thumbnails with context grouping**, add [snappy-switcher](https://github.com/OpalAayan/snappy-switcher) — pure C, Wayland layer shell, zero Electron/GTK deps:
-
-```bash
-yay -S snappy-switcher
-```
-
-Autostart the daemon and bind ALT+Tab:
-
-```lua
-hl.exec("snappy-switcher --daemon")
-hl.bind("ALT + Tab", hl.dsp.exec_cmd("snappy-switcher next --mod alt"))
-```
-
-Features: context grouping, 15 themes, dismiss-on-release, MRU ordering, `--workspace` mode.
-
-> **Default choice:** ScrollOverview ALT+Tab (§5.5) — no extra package, same visual language as the overview. Install snappy-switcher only if you want richer thumbnails; it **replaces** the ALT+Tab bind, so remove the ScrollOverview alttab module (or rebind it) to avoid conflicts. Also avoid snappy's `--workspace` mode on `SUPER+Tab` — that collides with the overview toggle.
 
 ---
 
@@ -624,7 +520,7 @@ hl.exec_cmd("mpvpaper -o 'loop' HDMI-A-1 ~/Videos/twilight-at-mount-fuji.mp4")
 
 ## Walker — Application Launcher
 
-[Walker](https://github.com/abenz1267/walker) is a fast, Wayland-native application launcher (GTK4 layer shell + Rust, GPLv3). It replaces Celestia's built-in launcher on `SUPER+Space`. It needs the **elephant** backend daemon running (installed + enabled in §3 step 8).
+[Walker](https://github.com/abenz1267/walker) is a fast, Wayland-native application launcher (GTK4 layer shell + Rust, GPLv3). It replaces Celestia's built-in launcher on `SUPER+Space`. It needs the **elephant** backend daemon running (installed + enabled in §3 step 7).
 
 ### Providers (built-in)
 
@@ -923,17 +819,6 @@ Bug [#1476](https://github.com/sddm/sddm/issues/1476) — fixed in SDDM ≥ 0.20
 - Quickshell must be the **git** version — `quickshell-git` (tagged release will fail to load Celestia).
 - Missing fonts: Celestia needs `material-symbols` + a Nerd Font (e.g. `caskaydia-cove-nerd`).
 
-### ScrollOverview won't load / `.so` mismatch after Hyprland update
-
-`hyprpm` plugins are built against your exact Hyprland version. After a Hyprland update, rebuild the plugin:
-
-```bash
-hyprpm update      # rebuild + fetch dependencies
-hyprpm enable scrolloverview
-```
-
-If you run a git build of Hyprland, the plugin must come from the `new-release` branch (see §3) — and expect to recompile on every compositor update.
-
 ### XWayland apps blurry on HiDPI
 
 See §XWayland — set `force_zero_scaling = true` and per-toolkit scaling.
@@ -964,4 +849,4 @@ rm -rf ~/.config/hypr ~/.config/quickshell
 
 ---
 
-*Sources: [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11 — Lua config, scrolling layout, SDDM compat, XWayland), [Celestia shell](https://github.com/caelestia-dots/shell), [SDDM bug #1476](https://github.com/sddm/sddm/issues/1476).*
+*Sources: [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11 — Lua config, native tiling layouts, SDDM compat, XWayland), [Celestia shell](https://github.com/caelestia-dots/shell), [SDDM bug #1476](https://github.com/sddm/sddm/issues/1476).*

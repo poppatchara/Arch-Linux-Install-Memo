@@ -490,9 +490,9 @@ If you want a `linux-cachyos*` kernel (instead of the vanilla one from §3.1), i
 # Pick your variant — linux-cachyos (default), linux-cachyos-bore (gaming/audio), linux-cachyos-eevdf
 sudo pacman -S --noconfirm linux-cachyos-bore linux-cachyos-bore-headers
 
-# Regenerate the bootloader entries
+# Build initramfs for the new kernel (GRUB entries are generated later in §5 — the
+# pacman kernel hook already regenerated them on install, and §5's grub-mkconfig picks up every installed kernel)
 sudo mkinitcpio -P
-sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 # Optional: drop the vanilla kernel you installed in §3.1 (keep linux-lts as a fallback if you have it)
 # sudo pacman -R --noconfirm linux-zen linux-zen-headers

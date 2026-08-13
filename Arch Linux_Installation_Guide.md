@@ -131,37 +131,10 @@ pacman -Syy
 
 ### 0.2 Mirror List
 
-Arch ships with a global mirror list. Moving your country's mirrors to the top means faster download speeds:
+Arch ships with a global mirror list. Filter to nearby mirrors (Thailand + Singapore) ranked by speed — `-f 10` keeps the 10 fastest, `-l 10` only considers mirrors synced in the last 10 hours. `reflector` ships in the live ISO:
 
 ```bash
-country=Thailand
-mirrorfile="/etc/pacman.d/mirrorlist"
-cp "$mirrorfile" "${mirrorfile}.bak"
-
-tmpfile="$(mktemp)"
-awk -v country="$country" '
-  { lines[NR] = $0; n = NR }
-  END {
-    country_re   = "^##[[:space:]]+" country "[[:space:]]*$"
-    worldwide_re = "^##[[:space:]]+Worldwide[[:space:]]*$"
-    for (i = 1; i <= n; ++i) if (lines[i] ~ country_re)   { cs = i; break }
-    for (i = 1; i <= n; ++i) if (lines[i] ~ worldwide_re) { ws = i; break }
-    if (!cs) { print "Country section not found: ## " country > "/dev/stderr"; exit 2 }
-    if (!ws) { print "Worldwide section not found: ## Worldwide" > "/dev/stderr"; exit 2 }
-    ce = n + 1
-    for (i = cs + 1; i <= n; ++i) { if (lines[i] ~ /^##[[:space:]]+/) { ce = i; break } }
-    m = 0
-    for (i = cs; i < ce; ++i) { c[++m] = lines[i] }
-    while (m > 0 && c[m] ~ /^[[:space:]]*$/) { --m }
-    for (i = 1; i < ws; ++i) { if (i < cs || i >= ce) print lines[i] }
-    for (i = 1; i <= m; ++i) print c[i]
-    print ""
-    for (i = ws; i <= n; ++i) { if (i < cs || i >= ce) print lines[i] }
-  }
-' "$mirrorfile" > "$tmpfile" || { echo "mirrorlist reorder failed; restoring backup." >&2
-  cp "${mirrorfile}.bak" "$mirrorfile"; rm -f "$tmpfile"; exit 1; }
-cp "$tmpfile" "$mirrorfile"
-rm -f "$tmpfile"
+reflector -c Thailand,Singapore -f 10 -l 10 > /etc/pacman.d/mirrorlist
 pacman -Syy
 ```
 

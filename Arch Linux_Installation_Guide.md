@@ -919,36 +919,29 @@ echo "Detected GPU: ${gpu_vendor:-unknown}"
 
 **NVIDIA (if detected):**
 
-`nvidia-open-dkms` is the open-source kernel module (610.x+). It works with all kernels including linux-zen and linux-cachyos because it builds against your running kernel via DKMS:
+`nvidia-open-dkms` is the open-source kernel module (610.x+). It works with all kernels including linux-zen and linux-cachyos because it builds against your running kernel via DKMS. This whole block runs only when NVIDIA was detected:
 
 ```bash
 if [ "$gpu_vendor" = "nvidia" ]; then
+  # --- 1. Driver + compute ---
   sudo pacman -S --noconfirm --needed \
     nvidia-open-dkms nvidia-utils lib32-nvidia-utils \
     nvidia-settings libxnvctrl \
     ocl-icd opencl-nvidia lib32-opencl-nvidia clinfo cuda
 
-  # Gaming extras — VA-API, Vulkan, DXVK
+  # --- 2. Gaming extras — VA-API, Vulkan, DXVK ---
   sudo pacman -S --noconfirm --needed \
     libva-utils vdpauinfo vulkan-tools \
     libva-nvidia-driver dxvk vkd3d shaderc spirv-tools
-fi
-```
 
-NVIDIA needs Wayland DRM modesetting enabled on the kernel command line. For GRUB:
-
-```bash
+  # --- 3. Wayland DRM modesetting (kernel cmdline, GRUB) ---
+  # For Limine: add nvidia-drm.modeset=1 nvidia-drm.fbdev=1 to the CMDLINE: line instead.
   if grep -q 'GRUB_CMDLINE_LINUX_DEFAULT' /etc/default/grub 2>/dev/null; then
     sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ nvidia-drm.modeset=1 nvidia-drm.fbdev=1"/' /etc/default/grub
     sudo grub-mkconfig -o /boot/grub/grub.cfg
   fi
-```
 
-> For Limine: add `nvidia-drm.modeset=1 nvidia-drm.fbdev=1` to the `CMDLINE:` line in `/boot/limine/limine.conf`.
-
-Configure mkinitcpio: add NVIDIA modules, remove the generic `kms` hook (NVIDIA provides its own):
-
-```bash
+  # --- 4. mkinitcpio: add NVIDIA modules, remove the generic kms hook (NVIDIA provides its own) ---
   sudo perl -0777 -i.bak -pe '
     s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
       my @mods = grep { length } split " ", $1;
@@ -964,11 +957,8 @@ Configure mkinitcpio: add NVIDIA modules, remove the generic `kms` hook (NVIDIA 
     }mge;
   ' /etc/mkinitcpio.conf
   sudo mkinitcpio -P
-```
 
-Pacman hook — auto-rebuilds initramfs whenever the NVIDIA driver or kernel is updated:
-
-```bash
+  # --- 5. Pacman hook: auto-rebuild initramfs on driver/kernel updates ---
   sudo mkdir -p /etc/pacman.d/hooks
   sudo tee /etc/pacman.d/hooks/nvidia.hook >/dev/null <<'HOOK'
 [Trigger]
@@ -988,6 +978,7 @@ When = PostTransaction
 NeedsTargets
 Exec = /bin/sh -c 'while read -r trg; do case $trg in linux*) exit 0; esac; done; /usr/bin/mkinitcpio -P'
 HOOK
+fi
 ```
 
 **Intel iGPU / Arc dGPU (if detected):**

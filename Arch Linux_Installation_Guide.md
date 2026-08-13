@@ -510,6 +510,11 @@ arch-chroot /mnt
 ```bash
 # Add CachyOS repos (skip if already present from §3.1)
 if ! grep -q '\[cachyos\]' /etc/pacman.conf 2>/dev/null; then
+  # Trust the CachyOS signing key FIRST — without --lsign-key, pacman rejects the
+  # repo with "signature ... is unknown trust" (the official script usually does this,
+  # but if the keyserver hiccups you're stuck — doing it manually is idempotent)
+  sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+  sudo pacman-key --lsign-key F3B607488DB35A47
   sudo pacman -Syu
   cd ~
   curl https://mirror.cachyos.org/cachyos-repo.tar.xz -o cachyos-repo.tar.xz

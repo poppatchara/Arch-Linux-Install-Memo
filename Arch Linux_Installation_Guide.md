@@ -506,6 +506,8 @@ arch-chroot /mnt
 ### CachyOS Repos (optional)
 
 > Skip if using Vanilla Arch repos. Run the official installer — skip if repos were already added in §3.1.
+>
+> **Note — this script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, use the §3.1 manual path instead (keyring + mirrorlists only, no pacman swap) or edit `/etc/pacman.conf` by hand with only `cachyos-v3`/`cachyos-v4`.
 
 ```bash
 # Add CachyOS repos (skip if already present from §3.1)

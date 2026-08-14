@@ -305,7 +305,7 @@ hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty
 hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
 --  System
-hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("noctalia msg lock-screen"))  -- lock (Noctalia)
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("noctalia msg session lock"))  -- lock (Noctalia)
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
@@ -413,7 +413,7 @@ end)
 > noctalia msg panel-toggle launcher      # app search / calculator / emoji
 > noctalia msg panel-toggle control-center
 > noctalia msg settings-toggle            # GUI settings editor
-> noctalia msg lock-screen                # lock screen
+> noctalia msg session lock          # lock screen
 > noctalia msg volume-up / -down / -mute  # audio OSD
 > noctalia msg brightness-up / -down      # brightness OSD
 > ```
@@ -482,13 +482,13 @@ All shell functions are scriptable through the `noctalia msg` socket (verified o
 noctalia msg panel-toggle launcher        # open/close launcher (app search / calculator / emoji)
 noctalia msg panel-toggle control-center  # control center
 noctalia msg settings-toggle              # GUI settings editor
-noctalia msg lock-screen                  # lock screen
+noctalia msg session lock                  # lock screen
 noctalia msg volume-up / -down / -mute    # audio OSD
 noctalia msg brightness-up / -down        # brightness OSD
 noctalia msg panel-toggle session         # session menu (logout / power)
 ```
 
-> **What IPC is:** IPC (*Inter-Process Communication*) — `noctalia msg ...` sends commands over a socket to the **already-running** shell process. It does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("noctalia msg lock-screen")` tells the running shell to lock the screen.
+> **What IPC is:** IPC (*Inter-Process Communication*) — `noctalia msg ...` sends commands over a socket to the **already-running** shell process. It does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("noctalia msg session lock")` tells the running shell to lock the screen.
 >
 > **Verify before relying:** run `noctalia msg` (no command) to print the full command list on your version — command names occasionally change between beta releases.
 

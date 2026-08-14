@@ -787,7 +787,7 @@ Add these to the `binds {}` block in your niri config:
     Mod+F2                    hotkey-overlay-title="Run Command" { spawn "wofi" "--show" "run"; }
     Mod+E                    hotkey-overlay-title="File Manager: Dolphin" { spawn "dolphin"; }
     Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
-    Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg lock-screen"; }
+    Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg session lock"; }
     Mod+Shift+Q              hotkey-overlay-title="Session Menu" { spawn-sh "noctalia msg panel-toggle session"; }
     Mod+Tab                  { toggle-overview; }
 ```

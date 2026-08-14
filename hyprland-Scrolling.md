@@ -302,7 +302,7 @@ hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty
 hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
 --  System (Niri: Super+Alt+L lock, Mod+Shift+E logout)
-hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("noctalia msg lock-screen"))  -- lock (Noctalia)
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("noctalia msg session lock"))  -- lock (Noctalia)
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
@@ -407,13 +407,13 @@ hl.on("hyprland.start", function()
 end)
 ```
 
-> **IPC is via `noctalia msg` (socket), not DBus GlobalShortcuts.** The shell runs as the `noctalia` process; keybinds send commands to the running instance with `noctalia msg <command>`. The launcher/lock binds in keybinds.lua already use these (`SUPER+Space` → `noctalia msg panel-toggle launcher`, `SUPER+Alt+L` → `noctalia msg lock-screen`). Other useful commands:
+> **IPC is via `noctalia msg` (socket), not DBus GlobalShortcuts.** The shell runs as the `noctalia` process; keybinds send commands to the running instance with `noctalia msg <command>`. The launcher/lock binds in keybinds.lua already use these (`SUPER+Space` → `noctalia msg panel-toggle launcher`, `SUPER+Alt+L` → `noctalia msg session lock`). Other useful commands:
 >
 > ```bash
 > noctalia msg panel-toggle launcher      # app search / calculator / emoji
 > noctalia msg panel-toggle control-center
 > noctalia msg settings-toggle            # GUI settings editor
-> noctalia msg lock-screen                # lock screen
+> noctalia msg session lock          # lock screen
 > noctalia msg volume-up / -down / -mute  # audio OSD
 > noctalia msg brightness-up / -down      # brightness OSD
 > ```
@@ -575,13 +575,13 @@ hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprmod"))   -- open settings GUI
 noctalia msg panel-toggle launcher         # app search / calculator / emoji
 noctalia msg panel-toggle control-center
 noctalia msg settings-toggle               # GUI settings editor
-noctalia msg lock-screen                   # lock screen
+noctalia msg session lock                   # lock screen
 noctalia msg volume-up / -down / -mute     # audio OSD
 noctalia msg brightness-up / -down         # brightness OSD
 noctalia msg                               # list all IPC commands
 ```
 
-> **What IPC is:** IPC = *Inter-Process Communication*. `noctalia msg <command>` sends commands over a socket to the **already-running daemon process** — it does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("noctalia msg lock-screen")` tells the running daemon to lock the screen.
+> **What IPC is:** IPC = *Inter-Process Communication*. `noctalia msg <command>` sends commands over a socket to the **already-running daemon process** — it does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("noctalia msg session lock")` tells the running daemon to lock the screen.
 
 4. **Keybinds** — the launcher/lock binds in keybinds.lua (§4.2) already use the `noctalia msg` forms above. No DBus GlobalShortcuts wiring is needed (unlike the old Quickshell-based Celestia).
 

@@ -1,12 +1,12 @@
-# Hyprland + Celestia Shell — Native Tiling 🪟🪽
+# Hyprland + Noctalia — Native Tiling 🪟🪽
 
-Installing Hyprland (native tiling Wayland compositor — **dwindle** default, **master** optional) with the Celestia shell on an existing Arch Linux install. Celestia is a Quickshell-based desktop shell — bar, launcher, notifications, lock screen, idle, wallpaper, and color picker all in one.
+Installing Hyprland (native tiling Wayland compositor — **dwindle** default, **master** optional) with the Noctalia shell on an existing Arch Linux install. Noctalia is a native C++ desktop shell — bar, launcher, notifications, lock screen, idle, wallpaper, and color picker all in one.
 
 > **This guide targets Hyprland 0.55+.** Since 0.55, Hyprland's config language is **Lua** (`hyprland.lua`) — the old hyprlang syntax (`hyprland.conf`) is deprecated. Check your version with `hyprctl version` before following any config examples.
 >
 > **Prefer scrolling?** There's a companion guide — `hyprland-Scrolling.md` — for the Niri-style scrolling layout with ScrollOverview.
 >
-> **Sources:** [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11), [Celestia shell repo](https://github.com/caelestia-dots/shell), [SDDM](https://github.com/sddm/sddm).
+> **Sources:** [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11), [Noctalia v5 docs](https://github.com/noctalia-dev/noctalia), [SDDM](https://github.com/sddm/sddm).
 
 ---
 
@@ -17,15 +17,14 @@ Installing Hyprland (native tiling Wayland compositor — **dwindle** default, *
 3. [Installation](#installation)
 4. [Configuration (Lua)](#configuration-lua)
 5. [HyprMod — GUI Settings](#hyprmod--gui-settings)
-6. [Celestia Shell Setup](#celestia-shell-setup)
-7. [Walker — Application Launcher](#walker--application-launcher)
-8. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
-9. [SDDM Login Manager](#sddm-login-manager)
-10. [XWayland](#xwayland)
-11. [Cursor Themes](#cursor-themes)
-12. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
-13. [Troubleshooting](#troubleshooting)
-14. [Uninstalling](#uninstalling)
+6. [Noctalia Shell Setup](#noctalia-shell-setup)
+7. [KDE Apps on Hyprland](#kde-apps-on-hyprland)
+8. [SDDM Login Manager](#sddm-login-manager)
+9. [XWayland](#xwayland)
+10. [Cursor Themes](#cursor-themes)
+11. [PCoIP Keyboard Passthrough](#pcoip-keyboard-passthrough)
+12. [Troubleshooting](#troubleshooting)
+13. [Uninstalling](#uninstalling)
 
 ---
 
@@ -34,21 +33,21 @@ Installing Hyprland (native tiling Wayland compositor — **dwindle** default, *
 | Component | Package | Source | Purpose |
 |-----------|---------|--------|---------|
 | **Hyprland** | `hyprland` | `extra` (official) | Wayland compositor with native tiling (dwindle + master) |
-| **Celestia shell** | `caelestia-shell` | AUR | Desktop shell: bar, launcher, notifications, lock, idle, wallpaper, picker, dashboard, OSD |
+| **Noctalia** | `noctalia-git` | AUR | Desktop shell: bar, launcher, notifications, lock, idle, wallpaper, OSD, clipboard |
 | **SDDM** | `sddm` | `extra` (official) | Login manager (≥ 0.20.0 to avoid bug #1476) |
 | **XDG Desktop Portal** | `xdg-desktop-portal-hyprland` | `extra` | Screen sharing / portal integration |
 | **Polkit agent** | `hyprpolkitagent` | `extra` | GUI authentication dialogs |
 | **XWayland** | `xorg-xwayland` | pulled by Hyprland | Legacy X11 app support (needed — keep enabled) |
 
 **Why this stack:**
-- **Celestia replaces 6 separate tools** — no `hyprlock` / `hypridle` / `hyprpaper` / `hyprpicker` / `waybar` / `mako` needed. One Quickshell-based shell covers bar, launcher, notifications, lock screen, idle, wallpaper, color picker, dashboard, and OSD.
+- **Noctalia replaces 6 separate tools** — no `hyprlock` / `hypridle` / `hyprpaper` / `hyprpicker` / `waybar` / `mako` needed. One native C++ shell covers bar, launcher, notifications, lock screen, idle, wallpaper, OSD, and clipboard. No Quickshell/QML dependency (unlike Celestia).
 - **Native tiling is built in** — `dwindle` (the default) for automatic tiling, `master` as an alternative layout for a master-window + stack arrangement. No plugins needed.
-- **No `hyprsunset`** — blue light filtering not needed on this setup.
+- **No `hyprsunset`** — Noctalia's built-in night light covers it. No `cliphist` — built-in clipboard manager.
 
 **Key differences from Niri + Noctalia:**
 - Config is **Lua** (`~/.config/hypr/hyprland.lua`), not KDL/TOML
 - Tiling is **built into the compositor**, not a shell feature
-- Celestia is **Quickshell/QML** (like Noctalia v4, not the v5 C++ rewrite)
+- Noctalia is the same **native C++ v5 shell** as the Niri guide — only the compositor's config syntax differs (Hyprland = Lua, Niri = KDL)
 - Keyboard-driven tiling like Niri, but with the classic `hjkl`/arrow window management (no tape/columns paradigm)
 
 ---
@@ -57,9 +56,8 @@ Installing Hyprland (native tiling Wayland compositor — **dwindle** default, *
 
 ```
 hyprland                      # compositor (official tagged release — NOT -git)
-caelestia-shell               # shell (AUR — bar/launcher/notif/lock/idle/paper/picker)
+noctalia-git                  # shell (AUR — bar/launcher/notif/lock/idle/paper/OSD/clipboard)
 kitty                         # terminal (GPU-accelerated — SUPER+T / SUPER+B binds)
-walker elephant               # launcher + backend daemon (AUR — Wayland-native, GTK4/Rust)
 grim slurp satty              # screenshots: capture + region select + native annotation
 wl-clipboard                  # Wayland clipboard (screenshot copy)
 hyprmod                       # GUI settings app (GTK4/libadwaita) — live tweak + profiles
@@ -73,7 +71,7 @@ sddm                          # login manager (>= 0.20.0)
 pixie-sddm-git                # SDDM theme (AUR — Material Design 3 / Pixel UI)
 ```
 
-**Deliberately NOT installed:** `hyprlock`, `hypridle`, `hyprpaper`, `hyprpicker`, `hyprsunset`, `waybar`, `mako`, `rofi`, `fuzzel` — all provided by Celestia.
+**Deliberately NOT installed:** `hyprlock`, `hypridle`, `hyprpaper`, `hyprpicker`, `hyprsunset`, `waybar`, `mako`, `rofi`, `fuzzel` — all provided by Noctalia. Also no `cliphist` / `wlsunset` / `swayidle` / `swaylock` — Noctalia v5 has those built in.
 
 > **Why official over AUR/git for Hyprland:** the wiki is explicit — *"heavily recommended you use what the distro packages for you, and not compiling manually or using `-git` packages."* Hyprland's ecosystem and dependencies are vast and intertwined; `-git` builds break with `.so` mismatches on every ABI-breaking dependency update (`hyprutils`, etc.).
 
@@ -105,15 +103,13 @@ sudo pacman -S grim slurp satty wl-clipboard
 
 > **Why:** `grim` captures the screen (Wayland-native, freedesktop), `slurp` selects a region, `satty` annotates (native GTK/Adwaita, OpenGL-accelerated, wlroots — Hyprland wiki's recommended annotation tool), `wl-clipboard` copies to the Wayland clipboard. No portal needed — this is the lean, native stack. (Flameshot works but is X11-first and relies on portal support on Wayland.)
 
-### 4. Install Celestia shell (AUR)
+### 4. Install Noctalia shell (AUR)
 
 ```bash
-yay -S caelestia-shell
+yay -S noctalia-git
 ```
 
-> **AUR policy — review the PKGBUILD first** (following the [June 2026 AUR malware incident](https://archlinux.org/news/active-aur-malicious-packages-incident/) checklist): `yay -S caelestia-shell --editmenu` or inspect via `yay -G caelestia-shell` before building. Celestia builds against `quickshell-git` (the git version is required, not the tagged release) and pulls `ddcutil`, `brightnessctl`, `libcava`, `fish`, `lm-sensors`, `swappy`, `libqalculate`, `material-symbols` fonts, and a Nerd Font. These are real build/runtime deps — expect a longer install.
->
-> Prefer the **stable** package `caelestia-shell` over `caelestia-shell-git` (bleeding edge, unstable).
+> **AUR policy — review the PKGBUILD first** (following the [June 2026 AUR malware incident](https://archlinux.org/news/active-aur-malicious-packages-incident/) checklist): `yay -S noctalia-git --editmenu` or inspect via `yay -G noctalia-git` before building. Noctalia v5 is a **native C++** rewrite of the shell (not Quickshell/QML). It provides everything in one package: bar, launcher, control center, notifications, lock screen, idle, wallpaper, OSD, clipboard, and night light — no separate `hyprlock`/`hypridle`/`hyprpaper`/`waybar`/`mako`/`cliphist`/`wlsunset`/`swaylock` needed. Binary is `noctalia` (in `$PATH`).
 
 ### 5. Install HyprMod (GUI settings app)
 
@@ -131,19 +127,7 @@ sudo pacman -S dolphin xdg-utils gvfs-mtp plasma-integration kded
 
 > **Why Dolphin:** familiar from the KDE/Niri setup — split view, tabs, terminal panel, search. `xdg-utils` makes "Open With" work (MIME + default apps), `gvfs-mtp` adds Android/phone transfer, `plasma-integration` + `kded` give KDE apps proper theming, file dialogs, trash support, and KIO network transparency. See [KDE Apps on Hyprland](#kde-apps-on-hyprland) below for the full integration setup.
 
-### 7. Install Walker (application launcher)
-
-```bash
-yay -S walker elephant
-# elephant = backend daemon (data providers); walker = the launcher UI
-elephant service enable
-```
-
-> **Why Walker:** a fast, Wayland-native launcher (GTK4 layer shell + Rust) by the same author as `hyprscroller`-era tooling. Providers built in: desktop applications, calculator (`=`), file browser (`/`), command runner (`>`), websearch, clipboard history (`:`), symbol picker (`.`), provider list (`;`), Arch package search, window list, and more. Celestia's built-in launcher still exists — Walker just replaces the `SUPER+Space` keybind for a richer, faster launcher.
->
-> **AUR policy — review the PKGBUILD first:** `walker` is maintained by the project author (benz, 26 votes) — inspect via `yay -G walker elephant` if you want to verify before building.
-
-### 8. Enable SDDM
+### 7. Enable SDDM
 
 ```bash
 sudo systemctl enable sddm --now
@@ -151,7 +135,7 @@ sudo systemctl enable sddm --now
 
 > **Why ≥ 0.20.0:** SDDM bug [#1476](https://github.com/sddm/sddm/issues/1476) causes 90-second shutdowns. Arch's `sddm` package is current (0.21+), so this is already satisfied — just don't downgrade.
 
-### 9. Verify
+### 8. Verify
 
 ```bash
 hyprctl version
@@ -170,7 +154,7 @@ Hyprland 0.55+ reads `~/.config/hypr/hyprland.lua` (not `.conf`). It hot-reloads
 ├── keybinds.lua          # hl.bind() — tiling binds included
 ├── rules.lua             # hl.window_rule + hl.workspace_rule
 ├── animations.lua        # hl.animation + hl.gesture
-└── celestia.lua          # shell autostart + global shortcut binds
+└── noctalia.lua          # shell autostart + IPC binds (lock, launcher, OSD)
 ```
 
 ### 4.1 Main config (`hyprland.lua`)
@@ -182,7 +166,7 @@ local mainMod = "SUPER"   -- the main mod key, used everywhere
 require("keybinds")
 require("rules")
 require("animations")
-require("celestia")
+require("noctalia")
 
 hl.config({
   general = {
@@ -252,7 +236,7 @@ local mainMod = "SUPER"
 
 --  Launch
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("kitty"))             -- terminal
-hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("walker"))          -- launcher (Walker)
+hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))  -- launcher (Noctalia)
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("kitty -e nvim"))     -- editor
 
 --  Window management
@@ -321,7 +305,7 @@ hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd('grim -g "$(slurp)" - | satty
 hl.bind("CTRL + Print", hl.dsp.exec_cmd('grim -g "$(slurp -d)" - | wl-copy'))  -- screen → clipboard
 
 --  System
-hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("caelestia shell lock lock"))  -- lock (Celestia)
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("noctalia msg lock-screen"))  -- lock (Noctalia)
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))    -- logout / relaunch session
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     -- power off
 ```
@@ -335,7 +319,7 @@ hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("shutdown now"))                     
 | Action | Keybind |
 |--------|---------|
 | Terminal | `SUPER+T` |
-| Launcher (Walker) | `SUPER+Space` |
+| Launcher (Noctalia) | `SUPER+Space` |
 | Editor | `SUPER+B` |
 | Close window | `SUPER+Q` |
 | Toggle floating | `SUPER+V` |
@@ -403,7 +387,7 @@ hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 
 > **Why gesture config exists:** touchpad swipe between workspaces works the same on tiling layouts — set `hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })` and swipe horizontally (3 fingers) to move between workspaces.
 
-### 4.5 Celestia integration (`celestia.lua`)
+### 4.5 Noctalia integration (`noctalia.lua`)
 
 First, enable the **polkit authentication agent** — a user service that shows GUI auth dialogs (e.g. package manager prompts, system settings). It starts automatically with the Hyprland graphical session:
 
@@ -411,24 +395,30 @@ First, enable the **polkit authentication agent** — a user service that shows 
 systemctl --user enable --now hyprpolkitagent
 ```
 
-> **Why:** `hyprpolkitagent` ships a systemd user unit (`/usr/lib/systemd/user/hyprpolkitagent.service`, `WantedBy=graphical-session.target`) but it is **disabled by default** — without enabling it, apps that need root privileges have no GUI auth dialog (the Hyprland welcome screen flags it as "Authentication agent missing"). The binary lives at `/usr/lib/hyprpolkitagent/hyprpolkitagent`, not in `$PATH`.
+> **Why:** `hyprpolkitagent` ships a systemd user unit (`/usr/lib/systemd/user/hyprpolkitagent.service`, `WantedBy=graphical-session.target`) but it is **disabled by default** — without enabling it, apps that need root privileges have no GUI auth dialog. The binary lives at `/usr/lib/hyprpolkitagent/hyprpolkitagent`, not in `$PATH`.
 
 ```lua
--- ~/.config/hypr/celestia.lua
+-- ~/.config/hypr/noctalia.lua
 local mainMod = "SUPER"
 
--- Autostart the shell
+-- Autostart the shell (foreground; Noctalia detaches its own services)
 hl.on("hyprland.start", function()
-  hl.exec_cmd("caelestia shell -d")
+  hl.exec_cmd("noctalia")
 end)
-
--- Global shortcuts registered by Celestia (via DBus GlobalShortcuts portal)
--- NOTE: don't collide with keybinds.lua — launcher (SUPER+Space) is Walker,
--- lock (SUPER+Alt+L) is the `caelestia shell lock lock` command in keybinds.lua.
-hl.bind(mainMod .. " + ALT + P", hl.dsp.global("caelestia:picker"))
 ```
 
-> **Why `hl.dsp.global`:** Celestia registers its actions through the GlobalShortcuts portal (XDPH). `hl.dsp.global("app:action")` binds Hyprland keys to those registered shortcuts. Find the exact action names with `hyprctl globalshortcuts` after launching the shell.
+> **IPC is via `noctalia msg` (socket), not DBus GlobalShortcuts.** The shell runs as the `noctalia` process; keybinds send commands to the running instance with `noctalia msg <command>`. The launcher/lock/OSD binds in keybinds.lua already use these:
+>
+> ```bash
+> noctalia msg panel-toggle launcher      # app search / calculator / emoji
+> noctalia msg panel-toggle control-center
+> noctalia msg settings-toggle            # GUI settings editor
+> noctalia msg lock-screen                # lock screen
+> noctalia msg volume-up / -down / -mute  # audio OSD
+> noctalia msg brightness-up / -down      # brightness OSD
+> ```
+>
+> Run `noctalia msg` (with no command) to see the full list on your install.
 
 ---
 
@@ -470,33 +460,63 @@ hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprmod"))   -- open settings GUI
 
 ---
 
-## Celestia Shell Setup
+## Noctalia Shell Setup
 
-Celestia is a **Quickshell**-based desktop shell. After installation:
+[Noctalia](https://github.com/noctalia-dev/noctalia) v5 is a **native C++** desktop shell (bar, launcher, control center, notifications, lock screen, idle, wallpaper, OSD, clipboard, night light) — no Quickshell/QML dependency. Config is TOML under `[shell]`, with a **GUI settings editor** as the primary way to tweak it.
 
-1. **Start it once from the config** — the `hl.on("hyprland.start")` hook above autostarts it on session start.
-2. **Manual start / debug:** `caelestia shell -d` (foreground) or `qs -c caelestia`.
-3. **IPC via CLI** — all shell functions are scriptable:
+### First start
+
+The shell autostarts from the `hyprland.start` hook (see §4.5). To debug or start it manually:
 
 ```bash
-caelestia shell lock lock          # lock screen
-caelestia shell wallpaper set /path/to/img   # set wallpaper
-caelestia shell mpris playPause    # media control
-caelestia shell picker open        # color picker
-caelestia shell -s                 # list all IPC targets/functions
+noctalia              # run in the foreground
+noctalia -d           # run as a daemon (background)
+noctalia msg          # IPC to the running instance (shows command list if none given)
 ```
 
-> **What IPC is:** IPC = *Inter-Process Communication*. `caelestia shell ...` sends commands over DBus/socket to the **already-running shell process** — it does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("caelestia shell lock lock")` tells the running shell to lock the screen.
+### IPC via `noctalia msg`
+
+All shell functions are scriptable through the `noctalia msg` socket (verified on a live v5 install):
+
+```bash
+noctalia msg panel-toggle launcher        # open/close launcher (app search / calculator / emoji)
+noctalia msg panel-toggle control-center  # control center
+noctalia msg settings-toggle              # GUI settings editor
+noctalia msg lock-screen                  # lock screen
+noctalia msg volume-up / -down / -mute    # audio OSD
+noctalia msg brightness-up / -down        # brightness OSD
+noctalia msg panel-toggle session         # session menu (logout / power)
+```
+
+> **What IPC is:** IPC (*Inter-Process Communication*) — `noctalia msg ...` sends commands over a socket to the **already-running** shell process. It does not start a new instance. This is how keybinds drive the shell: `hl.dsp.exec_cmd("noctalia msg lock-screen")` tells the running shell to lock the screen.
 >
-> **Verify the commands before relying on them:** run `caelestia shell -s` to list the actual IPC targets/actions, then test each command (e.g. `caelestia shell lock lock`) manually. The syntax in this guide is taken from the project docs but **not yet verified on a live install** — confirm it matches your shell version, especially before wiring it into keybinds (§4.2 uses `caelestia shell lock lock` on `SUPER+Alt+L`).
+> **Verify before relying:** run `noctalia msg` (no command) to print the full command list on your version — command names occasionally change between beta releases.
 
-4. **Keybinds** — if not using the full caelestia dots, wire global shortcuts yourself (see §4.5). The shell exposes drawers/notifs/lock/mpris/picker/wallpaper targets via IPC.
+### Config file
 
-> **Customization:** do **not** edit files installed by the AUR package — follow the [manual installation section](https://github.com/caelestia-dots/shell#manual-installation) and clone the repo into `~/.config/quickshell/caelestia` for local tweaks.
+Config lives at `~/.config/noctalia/config.toml`. The **GUI settings editor** (`noctalia msg settings-toggle`) is the primary way to configure; only a few manual overrides are commonly needed:
+
+```toml
+# ~/.config/noctalia/config.toml
+[shell]
+clipboard_enabled = true        # built-in clipboard manager (no cliphist needed)
+telemetry_enabled = false
+
+[shell.panel]
+transparency_mode = "solid"     # solid | soft | glass
+borders = true
+shadow = true
+
+[shell.launcher]
+categories = true
+sort_by_usage = true
+```
+
+> The shell reloads TOML on change; the settings editor writes to this file. Options you omit fall back to their defaults.
 
 ### Live wallpapers (optional)
 
-Celestia's wallpaper backend is **static images only** (QtQuick `CachingImage` — checked in the shell source). For animated wallpapers, use **mpvpaper** — a video wallpaper daemon for wlroots compositors:
+Noctalia's wallpaper engine handles **static images** (and the wallpaper picker reads from `~/Pictures/Wallpapers` by default). For **animated** video wallpapers, use **mpvpaper** — a video wallpaper daemon for wlroots compositors:
 
 ```bash
 # Install
@@ -520,56 +540,9 @@ pkill mpvpaper
 hl.exec_cmd("mpvpaper -o 'loop' HDMI-A-1 ~/Videos/twilight-at-mount-fuji.mp4")
 ```
 
-> **⚠️ Conflict with Celestia:** both Celestia's wallpaper and mpvpaper draw on the same layer-shell background layer — running both at once stacks/overlaps them. To use live wallpapers, clear Celestia's wallpaper first (`caelestia shell wallpaper set ""` — verify the empty-value syntax on your install) and let mpvpaper own the background. Re-enable the Celestia wallpaper when you stop mpvpaper.
+> **⚠️ Conflict with Noctalia's wallpaper:** both Noctalia's wallpaper and mpvpaper draw on the same layer-shell background layer — running both at once stacks/overlaps them. Use either mpvpaper **or** the Noctalia static wallpaper, not both simultaneously (set the Noctalia wallpaper back when you stop mpvpaper).
 >
 > **Performance note:** video wallpapers use a hardware-accelerated mpv context but still cost GPU/VRAM — expect a few percent GPU load while running. The `960x540` MotionBGs preview is lighter than the full-res version.
-
----
-
-## Walker — Application Launcher
-
-[Walker](https://github.com/abenz1267/walker) is a fast, Wayland-native application launcher (GTK4 layer shell + Rust, GPLv3). It replaces Celestia's built-in launcher on `SUPER+Space`. It needs the **elephant** backend daemon running (installed + enabled in §3 step 7).
-
-### Providers (built-in)
-
-| Prefix | Provider | Example |
-|--------|----------|---------|
-| *(none)* | Desktop applications | `firefox` |
-| `=` | Calculator / unit conversion | `= 42*3` |
-| `/` | File browser | `/home/pop/` |
-| `>` | Command runner | `> systemctl --user restart` |
-| `;` | Provider list | `;` |
-| `:` | Clipboard history | `:` |
-| `.` | Symbol / emoji picker | `.` |
-| — | Websearch, Arch package search (`i:`), windows, bookmarks, bluetooth, snippets, todo, dmenu | — |
-
-### Configuration
-
-Config lives at `~/.config/walker/config.toml` (TOML, not JSON). A minimal sane starting point:
-
-```toml
-# ~/.config/walker/config.toml
-single_click_activation = true
-selection_wrap = true
-exact_search_prefix = "'"   # disable fuzzy search with ' prefix
-
-[providers]
-default = ["desktopapplications", "calc", "websearch", "runner"]
-empty = ["desktopapplications"]
-```
-
-Keybinds inside Walker: `Escape` close, `Down`/`Up` next/previous, `Page_Down`/`Page_Up` jump, `ctrl e` exact search, `alt j` actions, `F1`–`F4` quick activate.
-
-### Service
-
-elephant runs as a user service (starts with the graphical session):
-
-```bash
-elephant service enable   # already done in §3 step 8
-systemctl --user status elephant         # verify
-```
-
-> **Why Walker over Celestia's launcher:** Celestia's launch is a simple app grid; Walker adds calculator, file browsing, clipboard history, symbol picker, runner, and Arch package search — all in one fuzzy-search box. If you prefer the Celestia launcher, just revert the §4.2 bind to `caelestia shell launch`.
 
 ---
 
@@ -820,12 +793,12 @@ Bug [#1476](https://github.com/sddm/sddm/issues/1476) — fixed in SDDM ≥ 0.20
   local ok, err = pcall(require, "maybe-nonexistent")
   ```
 
-### Celestia doesn't start / no bar
+### Noctalia doesn't start / no bar
 
-- Run `caelestia shell -d` in a terminal — read the error.
+- Run `noctalia` in a terminal — read the error (it prints a clear reason, e.g. missing config or a Wayland/socket issue).
 - Check the autostart hook fired: `hyprctl -j events` and look for startup errors.
-- Quickshell must be the **git** version — `quickshell-git` (tagged release will fail to load Celestia).
-- Missing fonts: Celestia needs `material-symbols` + a Nerd Font (e.g. `caskaydia-cove-nerd`).
+- Make sure `noctalia` is started **after** Hyprland (the `hyprland.start` hook in §4.5) — it needs a compositor and the Wayland socket.
+- Missing fonts: Noctalia expects a Nerd Font and `material-symbols`-style icon font on your system (install e.g. `noto-fonts` + a Nerd Font package if glyphs/boxes render).
 
 ### XWayland apps blurry on HiDPI
 
@@ -846,15 +819,15 @@ sudo systemctl disable sddm --now
 # Remove Hyprland + ecosystem
 sudo pacman -Rns hyprland xdg-desktop-portal-hyprland hyprpolkitagent sddm
 
-# Remove Celestia shell (AUR)
-yay -Rns caelestia-shell
+# Remove Noctalia shell (AUR)
+yay -Rns noctalia-git
 
 # Remove configs
-rm -rf ~/.config/hypr ~/.config/quickshell
+rm -rf ~/.config/hypr ~/.config/noctalia
 ```
 
 > **Why `-Rns`:** removes the packages, their now-unneeded dependencies (`-s`), and their config files (`-n`).
 
 ---
 
-*Sources: [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11 — Lua config, native tiling layouts, SDDM compat, XWayland), [Celestia shell](https://github.com/caelestia-dots/shell), [SDDM bug #1476](https://github.com/sddm/sddm/issues/1476).*
+*Sources: [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11 — Lua config, native tiling layouts, SDDM compat, XWayland), [Noctalia v5](https://github.com/noctalia-dev/noctalia), [SDDM bug #1476](https://github.com/sddm/sddm/issues/1476).*

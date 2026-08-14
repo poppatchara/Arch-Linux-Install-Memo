@@ -1186,7 +1186,14 @@ flatpak install -y flathub \
 `pyenv` manages multiple Python versions per-user without conflicting with the system Python:
 
 ```bash
-sudo pacman -S --noconfirm --needed openssl zlib xz tk readline sqlite libffi bzip2
+# zlib vs zlib-ng-compat: CachyOS replaces zlib upstream. Install whichever
+# this system already uses, so the two never conflict (requesting `zlib`
+# while zlib-ng-compat is installed would make pacman ask to remove it).
+zlib_pkg="zlib"
+pacman -Q zlib-ng-compat >/dev/null 2>&1 && zlib_pkg="zlib-ng-compat"
+lib32_zlib_pkg="lib32-zlib"
+pacman -Q lib32-zlib-ng-compat >/dev/null 2>&1 && lib32_zlib_pkg="lib32-zlib-ng-compat"
+sudo pacman -S --noconfirm --needed openssl "$zlib_pkg" "$lib32_zlib_pkg" xz tk readline sqlite libffi bzip2
 git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 
 shell_name="$(basename "${SHELL:-bash}")"
@@ -1208,7 +1215,7 @@ pyenv install 3.13.2
 pyenv global 3.13.2
 ```
 
-> **CachyOS note:** `zlib` is already replaced by **`zlib-ng-compat`** in the CachyOS Repos section (same ABI, faster). Nothing to do here — pyenv compiles fine against it.
+> **Why the zlib guard?** CachyOS replaces `zlib` with `zlib-ng-compat` (same ABI, faster, done in the CachyOS Repos section). The lines above detect which one this system uses and install it — so the command works on **both** vanilla Arch and CachyOS paths without pacman asking to remove `zlib-ng-compat`. pyenv compiles fine against either. `--needed` skips anything already installed.
 
 ### 9.10 SPDIF Audio Fix (optional)
 

@@ -68,7 +68,7 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 |---|----------|---|---|---|---|
 | 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(post-chroot)* | `linux` / `linux-lts` | §3 + CachyOS Repos |
 | 2 | **Repos** | Vanilla Arch | CachyOS repos | | CachyOS Repos *(post-chroot)* |
-| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling — see §7)* | §7 |
+| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Noctalia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
 > **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. The live ISO stage always installs a vanilla kernel; if you want `linux-cachyos*`, add the repos **post-chroot** (CachyOS Repos section) and swap the kernel there.
@@ -81,8 +81,8 @@ These are the three configurations this guide has been battle-tested with:
 |-------|--------|-------|---------|------------|
 | ⭐ **KDE Daily** | linux-zen | Vanilla | KDE Plasma | GRUB |
 | 🏔️ **Niri Lean** | linux-zen | Vanilla | Niri+Noctalia | GRUB |
-| 🪟 **Hyprland Scrolling** | linux-zen | Vanilla | Hyprland + Celestia (Route A) | GRUB |
-| 🪟 **Hyprland Tiling** | linux-zen | Vanilla | Hyprland + Celestia (Route B) | GRUB |
+| 🪟 **Hyprland Scrolling** | linux-zen | Vanilla | Hyprland + Noctalia (Scrolling) | GRUB |
+| 🪟 **Hyprland Tiling** | linux-zen | Vanilla | Hyprland + Noctalia (Tiling) | GRUB |
 | 🚀 **CachyOS KDE** | linux-cachyos | CachyOS | KDE Plasma | Limine |
 
 ---
@@ -811,7 +811,7 @@ systemctl enable fstrim.timer
 
 ### 6.3 YAY (AUR Helper)
 
-`yay` is needed for AUR packages in §7 (Noctalia, greetd, Celestia, HyprMod, etc.). Install it now inside chroot so §7 can use it:
+`yay` is needed for AUR packages in §7 (Noctalia, greetd, HyprMod, etc.). Install it now inside chroot so §7 can use it:
 
 ```bash
 sudo pacman -S --noconfirm --needed git base-devel
@@ -827,7 +827,7 @@ cd ~ && rm -rf /tmp/yay-bin
 
 ## §7 — Desktop Stack
 
-> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Celestia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
+> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Noctalia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
 
 Each path has a dedicated companion guide with the full install + config. Open the one you picked:
 
@@ -835,11 +835,11 @@ Each path has a dedicated companion guide with the full install + config. Open t
 |------|-------|-------------|--------------|
 | 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
 | 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `greetd` + `noctalia-greeter` |
-| 🪟 **Hyprland + Celestia (Scrolling)** | [`hyprland-Scrolling.md`](hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Celestia shell | `sddm` |
-| 🪟 **Hyprland + Celestia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Celestia shell | `sddm` |
+| 🪟 **Hyprland + Noctalia (Scrolling)** | [`hyprland-Scrolling.md`](hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
+| 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
 | 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |
 
-KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Celestia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same lean Celestia shell.
+KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Noctalia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same native C++ Noctalia shell.
 
 **No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri → `greetd`, Hyprland → `sddm`. Enable exactly one. The KDE packages referenced in the Hyprland guide (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* Hyprland — they don't pull the Plasma desktop.
 

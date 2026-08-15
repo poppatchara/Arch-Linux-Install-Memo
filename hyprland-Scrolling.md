@@ -665,7 +665,7 @@ sudo pacman -S kwallet kwalletmanager kwallet-pam libsecret
 
 > **Enable the Secret Service interface:** open KWallet settings (System Settings → KDE Wallet) and check **"Enable the KWallet Secret Service interface"** — otherwise GTK apps can't see the wallet. (GNOME Keyring is only needed for `gnome-online-accounts` or if you want a separate secret store.)
 
-> **SDDM auto-unlock:** unlike the Niri guide's greetd setup, SDDM ships with `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch. Verify they're present (`grep -i kwallet /etc/pam.d/sddm`) — if missing, add the same `auth optional` / `session optional` lines from the Niri guide. KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+> **SDDM auto-unlock:** on Arch, SDDM ships with `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm`. Verify they're present (`grep -i kwallet /etc/pam.d/sddm`) — if missing, add the `auth optional` / `session optional` lines from the Niri guide's SDDM setup. KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 
 ### Dolphin "Open With" Blank Popup Fix
 

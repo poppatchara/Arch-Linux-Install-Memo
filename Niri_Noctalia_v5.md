@@ -16,7 +16,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 6. [Post-Install & Tweaks](#post-install--tweaks)
 7. [Complete DE Experience](#complete-de-experience)
 8. [KDE Integration](#kde-integration)
-9. [Switch to Noctalia Greeter](#switch-to-noctalia-greeter)
+9. [SDDM Login Manager](#sddm-login-manager)
 10. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
 11. [Troubleshooting](#troubleshooting)
 12. [Uninstalling](#uninstalling)
@@ -177,7 +177,7 @@ sudo pacman -S --noconfirm --needed \
 | `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
 | `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
 | `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
-| `accountsservice` | User account D-Bus interface | Needed by `noctalia-greeter` for avatar + user info |
+| `accountsservice` | User account D-Bus interface | Needed by `sddm` for the user list + avatar display on the login screen |
 | `qt5-wayland` | Qt5 Wayland plugin | Some apps (VLC, older Qt5 apps) need this — not all are Qt6 yet |
 | `gvfs-mtp` | Android/phone file transfer | Mount Android devices via MTP in Dolphin |
 | `gvfs-gphoto2` | Camera import | Import photos from digital cameras |
@@ -551,11 +551,15 @@ sudo pacman -S --noconfirm --needed \
 | `ffmpegthumbs` | Video thumbnails KIO plugin | Pre-installed with KDE graphics |
 | `ffmpegthumbnailer` | Video thumbnail generator | Install manually: `sudo pacman -S ffmpegthumbnailer` |
 
-**Cursor theme (optional):**
+**Cursor theme (Phinger — matches the Hyprland guide):**
 
 ```bash
-sudo pacman -S --noconfirm --needed capitaine-cursors
+# Phinger — modern, clean cursor line (XCursor, AUR)
+# 🔒 AUR — review `yay -G phinger-cursors` before installing
+yay -S --noconfirm --needed phinger-cursors
 ```
+
+**Alternative:** Bibata Classic (AUR `bibata-cursor-git`) if you prefer the rounded Classic look — both work with Niri; just set the active theme in the cursors section above.
 
 ### Session Restore (Testing)
 
@@ -774,7 +778,7 @@ environment {
 }
 
 cursor {
-    xcursor-theme "Adwaita"
+    xcursor-theme "phinger-cursors"
     xcursor-size 24
 }
 
@@ -833,8 +837,8 @@ KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Cod
 ```bash
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
 
-# PAM hooks for greetd (auto-unlock at login)
-sudo tee -a /etc/pam.d/greetd <<'EOF'
+# PAM hooks for sddm (auto-unlock at login)
+sudo tee -a /etc/pam.d/sddm <<'EOF'
 auth       optional     pam_gnome_keyring.so
 session    optional     pam_gnome_keyring.so auto_start
 session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
@@ -978,145 +982,98 @@ sudo pacman -S --noconfirm --needed ffmpegthumbnailer
 
 ---
 
-## Switch to Noctalia Greeter
+## SDDM Login Manager
 
-Replace Plasma Login Manager with the Noctalia-themed greeter for a unified login experience. The greeter runs on **greetd** with a bundled wlroots compositor.
+Noctalia's shell is compositor-agnostic, so the login manager is independent of it. This guide uses **SDDM** with the **pixie** theme — the same choice as the Hyprland guide — for a consistent Material-style login screen and a large theme ecosystem.
 
-> **⚠️ Safe approach:** Test first, then disable Plasma Login Manager. You can always switch back.
+> **Why SDDM + pixie:** SDDM is a battle-tested Qt6 login manager in the official `extra` repo; pixie is a Material Design 3 / Google Pixel-inspired theme (two-tone stacked clock, dynamic wallpaper color extraction, blur, circular avatar). Keeps the same login look across both Niri and Hyprland machines.
 
-### 1. Install
+> **⚠️ Safe approach:** install + configure first, then switch the enabled display manager. You can always switch back to Plasma Login Manager.
 
-```bash
-# greetd (official repo) + Noctalia greeter (AUR)
-sudo pacman -S --noconfirm --needed greetd
-
-# 🔒 AUR — Review PKGBUILD before installing
-yay -S --noconfirm --needed noctalia-greeter
-```
-
-### 2. Configure greetd
-
-Edit `/etc/greetd/config.toml`:
-
-```toml
-[terminal]
-vt = 1
-
-[default_session]
-command = "noctalia-greeter"
-user = "greetd"
-```
-
-> The greeter runs as the `greetd` user. The config directory `/var/lib/noctalia-greeter/` must be owned by this user — the AUR package sets this up automatically.
-
-### 3. Configure the Greeter
-
-The greeter stores settings at `/var/lib/noctalia-greeter/greeter.toml`. Create with your preferences:
-
-```toml
-# /var/lib/noctalia-greeter/greeter.toml
-
-[session]
-default = "niri-noctalia"     # Pre-select "Niri + Noctalia v5" session
-
-[keyboard]
-layout = "us,th"              # Match your keyboard layouts
-numlock = true
-
-[cursor]
-theme = "capitaine-cursors"
-size = 24
-
-[appearance]
-password_style = "default"    # "default" = filled circles, "random" = varied glyphs
-```
-
-**Multi-monitor:** List your connectors from a running Wayland session:
+### 1. Install SDDM + pixie theme
 
 ```bash
-noctalia-greeter outputs
+# SDDM (official repo) — must be >= 0.20.0 to avoid bug #1476 (90s shutdowns).
+# Arch's package is current (0.21+), so this is already satisfied.
+sudo pacman -S --noconfirm --needed sddm
+
+# Qt6 engine prereqs (SDDM on Arch runs Qt6) — the pixie PKGBUILD lists Qt5 deps,
+# but missing these on Qt6 SDDM = black screen.
+sudo pacman -S --noconfirm --needed qt6-declarative qt6-svg
+
+# pixie theme (AUR, maintained by the theme author xCaptaiN09)
+# 🔒 AUR — review `yay -G pixie-sddm-git` before installing if desired.
+yay -S --noconfirm --needed pixie-sddm-git
 ```
 
-Then set the preferred monitor in `greeter.toml`:
+### 2. Point SDDM at pixie
 
-```toml
-[output]
-name = "DP-1"                 # Show greeter on this monitor only
+```bash
+sudo sh -c 'echo "\
+[Theme]\
+Current=pixie" > /etc/sddm.conf.d/theme.conf'
 ```
 
-Or sync monitor layout from Noctalia: **Settings → Security → Noctalia Greeter → Sync Now**.
+> **Why the drop-in dir:** `/etc/sddm.conf.d/` overrides the packaged defaults without touching `/etc/sddm.conf` — survives package updates.
+>
+> **AUR policy:** `pixie-sddm-git` installs only to `/usr/share/sddm/themes/pixie` (Main.qml, components, assets, theme.conf). Verify with `yay -G pixie-sddm-git` if desired.
+>
+> **Other themes:** any SDDM theme from the [KDE Store](https://store.kde.org/browse/cat/106/order/latest/) or AUR (`sddm-theme-*`) works — just change `Current=` accordingly.
 
-### 4. Test the Greeter
+### 3. Verify the session entry
+
+```bash
+# List available sessions — a "Niri + Noctalia" entry must be present
+ls /usr/share/wayland-sessions/
+ls /usr/share/xsessions/
+```
+
+The Niri session file is created in the [Session File for Plasma Login Manager](#session-file-for-plasma-login-manager) section above; SDDM lists every `*.desktop` it finds, so "Niri + Noctalia" (and Plasma, if installed) will appear.
+
+### 4. Test then enable SDDM
 
 **Do NOT disable Plasma Login Manager yet.** Test first:
 
 ```bash
-# Start greetd in a TTY for testing
-sudo systemctl start greetd
+# Start SDDM on a separate VT for testing (leave your current session running)
+sudo systemctl start sddm
 ```
 
-Switch to TTY1 (the configured VT) — you should see the Noctalia login screen. If it works, switch back to your current session (TTY2 or back to Plasma) with `Ctrl+Alt+F2`.
+Switch to TTY1 (SDDM's default VT) — you should see the pixie login screen with the "Niri + Noctalia" session entry. If it works, switch back with `Ctrl+Alt+F2`.
 
-If the greeter doesn't appear, check logs:
+If SDDM doesn't appear, check logs:
 
 ```bash
-journalctl -u greetd -f
+journalctl -u sddm -f
 ```
-
-### 5. Enable Greeter, Disable Plasma Login Manager
 
 Once tested:
 
 ```bash
-# Enable greetd
-sudo systemctl enable greetd
+# Enable SDDM
+sudo systemctl enable sddm --now
 
-# Disable Plasma Login Manager
+# Disable Plasma Login Manager (if it was enabled)
 sudo systemctl disable plasmalogin
 
 # Reboot
 sudo reboot
 ```
 
-After reboot, you'll see the Noctalia greeter instead of the Plasma login screen. Select **"Niri + Noctalia v5"** (or "Plasma" to go back to KDE).
+After reboot, SDDM shows the pixie login screen. Select **"Niri + Noctalia"** (or "Plasma" to go back to KDE).
 
 ### Rollback to Plasma Login Manager
 
 If anything goes wrong:
 
 ```bash
-# From TTY (Ctrl+Alt+F3), log in and:
-sudo systemctl disable greetd
+# From a TTY (Ctrl+Alt+F3), log in and:
+sudo systemctl disable sddm
 sudo systemctl enable plasmalogin
 sudo reboot
 ```
 
 You'll be back to the Plasma login screen. All sessions (Plasma, Niri+Noctalia) still work.
-
-### Greeter Config Reference
-
-| Key | Purpose | Example |
-|-----|---------|---------|
-| `[session].default` | Pre-selected session (by Name from `.desktop` file) | `"niri-noctalia"` |
-| `[session].last` | Last-used session (auto-written by greeter) | `"niri-noctalia"` |
-| `[user].default` | Pre-filled username on startup | `"pop"` |
-| `[output].name` | Show greeter on one monitor only | `"DP-2"` |
-| `[output].layout` | Multi-monitor positions | `"DP-1:0,0; DP-2:2560,0"` |
-| `[output].scale` | Manual UI scale (override auto) | `1.5` |
-| `[keyboard].layout` | XKB layout(s), comma-separated | `"us,th"` |
-| `[keyboard].variant` | XKB variant(s) | `""` |
-| `[keyboard].options` | XKB options | `"grp:alt_shift_toggle"` |
-| `[keyboard].numlock` | Num Lock on start | `true` |
-| `[cursor].theme` | Cursor theme | `"capitaine-cursors"` |
-| `[cursor].size` | Cursor size in px | `24` |
-| `[appearance].password_style` | Password dots: `default` or `random` | `"default"` |
-| `[appearance].scheme` | Color scheme (auto-written) | `"Synced"` |
-| `[appearance].hide_logo` | Hide Noctalia brand logo | `false` |
-| `[auth].allow_empty_password` | Allow empty password (for fprintd/smartcard) | `false` |
-
-> Full docs: https://docs.noctalia.dev/v5/greeter/configuration/
-
----
 
 ## Migration Notes (from KDE Plasma)
 

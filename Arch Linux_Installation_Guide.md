@@ -811,7 +811,7 @@ systemctl enable fstrim.timer
 
 ### 6.3 YAY (AUR Helper)
 
-`yay` is needed for AUR packages in §7 (Noctalia, greetd, HyprMod, etc.). Install it now inside chroot so §7 can use it:
+`yay` is needed for AUR packages in §7 (Noctalia, sddm theme, HyprMod, etc.). Install it now inside chroot so §7 can use it:
 
 ```bash
 sudo pacman -S --noconfirm --needed git base-devel
@@ -834,14 +834,14 @@ Each path has a dedicated companion guide with the full install + config. Open t
 | Path | Guide | What you get | Login screen |
 |------|-------|-------------|--------------|
 | 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
-| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `greetd` + `noctalia-greeter` |
+| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `sddm` + `pixie-sddm-git` |
 | 🪟 **Hyprland + Noctalia (Scrolling)** | [`hyprland-Scrolling.md`](hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
 | 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
 | 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |
 
 KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Noctalia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same native C++ Noctalia shell.
 
-**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri → `greetd`, Hyprland → `sddm`. Enable exactly one. The KDE packages referenced in the Hyprland guide (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* Hyprland — they don't pull the Plasma desktop.
+**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri + Hyprland → `sddm` (with the `pixie` theme). Enable exactly one. The KDE packages referenced in the guides (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* a compositor — they don't pull the Plasma desktop.
 
 ### ▸ Secret Storage (all paths)
 
@@ -851,9 +851,9 @@ Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromi
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
 ```
 
-> PAM hooks for greetd are added in the greetd setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/greetd` to exist first.
+> PAM hooks for the login manager are added in the SDDM setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/sddm` to exist first.
 >
-> **Hyprland path (SDDM):** SDDM ships `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm` on Arch — verify with `grep -i kwallet /etc/pam.d/sddm`; if missing, add the same `auth optional` / `session optional` lines used for greetd above.
+> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks — verify with `grep -i kwallet /etc/pam.d/plasmalogin`; if missing, add the same `auth optional` / `session optional` lines used for sddm above.
 >
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 

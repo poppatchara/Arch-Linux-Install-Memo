@@ -775,7 +775,7 @@ These are the background services that keep your system running. NetworkManager 
 
 ```bash
 pacman -Syu --noconfirm --needed \
-  util-linux inetutils usbutils rsync htop bat zip unzip p7zip \
+  util-linux inetutils usbutils rsync htop bat zip unzip 7zip \
   avahi nss-mdns \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
@@ -937,7 +937,11 @@ if [ "$gpu_vendor" = "nvidia" ]; then
   # --- 2. Gaming extras — VA-API, Vulkan, DXVK ---
   sudo pacman -S --noconfirm --needed \
     libva-utils vdpauinfo vulkan-tools \
-    libva-nvidia-driver dxvk vkd3d shaderc spirv-tools
+    libva-nvidia-driver vkd3d shaderc spirv-tools
+
+  # DXVK is AUR (not in official repos) — needs yay
+  # 🔒 AUR — review `yay -G dxvk-bin` before installing
+  yay -S --noconfirm --needed dxvk-bin
 
   # --- 3. Wayland DRM modesetting (kernel cmdline, GRUB) ---
   # For Limine: add nvidia-drm.modeset=1 nvidia-drm.fbdev=1 to the CMDLINE: line instead.
@@ -1153,7 +1157,7 @@ sudo usermod -aG gamemode $USER
 sudo pacman -S --noconfirm --needed \
   noto-fonts noto-fonts-emoji \
   ttf-dejavu ttf-ubuntu-font-family \
-  terminus-font nerd-fonts
+  terminus-font ttf-nerd-fonts-symbols
 
 # Microsoft fonts (AUR)
 yay -S --noconfirm --needed ttf-ms-fonts

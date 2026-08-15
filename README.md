@@ -30,6 +30,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-08-15
+
+- **`niri-qol-git` optional option:** Added to `Niri_Noctalia_v5.md` Installation — soft-fork of Niri that fast-tracks 3 upstream QoL PRs (sticky floating windows #3302, hidden workspaces #2997, `float-above-fullscreen` #4062). Replaces base `niri`; safety-checked (clean PKGBUILD, `--locked`/`--frozen` build, no network hooks) but 0-vote brand-new package → marked experimental. Step 1 install cross-referenced to point to the alternative.
+
 ### 2026-08-13
 
 - **Main guide §7 now covers Hyprland:** `Arch Linux_Installation_Guide.md` gains a **▸ Hyprland + Celestia** section — package matrix (which packages each route installs/drops), shared base install, Route A (scrolling + ScrollOverview) vs Route B (native tiling, no plugin), SDDM + pixie theme setup, and pointers to the two companion guides. Decision Matrix + Recommended Combos updated; Secret Storage promoted to shared (all paths) with a SDDM/KWallet note. No conflicts: KDE→plasmalogin, Niri→greetd, Hyprland→sddm.

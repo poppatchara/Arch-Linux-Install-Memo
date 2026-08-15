@@ -136,6 +136,10 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 sudo pacman -S --noconfirm --needed niri
 ```
 
+> **Optional alternative:** `niri-qol-git` (fast-tracked QoL fork)
+> *replaces* this package — see the Optional AUR section below.
+> If you plan to use it, skip this step.
+
 ### 2. Install Recommended Packages
 
 From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installation), filtered for Noctalia v5 compatibility. Packages that Noctalia v5 already provides (launcher, bar, notifications, wallpaper, lock screen) are **excluded**.
@@ -213,6 +217,30 @@ sudo pacman -S --noconfirm --needed qt6ct-kde
 # Repo: https://github.com/srinivasr/nirimod
 yay -S --noconfirm --needed nirimod-git
 ```
+
+**Optional — `niri-qol-git` (fast-tracked QoL fork):**
+
+> 🔒 AUR — **soft-fork** of Niri that merges 3 upstream QoL PRs not yet
+> in mainline. *Replaces* the base `niri` package (conflicts with
+> `niri`/`niri-git`/`niri-bin`). If you install this, **skip the base
+> `niri` install in the previous section** and use this instead.
+> Safety-checked by Emi (2026-08-15: clean PKGBUILD, `--locked`/`--frozen`
+> build, no network hooks — but 0 votes, brand-new package, so treat as
+> experimental). Extra features:
+> - **Sticky floating windows** — keep floating windows pinned across
+>   workspaces (upstream PR #3302)
+> - **Hidden workspaces** — hide workspaces without closing windows
+>   (upstream PR #2997)
+> - **`float-above-fullscreen`** window rule (upstream PR #4062)
+
+```bash
+yay -S --noconfirm --needed niri-qol-git
+```
+
+The `niri-qol` fork keeps the same `config.kdl` path
+(`~/.config/niri/config.kdl`) and binary/commands as stock Niri — all
+config in this guide applies unchanged. Built from source (Rust,
+`--frozen`), so first install takes a while to compile.
 
 ### 3. Install Noctalia v5
 

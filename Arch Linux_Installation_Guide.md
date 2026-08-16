@@ -357,11 +357,12 @@ sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
 sudo pacman-key --lsign-key F3B607488DB35A47
 
 # 2. Install keyring + mirrorlists (ALL THREE needed — v3/v4 tiers + base)
-sudo pacman -U \
-  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
-  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst \
-  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-27-1-any.pkg.tar.zst \
-  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-27-1-any.pkg.tar.zst
+#    Resolves the latest version from the live repo — no hardcoded pins to go stale
+PKG_BASE="https://mirror.cachyos.org/repo/x86_64/cachyos"
+for p in cachyos-keyring cachyos-mirrorlist cachyos-v3-mirrorlist cachyos-v4-mirrorlist; do
+  url="$PKG_BASE/$(curl -s "$PKG_BASE/" | grep -oE "${p}-[0-9][^\"<]*\.pkg\.tar\.zst" | sort -V | tail -1)"
+  sudo pacman -U --noconfirm "$url"
+done
 
 # 3. Enable the repos in the live ISO's pacman.conf
 sudo tee -a /etc/pacman.conf <<'EOF'
@@ -396,14 +397,22 @@ Install at least one. You can install multiple — common combos: `linux-zen` (d
 > `linux-cachyos*` kernels need the CachyOS repos. If you enabled them on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)), you can pick a CachyOS kernel here and pacstrap installs it directly. Otherwise stay vanilla here and swap to `linux-cachyos*` post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
 
 ```bash
-# Uncomment the kernels you want.
-# Vanilla (linux / linux-zen / linux-lts) always works.
-# CachyOS variants (linux-cachyos*) only resolve if you enabled §3.0a on the live ISO.
+# Uncomment the kernels you want. You can install several - GRUB picks the first.
+# Vanilla (all in Arch repos, always available):
+#   linux-zen (interactivity), linux (stable), linux-lts (long-term),
+#   linux-hardened (security), linux-rt (real-time)
+# CachyOS variants (linux-cachyos*) only resolve if you enabled §3.0a on the live ISO:
+#   linux-cachyos, linux-cachyos-bore, linux-cachyos-eevdf, linux-cachyos-bmq,
+#   linux-cachyos-lts, linux-cachyos-deckify, linux-cachyos-hardened
 KERNELS=(
   linux-zen
   # linux
   # linux-lts
+  # linux-hardened
+  # linux-rt
+  # linux-cachyos
   # linux-cachyos-bore
+  # linux-cachyos-hardened
 )
 
 # Build kernel package list for pacstrap
@@ -419,15 +428,22 @@ done
 | Kernel | Repo | Scheduler | Best for |
 |--------|------|-----------|----------|
 | `linux-zen` | `[extra]` | EEVDF | Desktop/laptop daily use — lower latency, tuned for interactivity |
-| `linux-cachyos` | CachyOS repos | EEVDF | CachyOS defaults — balanced optimization with extra patches |
-| `linux-cachyos-bore` | CachyOS repos | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
-| `linux-cachyos-eevdf` | CachyOS repos | EEVDF | General desktop — EEVDF scheduler with CachyOS optimizations |
 | `linux` | `[core]` | EEVDF | Maximum stability — vanilla kernel, least patches, slowest to adopt new features |
 | `linux-lts` | `[core]` | EEVDF | Fallback kernel — older version, ultra-stable, ideal rescue boot option |
+| `linux-hardened` | `[extra]` | EEVDF | Security — hardened malloc/stack & other hardening patches (slightly slower) |
+| `linux-rt` | `[extra]` | EEVDF (PREEMPT_RT) | Real-time (PREEMPT_RT) — pro audio / MIDI / latency-critical, clock source accuracy |
+| `linux-cachyos` | CachyOS repos | EEVDF | CachyOS defaults — balanced optimization with extra patches (best all-round) |
+| `linux-cachyos-bore` | CachyOS repos | BORE | Gaming/audio — Burst-Oriented Response Enhancer prioritizes foreground tasks |
+| `linux-cachyos-eevdf` | CachyOS repos | EEVDF | General desktop — explicit EEVDF build (in case default scheduler changes) |
+| `linux-cachyos-bmq` | CachyOS repos | BMQ | Niche — BitMap Queue scheduler, heavy multi-thread workloads (no sched-ext) |
+| `linux-cachyos-lts` | CachyOS repos | EEVDF | CachyOS long-term support — stable fallback / second kernel |
+| `linux-cachyos-deckify` | CachyOS repos | BORE | Steam Deck & handheld tuning — gaming hardware patches (BORE) |
+| `linux-cachyos-hardened` | CachyOS repos | BORE | Hardened + BORE — very aggressive security (large performance hit) |
 
 **Scheduler explainer:**
 - **EEVDF** (Earliest Eligible Virtual Deadline First) — the default Linux scheduler since 6.6. Fair, predictable, good all-rounder.
 - **BORE** (Burst-Oriented Response Enhancer) — prioritizes the currently-focused task. Noticeably snappier for single-app workloads (gaming, DAWs, video editing). Can slightly penalize heavy background tasks.
+- **BMQ** (BitMap Queue) — simple bitmap-based scheduler. Great raw throughput on heavy multi-thread workloads, but niche and **no `sched-ext`** support. Pick only if a specific workload prefers it.
 
 **CachyOS vs vanilla kernels:**
 CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — for a pure CachyOS install, enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and select the kernel here; otherwise install it post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.

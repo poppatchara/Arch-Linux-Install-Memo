@@ -661,20 +661,56 @@ Bind `Mod+F2` to wofi run mode (see [Keybind Additions](#keybind-additions)).
 
 ### Keybind Additions
 
-Add these to the `binds {}` block in your niri config:
+Add these to the `binds {}` block in your niri config. Each keybind **must be
+multiline** (niri 26.04 rejects one-line `{ ...; }` blocks on the same line as
+the key), and `spawn-sh` on a separate line inside the block:
 
 ```kdl
-    // ─── DE Applications ───
-    Mod+Return               hotkey-overlay-title="Open Terminal" { spawn "ghostty"; }
-    Mod+F2                    hotkey-overlay-title="Run Command" { spawn "wofi" "--show" "run"; }
-    Mod+E                    hotkey-overlay-title="File Manager: Dolphin" { spawn "dolphin"; }
-    Mod+B                    hotkey-overlay-title="Browser: Firefox" { spawn "firefox"; }
-    Mod+Alt+L                hotkey-overlay-title="Lock" { spawn-sh "noctalia msg session lock"; }
-    Mod+Shift+Q              hotkey-overlay-title="Session Menu" { spawn-sh "noctalia msg panel-toggle session"; }
-    Mod+Tab                  { toggle-overview; }
+    // ─── DE Applications (multiline — niri 26.04 requires blocks on their own lines) ───
+    Mod+Return {
+        spawn "ghostty"
+    }
+    Mod+F2 {
+        spawn "wofi" "--show" "run"
+    }
+    Mod+E {
+        spawn "dolphin"
+    }
+    Mod+B {
+        spawn "firefox"
+    }
+    Mod+Alt+L {
+        spawn-sh "noctalia msg session lock"
+    }
+    Mod+Shift+Q {
+        spawn-sh "noctalia msg panel-toggle session"
+    }
+    Mod+Tab {
+        toggle-overview
+    }
 ```
 
 > **Note:** `Mod+Return` replaces the default Niri `Mod+T` — matches the CachyOS convention.
+
+> **After editing, reload live (no logout needed):**
+> ```bash
+> NIRI_SOCKET=/run/user/1000/niri.wayland-<N>.<PID>.sock niri msg action load-config-file
+> ```
+> The socket path is `$XDG_RUNTIME_DIR/niri.wayland-<N>.<pid>.sock` — check the
+> actual file in `/run/user/1000/`. Validate first with `niri validate`; reload
+> with `niri msg action load-config-file` (the reload subcommand; older
+> `reload-config` was renamed).\n
+>
+> **Gotchas (observed on pop_arch, niri 26.04):**
+> - Missing binds cause "shortcut does nothing" — Mod+T terminal is **Mod+Return**
+>   here; Mod+E/B/F2 are extra binds that MUST be added or they silently no-op.
+>   A config that validates but lacks the binds block entries won't error.
+> - Do NOT SSH into the same desktop user while diagnosing the live session:
+>   the SSH session opens a second `user@UID` manager → logind tears down
+>   `/run/user/<UID>` (socket files vanish) → every client gets ENOENT
+>   ("not running") though the compositor process is alive and listening.
+>   Debug via `NIRI_SOCKET=`/`XDG_RUNTIME_DIR=` env pointed at the live sockets
+>   from a single short command instead.
 
 ### Input & Keyboard QoL
 

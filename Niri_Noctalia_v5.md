@@ -1104,6 +1104,29 @@ Current=pixie" > /etc/sddm.conf.d/theme.conf'
 >
 > **Other themes:** any SDDM theme from the [KDE Store](https://store.kde.org/browse/cat/106/order/latest/) or AUR (`sddm-theme-*`) works — just change `Current=` accordingly.
 
+### 2b. Use the Wayland greeter (drops the Xorg process — saves ~135MB RAM)
+
+SDDM defaults to an **X11 greeter** (`/usr/lib/Xorg` + `sddm-greeter-qt6` on VT1). On a Niri/Wayland machine that Xorg serves **only the login screen** — after login it is dead weight and, worse, can be left running (stuck on VT1) if the session switches VT, wasting ~135MB forever.
+
+Switch SDDM to a **Wayland greeter** so the greeter runs inside a Wayland compositor and is torn down cleanly with the session. Requires the `kwin` package (has `kwin_wayland`) — present if Plasma is installed, or `sudo pacman -S kwin`:
+
+```bash
+sudo tee /etc/sddm.conf.d/01-wayland.conf > /dev/null <<'EOF'
+[General]
+DisplayServer=wayland
+
+[Wayland]
+CompositorCommand=kwin_wayland --no-lockscreen
+SessionCommand=/usr/share/sddm/scripts/wayland-session
+SessionDir=/usr/local/share/wayland-sessions,/usr/share/wayland-sessions
+EOF
+sudo systemctl restart sddm
+```
+
+> **Prereq for the Wayland greeter:** the session wrapper **must** export `XDG_RUNTIME_DIR` (see the [Wrapper Script](#create-wrapper-script) fix above). Without it SDDM's Wayland-path session launch fails with `RuntimeDirNotSet` and the login "bounces back" — that is why the greeter was reverted to X11 before; it is now safe because the wrapper sets `XDG_RUNTIME_DIR=/run/user/1000`.
+>
+> **Verify the greeter is Wayland (no Xorg):** after restart, `pgrep -x Xorg` returns nothing; `pgrep -f kwin_wayland` shows the greeter compositor. Revert to the X11 greeter with `rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm`.
+
 ### 3. Verify the session entry
 
 ```bash

@@ -206,7 +206,9 @@ sudo pacman -S --noconfirm --needed xdg-desktop-portal-kde
 **Qt theme consistency:** Without Plasma running, Qt apps may look wrong. Install `qt6ct-kde` to apply KDE color schemes and styles to Qt applications under Niri:
 
 ```bash
-sudo pacman -S --noconfirm --needed qt6ct-kde
+# 🔒 AUR — `qt6ct-kde`: KDE-patched Qt 6 Config Utility (theme consistency for Qt apps under Niri).
+# `qt6ct` (unpatched) is in [extra], but the KDE variant is AUR-only — must use yay, not pacman.
+yay -S --noconfirm --needed qt6ct-kde
 ```
 
 **Optional:**

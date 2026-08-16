@@ -145,19 +145,18 @@ The bootloader determines the partition layout. The key difference:
 - **GRUB** can read Btrfs natively. `/boot` lives inside `@`, so kernel + initramfs are covered by root snapshots and rollbacks (no separate `@boot` to manage).
 - **Limine** only reads FAT. Kernels and initramfs must be copied to the EFI System Partition (FAT32), which is outside snapshot coverage.
 
-This affects where swap goes too — we want swap at the end for Limine (easy to resize away), and in the middle for GRUB (maximizing contiguous Btrfs space, with `/boot/EFI` at the edge).
+Neither uses a swap partition — swap is a **file on a dedicated `@swap` subvolume** (set up in §2.2), so every layout is just the ESP plus one Btrfs partition:
 
 ---
 
 ### ▸ GRUB
 
-ESP mounted at `/boot/EFI`, swap in the middle, Btrfs takes the rest:
+ESP mounted at `/boot/EFI`, with Btrfs taking the rest. Swap is a **file on a `@swap` subvolume** (set up in §2.2), not a partition:
 
 | Partition | Size | Type | Mount |
 |-----------|------|------|-------|
 | p1 | 2–4G | EFI System | `/boot/EFI` |
-| p2 | RAM-sized | Linux swap | swap |
-| p3 | Remainder | Btrfs root | `/` |
+| p2 | Remainder | Btrfs root | `/` |
 
 #### Step 1 — Create Partitions with cfdisk
 
@@ -169,29 +168,25 @@ cfdisk /dev/nvme0n1
 
 1. If prompted, select **GPT** label type
 2. **Create p1:** `[New]` → `2G` (or `4G`) → `[Type]` → `EFI System`
-3. **Create p2:** `↓` to free space → `[New]` → (your RAM size, e.g. `32G`) → `[Type]` → `Linux swap`
-4. **Create p3:** `↓` to free space → `[New]` → (accept default = remainder) → `[Type]` → `Linux filesystem`
-5. `[Write]` → type `yes` → `[Quit]`
+3. **Create p2:** `↓` to free space → `[New]` → (accept default = remainder) → `[Type]` → `Linux filesystem`
+4. `[Write]` → type `yes` → `[Quit]`
 
 #### Step 2 — Format
 
-Each partition gets its filesystem. `mkfs.fat` for the ESP (UEFI firmware requirement), `mkswap` for swap, `mkfs.btrfs` for the root. The `-L` label is cosmetic — helps identify the disk in file managers:
+Each partition gets its filesystem. `mkfs.fat` for the ESP (UEFI firmware requirement) and `mkfs.btrfs` for the root. The `-L` label is cosmetic — helps identify the disk in file managers:
 
 ```bash
 mkfs.fat -F32 -n EFI /dev/nvme0n1p1
-mkswap /dev/nvme0n1p2
-mkfs.btrfs -f -L Arch /dev/nvme0n1p3
+mkfs.btrfs -f -L Arch /dev/nvme0n1p2
 ```
 
 #### Step 3 — Capture UUIDs
 
-UUIDs are stable identifiers — unlike `/dev/nvme0n1pN` which can change if disk topology shifts. We detect by filesystem label (`EFI`) and type (`swap`, `btrfs`) so the guide works on any disk:
+UUIDs are stable identifiers — unlike `/dev/nvme0n1pN` which can change if disk topology shifts. We detect by filesystem label (`EFI`) and type (`btrfs`) so the guide works on any disk:
 
 ```bash
 esp_part="$(blkid -L EFI -o device)"
 esp_uuid="$(blkid -s UUID -o value "$esp_part")"
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
@@ -200,13 +195,12 @@ root_uuid="$(blkid -s UUID -o value "$root_part")"
 
 ### ▸ Limine
 
-ESP mounted at `/boot` directly (because Limine reads kernels from FAT), swap at the end:
+ESP mounted at `/boot` directly (because Limine reads kernels from FAT), with Btrfs taking the rest. Swap is a **file on a `@swap` subvolume** (set up in §2.2), not a partition:
 
 | Partition | Size | Type | Mount |
 |-----------|------|------|-------|
 | p1 | 2–4G | EFI System | `/boot` |
 | p2 | Remainder | Btrfs root | `/` |
-| p3 | RAM-sized | Linux swap | swap |
 
 #### Step 1 — Create Partitions with cfdisk
 
@@ -217,15 +211,13 @@ cfdisk /dev/nvme0n1
 1. If prompted, select **GPT** label type
 2. **Create p1:** `[New]` → `2G` (or `4G`) → `[Type]` → `EFI System`
 3. **Create p2:** `↓` to free space → `[New]` → (accept default = remainder) → `[Type]` → `Linux filesystem`
-4. **Create p3:** `↓` to free space → `[New]` → (your RAM size, e.g. `32G`) → `[Type]` → `Linux swap`
-5. `[Write]` → type `yes` → `[Quit]`
+4. `[Write]` → type `yes` → `[Quit]`
 
 #### Step 2 — Format
 
 ```bash
 mkfs.fat -F32 -n EFI /dev/nvme0n1p1
 mkfs.btrfs -f -L Arch /dev/nvme0n1p2
-mkswap /dev/nvme0n1p3
 ```
 
 #### Step 3 — Capture UUIDs
@@ -235,8 +227,6 @@ Same label-based detection as GRUB:
 ```bash
 esp_part="$(blkid -L EFI -o device)"
 esp_uuid="$(blkid -s UUID -o value "$esp_part")"
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
@@ -254,6 +244,7 @@ Btrfs subvolumes are like lightweight partitions inside a single filesystem. The
 - `@var_tmp` for `/var/tmp` — temporary files, excluded from snapshots
 - `@home` gets light snapshot coverage (optional)
 - `@root` keeps `/root` (the root user's home) separate
+- `@swap` holds the swap **file** on its own subvolume — required because Btrfs forbids snapshots of a subvolume containing an active swap file (so it can't live inside `@`)
 
 The `@` naming convention came from openSUSE's Snapper layout. It's not required, but most tooling expects it.
 
@@ -274,15 +265,33 @@ btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@var_tmp
 btrfs subvolume create /mnt/@root
+btrfs subvolume create /mnt/@swap
 ```
 
 > Optional: add `@home_cache`, `@home_downloads`, `@home_git` subvolumes if you want to exclude those directories from snapshots (they tend to be large and change frequently).
+
+#### About the `@swap` subvolume
+
+Swap on Btrfs is a **file**, not a partition — but it can't just live inside `@`. Btrfs has hard constraints on swap files that force a dedicated subvolume:
+
+- **No snapshots of a live swap subvolume.** Btrfs *refuses* to snapshot a subvolume that contains an active swap file (`btrfs subvolume snapshot` errors out). If the swap file sat inside `@`, you'd be unable to take any `@` snapshot — killing the whole Snapper/snap-pac rollback story. So the swap file gets its own `@swap` subvolume (snapshotting it is neither needed nor wanted).
+- **Data profile must be `single`.** A swap file can't live on a multi-device / RAID data profile. On a single-disk install (the normal case) this is a non-issue.
+- **Must be pre-allocated and NOCOW.** Swap files can't be copy-on-write and can't have holes. `btrfs filesystem mkswapfile` handles both automatically (it preallocates the blocks and sets the NOCOW attribute) — don't hand-roll this with `dd` + `chattr +C` + `mkswap`, the `btrfs` helper is the supported, correct path and also stamps an explicit UUID.
+
+**Layout result:** the ESP + one Btrfs partition holds `@`, `@home`, `@var_*`, `@root`, `@srv`, and now `@swap`. The swap file lives at `/swap/swapfile` on its own subvolume. Its size is yours to pick — equal to RAM if you want hibernation to have room for the full suspend image, smaller if you just want overflow swap (see §2.2's `swap_size`).
+
+**Hibernation is the one trickier bit.** With a swap *file* (vs a partition), the kernel needs both the block device holding the file **and** its physical offset:
+
+- `resume=UUID=<btrfs root device UUID>` — the device `@swap` sits on
+- `resume_offset=<physical offset>` — obtained with `btrfs inspect-internal map-swapfile -r /swap/swapfile` (never `filefrag` on Btrfs — it reports a virtual address, not the real disk offset)
+
+Both are captured as `resume_uuid` / `resume_offset` in §2.2 and wired into the bootloader command line in §5.1. The `resume` mkinitcpio hook (§4) already handles the initramfs side.
 
 ### ▸ 2.2 Common Mounts
 
 The GRUB and Limine paths share almost everything — only the boot/ESP handling differs. So we do the shared part once here, then the bootloader-specific part in §2.3.
 
-We create `@srv` (server data separation for Limine) up front. `/boot` is **not** a separate `@boot` subvolume — for GRUB it lives inside `@`, so a single rollback of `@` covers kernel + initramfs + system together; Limine's `/boot` is the ESP (handled in §2.3):
+We create `@srv` (server data separation for Limine) and `@swap` (swap-file home) up front. `/boot` is **not** a separate `@boot` subvolume — for GRUB it lives inside `@`, so a single rollback of `@` covers kernel + initramfs + system together; Limine's `/boot` is the ESP (handled in §2.3):
 
 ```bash
 btrfs subvolume create /mnt/@srv
@@ -294,10 +303,26 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /m
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_tmp   UUID="${root_uuid}" /mnt/var/tmp
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /mnt/root
-swapon UUID="${swap_uuid}"
+mount --mkdir -o compress=zstd:1,noatime,subvol=@swap     UUID="${root_uuid}" /mnt/swap
 ```
 
-> `/boot` is a path inside `@` (for GRUB), not a separate `@boot` subvolume. This matters **only for GRUB**: its kernel + initramfs live at `@/boot`, so they're captured by every `@` snapshot and roll back with the system. Limine ignores `@/boot` entirely — it reads kernels from the FAT32 ESP (see §2.3), so its boot files are never snapshotted. `@srv` is created here because it costs nothing on a fresh install and keeps server data out of snapshots; it's only mounted if you actually use it.
+**Create the swap file** on `@swap`. `btrfs filesystem mkswapfile` handles the preallocation and NOCOW attribute automatically (Btrfs swap files need both), plus sets an explicit `--uuid` so the swap file is stable across boots:
+
+```bash
+swap_size="32G"   # set to your RAM size (for hibernation) or less if you only want overflow swap
+btrfs filesystem mkswapfile --size "${swap_size}" --uuid clear /mnt/swap/swapfile
+swapon /mnt/swap/swapfile
+```
+
+**Capture the hibernation resume values.** With a swap file (unlike a swap partition), `resume=` names the **block device holding the file** and `resume_offset=` the physical offset within it. On Btrfs you must get the offset with `btrfs inspect-internal map-swapfile` (not `filefrag`, which lies about physical offsets on Btrfs):
+
+```bash
+resume_uuid="${root_uuid}"                                    # swap file lives on the root Btrfs device
+resume_offset="$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)"
+echo "resume_uuid=${resume_uuid} resume_offset=${resume_offset}"   # verify before proceeding
+```
+
+> `/boot` is a path inside `@` (for GRUB), not a separate `@boot` subvolume. This matters **only for GRUB**: its kernel + initramfs live at `@/boot`, so they're captured by every `@` snapshot and roll back with the system. Limine ignores `@/boot` entirely — it reads kernels from the FAT32 ESP (see §2.3), so its boot files are never snapshotted. `@srv` is created here because it costs nothing on a fresh install and keeps server data out of snapshots; it's only mounted if you actually use it. `@swap` houses the swap file — it must stay out of `@` because Btrfs refuses to snapshot a subvolume that holds an active swap file.
 
 ### ▸ 2.3 Boot & ESP Mount (per-bootloader)
 
@@ -323,13 +348,18 @@ mount --mkdir UUID="${esp_uuid}" /mnt/boot
 
 ### 2.4 fstab
 
-`genfstab` generates `/etc/fstab` from the current mount state. Using `-U` writes UUIDs (not device paths). Always glance at the output before moving on — a misconfigured fstab means an unbootable system:
+`genfstab` generates `/etc/fstab` from the current mount state. Using `-U` writes UUIDs (not device paths). Always glance at the output before moving on — a misconfigured fstab means an unbootable system. Swap files are **not** emitted by `genfstab`, so we add that entry by hand:
 
 ```bash
 mkdir -p /mnt/etc
 genfstab -U /mnt > /mnt/etc/fstab
-cat /mnt/etc/fstab  # sanity check
+cat /mnt/etc/fstab  # sanity check — should include the @swap mount line at /swap
+
+# Add the swap file entry (genfstab doesn't write swap files)
+echo "/swap/swapfile none swap defaults 0 0" >> /mnt/etc/fstab
 ```
+
+> The `subvol=@swap` mount at `/swap` (from genfstab) and the `/swap/swapfile` swap line are **both** needed — the subvolume must be mounted before `swapon` can activate the file inside it.
 
 ---
 
@@ -661,21 +691,22 @@ efibootmgr -v                         # list all entries
 
 These steps are identical for GRUB and Limine — do them once, pick a bootloader in 5.2/5.3.
 
-First, detect CPU microcode and partition UUIDs (used by both the kernel command line and config generation):
+First, detect CPU microcode and the root/swap UUIDs (used by both the kernel command line and config generation). These are re-detected here because §5 runs inside the chroot — a fresh shell that doesn't see the §2 variables:
 
 ```bash
 ucode_img="intel"
 lscpu | grep -qi amd && ucode_img="amd"
 
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-swap_uuid="$(blkid -s UUID -o value "$swap_part")"
-
-# root UUID is only needed by Limine (GRUB discovers / via search at mkconfig time)
+# root UUID (GRUB discovers / via search at mkconfig time; Limine uses it in kernel cmdline)
 root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
 root_uuid="$(blkid -s UUID -o value "$root_part")"
+
+# hibernation resume: swap file lives on the root device; offset from btrfs (not filefrag)
+resume_uuid="${root_uuid}"
+resume_offset="$(btrfs inspect-internal map-swapfile -r /swap/swapfile)"
 ```
 
-> **Kernel parameters (shared core):** both bootloaders pass the same base tuning on the command line — `loglevel=3` (quiet boot), `resume=UUID=${swap_uuid}` (hibernation), `zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc` (compressed RAM swap cache), `${ucode_img}_iommu=on iommu=pt` (GPU passthrough / IOMMU). GRUB gets these via `GRUB_CMDLINE_LINUX_DEFAULT`; Limine inlines them in each `limine.conf` entry. The one real difference — **root specification** — is handled per-bootloader below: GRUB omits `root=` (its `search` hook finds `/` automatically), while Limine must declare `root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw`.
+> **Kernel parameters (shared core):** both bootloaders pass the same base tuning on the command line — `loglevel=3` (quiet boot), `resume=UUID=${resume_uuid} resume_offset=${resume_offset}` (hibernation from the swap **file**), `zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc` (compressed RAM swap cache), `${ucode_img}_iommu=on iommu=pt` (GPU passthrough / IOMMU). GRUB gets these via `GRUB_CMDLINE_LINUX_DEFAULT`; Limine inlines them in each `limine.conf` entry. The one real difference — **root specification** — is handled per-bootloader below: GRUB omits `root=` (its `search` hook finds `/` automatically), while Limine must declare `root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw`.
 
 Add the zswap compression modules to the initramfs so they're available immediately at boot (identical for both):
 
@@ -708,7 +739,7 @@ Now apply the shared kernel parameters from §5.1 to GRUB's config. Note GRUB de
 
 ```bash
 sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
-sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
+sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${resume_uuid} resume_offset=${resume_offset} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
 ```
 
 Generate the GRUB configuration file and we're done:
@@ -721,7 +752,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 ### ▸ 5.3 Limine
 
-Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`. It reuses the `$root_uuid`, `$swap_uuid`, and `$ucode_img` variables set in §5.1.
+Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`. It reuses the `$root_uuid`, `$resume_uuid`, `$resume_offset`, and `$ucode_img` variables set in §5.1.
 
 Install and register with the UEFI firmware:
 
@@ -759,7 +790,7 @@ for k in "${KERNELS[@]}"; do
     KERNEL_PATH: boot():/limine/vmlinuz-${k}
     MODULE_PATH: boot():/limine/${ucode_img}-ucode.img
     MODULE_PATH: boot():/limine/initramfs-${k}.img
-    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
+    CMDLINE: loglevel=3 root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw resume=UUID=${resume_uuid} resume_offset=${resume_offset} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt
 
 /Arch Linux (${k} fallback)
     PROTOCOL: linux

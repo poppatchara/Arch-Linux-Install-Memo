@@ -30,6 +30,11 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-08-16
+
+- **CachyOS-first route — enable CachyOS repos on the live ISO:** `Arch Linux_Installation_Guide.md` gains **▸ 3.0a Optional: Enable CachyOS Repos (Live ISO)** — a manual keyring + mirrorlist + `pacman.conf` setup that lets §3.1 select a `linux-cachyos*` kernel and §3.3 pacstrap it directly (no double-install). The `cachyos-repo.sh` fork/reinstall stays in the chroot [CachyOS Repos] section as before. Decision Matrix rows 1/2 updated with both routes; §3.3 gains the critical `cp` of the separate `cachyos-*-mirrorlist` files into `/mnt` (pacstrap only copies the Arch mirrorlist + pacman.conf). TOC + all internal links updated. Known pitfall preserved: on the live ISO, touch only the repos — the shell script is a chroot operation.
+- **Refactor §2.2/§2.3 — merged GRUB & Limine mounts:** `Arch Linux_Installation_Guide.md` now has **▸ 2.2 Common Mounts** (shared block: creates both `@boot` + `@srv`, mounts every subvolume except boot/ESP, swap) plus **▸ 2.3 Boot & ESP Mount (per-bootloader)** splitting only where they diverge — GRUB (`@boot` Btrfs mount + ESP at `/boot/EFI`) vs Limine (ESP directly at `/boot`). Removes the ~10-line duplicate mount sequence, keeps the boot/ESP-only difference explicit, and fixes a stale `§5.2` cross-reference.
+
 ### 2026-08-15
 
 - **Niri now uses SDDM + pixie (replaces greetd/noctalia-greeter):** per user decision — Niri should use the same login manager as Hyprland. `Niri_Noctalia_v5.md`'s `Switch to Noctalia Greeter` section replaced with an **SDDM Login Manager** section (`sddm` + `pixie-sddm-git`, Qt6 prereqs, `/etc/sddm.conf.d/theme.conf` `Current=pixie`), PAM hooks moved to `/etc/pam.d/sddm`, cursor theme switched `capitaine-cursors` → **Phinger** (`phinger-cursors`) + **Bibata Classic** alternative (matches the Hyprland guide). Decision matrix updated in `Arch Linux_Installation_Guide.md`: Niri + Hyprland → `sddm`, KDE → `plasmalogin`. Historical `greetd` notes kept in the changelog/archive.

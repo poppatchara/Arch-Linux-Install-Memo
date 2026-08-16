@@ -18,11 +18,12 @@ Not the best way. Just the way I like.
   - [▸ Limine](#-limine)
 - [§2 — Btrfs Subvolumes & Mounts](#2--btrfs-subvolumes--mounts)
   - [2.1 Common Subvolumes](#21-common-subvolumes)
-  - [▸ 2.2 GRUB Mounts](#-22-grub-mounts)
-  - [▸ 2.3 Limine Mounts](#-23-limine-mounts)
+  - [▸ 2.2 Common Mounts](#-22-common-mounts)
+  - [▸ 2.3 Boot & ESP Mount (per-bootloader)](#-23-boot--esp-mount-per-bootloader)
   - [2.4 fstab](#24-fstab)
 - [§3 — Base Install](#3--base-install)
   - [3.0 CPU Detection](#30-cpu-detection)
+  - [3.0a Optional: Enable CachyOS Repos](#30a-optional-enable-cachyos-repos-live-iso)
   - [3.1 Select Kernels](#31-select-kernels)
   - [3.2 vconsole](#32-vconsole)
   - [3.3 pacstrap](#33-pacstrap)
@@ -66,12 +67,12 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 
 | # | Decision | A | B | C | § |
 |---|----------|---|---|---|---|
-| 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(post-chroot)* | `linux` / `linux-lts` | §3 + CachyOS Repos |
-| 2 | **Repos** | Vanilla Arch | CachyOS repos | | CachyOS Repos *(post-chroot)* |
+| 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(up-front §3.0a, or swap post-chroot)* | `linux` / `linux-lts` | §3 + CachyOS Repos |
+| 2 | **Repos** | Vanilla Arch | CachyOS repos | | §3.0a (live ISO) or CachyOS Repos (post-chroot) |
 | 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Noctalia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
-> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. The live ISO stage always installs a vanilla kernel; if you want `linux-cachyos*`, add the repos **post-chroot** (CachyOS Repos section) and swap the kernel there.
+> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. Two routes: **CachyOS-first** — enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and pacstrap a `linux-cachyos*` kernel directly; or **post-chroot** (default) — start vanilla, add the repos in the [CachyOS Repos](#cachyos-repos-optional) section, then swap the kernel there.
 
 ### Recommended Combos
 
@@ -277,32 +278,14 @@ btrfs subvolume create /mnt/@root
 
 > Optional: add `@home_cache`, `@home_downloads`, `@home_git` subvolumes if you want to exclude those directories from snapshots (they tend to be large and change frequently).
 
-### ▸ 2.2 GRUB Mounts
+### ▸ 2.2 Common Mounts
 
-GRUB adds `@boot` — this is the key advantage. Kernel updates get snapshotted automatically by `snap-pac`. After creating it, we unmount everything and re-mount each subvolume with the correct options:
+The GRUB and Limine paths share almost everything — only the boot/ESP handling differs. So we do the shared part once here, then the bootloader-specific part in §2.3.
+
+We create both `@boot` (GRUB: snapshotted kernels via `snap-pac`) and `@srv` (Limine: server data separation) up front — creating the unused one is harmless, only the mount below matters:
 
 ```bash
 btrfs subvolume create /mnt/@boot
-
-umount -R /mnt
-mount -o compress=zstd:1,noatime,subvol=@ UUID="${root_uuid}" /mnt
-mount --mkdir -o compress=zstd:1,noatime,subvol=@home     UUID="${root_uuid}" /mnt/home
-mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /mnt/var/log
-mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
-mount --mkdir -o compress=zstd:1,noatime,subvol=@var_tmp   UUID="${root_uuid}" /mnt/var/tmp
-mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /mnt/root
-mount --mkdir -o compress=zstd:1,noatime,subvol=@boot     UUID="${root_uuid}" /mnt/boot
-mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
-swapon UUID="${swap_uuid}"
-```
-
-The ESP is mounted at `/boot/EFI` — inside the Btrfs `/boot`. GRUB reads the kernel from Btrfs `/boot`, then chain-loads from the FAT32 ESP at `/boot/EFI`.
-
-### ▸ 2.3 Limine Mounts
-
-Limine can't read Btrfs, so the ESP is mounted directly at `/boot`. No `@boot` subvolume needed — kernel artifacts get copied to FAT32 in §5.2. We add `@srv` instead for server data separation:
-
-```bash
 btrfs subvolume create /mnt/@srv
 
 umount -R /mnt
@@ -312,9 +295,28 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@var_log  UUID="${root_uuid}" /m
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_cache UUID="${root_uuid}" /mnt/var/cache
 mount --mkdir -o compress=zstd:1,noatime,subvol=@var_tmp   UUID="${root_uuid}" /mnt/var/tmp
 mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /mnt/root
-mount --mkdir -o compress=zstd:1,noatime,subvol=@srv      UUID="${root_uuid}" /mnt/srv
-mount --mkdir UUID="${esp_uuid}" /mnt/boot
 swapon UUID="${swap_uuid}"
+```
+
+> `@boot` is only used by GRUB, `@srv` only by Limine. Creating both costs nothing on a fresh install; skip the line for the one your bootloader won't use if you prefer a leaner subvolume list.
+
+### ▸ 2.3 Boot & ESP Mount (per-bootloader)
+
+Everything above is identical — here is where GRUB and Limine diverge. Pick the block for your bootloader from the [Decision Matrix](#decision-matrix).
+
+**GRUB** — reads Btrfs natively, so `/boot` stays on a `@boot` Btrfs subvolume (kernel updates get snapshotted). The ESP is mounted *inside* it at `/boot/EFI`:
+
+```bash
+mount --mkdir -o compress=zstd:1,noatime,subvol=@boot UUID="${root_uuid}" /mnt/boot
+mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
+```
+
+> The ESP is mounted at `/boot/EFI` — inside the Btrfs `/boot`. GRUB reads the kernel from Btrfs `/boot`, then chain-loads from the FAT32 ESP at `/boot/EFI`.
+
+**Limine** — can't read Btrfs, so the ESP is mounted directly at `/boot`. No `@boot` mount (kernel artifacts get copied to FAT32 in the [Bootloader section](#5--bootloader)):
+
+```bash
+mount --mkdir UUID="${esp_uuid}" /mnt/boot
 ```
 
 ### 2.4 fstab
@@ -336,9 +338,47 @@ cat /mnt/etc/fstab  # sanity check
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
 - `linux-lts` — long-term support. Older but extremely stable. Good fallback.
-- `linux-cachyos*` (cachyos / bore / eevdf) — NOT available in the live ISO. Install these **after chroot** in the [CachyOS Repos](#cachyos-repos-optional) section.
+- `linux-cachyos*` (cachyos / bore / eevdf) — needs the CachyOS repos. Two options: **enable the repos on the live ISO first** ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) so you can pick it here, or stay vanilla-now and swap kernels post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
 
-> **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos — done **post-chroot** in the [CachyOS Repos](#cachyos-repos-optional) section. The live ISO stage always uses vanilla repos (simpler, no space pressure); if you want a `linux-cachyos*` kernel you install a vanilla kernel now, then swap kernels after the repos are added.
+> **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos. Two entry points:
+> - **CachyOS-first** — enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) before §3.1, then pacstrap installs a `linux-cachyos*` kernel directly. No double-install.
+> - **Post-chroot (default)** — start vanilla, install the repos after chroot in the [CachyOS Repos](#cachyos-repos-optional) section, then swap kernels there. Simpler start, but you install a vanilla kernel first then replace it.
+
+### 3.0a Optional: Enable CachyOS Repos (Live ISO)
+
+Do this **only** if you want a `linux-cachyos*` kernel installed from the start (pure CachyOS route). This adds the repos to the **live ISO's** pacman so §3.1/§3.3 can resolve them. For the vanilla-first route, skip this and use the [CachyOS Repos](#cachyos-repos-optional) section post-chroot instead.
+
+> **Don't run `cachyos-repo.sh` here.** That script (a) installs CachyOS's forked pacman and (b) does a full package reinstall — both are **chroot operations** for the [CachyOS Repos](#cachyos-repos-optional) section. On the live ISO we only add the repos themselves (keyring + mirrorlists + pacman.conf), which is all pacstrap needs.
+
+```bash
+# Only if you want a linux-cachyos* kernel from pacstrap.
+# 1. Trust the CachyOS signing key
+sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+sudo pacman-key --lsign-key F3B607488DB35A47
+
+# 2. Install keyring + mirrorlists (ALL THREE needed — v3/v4 tiers + base)
+sudo pacman -U \
+  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst \
+  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-27-1-any.pkg.tar.zst \
+  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-27-1-any.pkg.tar.zst \
+  https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-27-1-any.pkg.tar.zst
+
+# 3. Enable the repos in the live ISO's pacman.conf
+sudo tee -a /etc/pacman.conf <<'EOF'
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+[cachyos-v3]
+Include = /etc/pacman.d/cachyos-v3-mirrorlist
+[cachyos-v4]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+EOF
+
+# 4. Refresh the live ISO's package DB with the new repos
+sudo pacman -Syy
+```
+
+> **After §3.3 pacstrap, copy the CachyOS mirrorlists into the chroot yourself.** pacstrap only copies `/etc/pacman.d/mirrorlist` (the Arch default) and `/etc/pacman.conf` into `/mnt` — it does **not** copy the separate `cachyos-*-mirrorlist` files. Without them, the copied `pacman.conf` references `Include = /etc/pacman.d/cachyos-*-mirrorlist` that don't exist inside the chroot, and pacman there can't reach the repos. See §3.3 for the exact `cp`.
 
 ### 3.0 CPU Detection
 
@@ -353,14 +393,17 @@ lscpu | grep -qi amd && cpu=amd
 
 Install at least one. You can install multiple — common combos: `linux-zen` (daily) + `linux-lts` (fallback).
 
-> `linux-cachyos*` kernels can't be selected here — they need CachyOS repos which are only added post-chroot. Install a vanilla kernel now; swap to `linux-cachyos*` in the [CachyOS Repos](#cachyos-repos-optional) section if you want it.
+> `linux-cachyos*` kernels need the CachyOS repos. If you enabled them on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)), you can pick a CachyOS kernel here and pacstrap installs it directly. Otherwise stay vanilla here and swap to `linux-cachyos*` post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
 
 ```bash
-# Uncomment the kernels you want (vanilla only — see note above):
+# Uncomment the kernels you want.
+# Vanilla (linux / linux-zen / linux-lts) always works.
+# CachyOS variants (linux-cachyos*) only resolve if you enabled §3.0a on the live ISO.
 KERNELS=(
   linux-zen
   # linux
   # linux-lts
+  # linux-cachyos-bore
 )
 
 # Build kernel package list for pacstrap
@@ -387,10 +430,10 @@ done
 - **BORE** (Burst-Oriented Response Enhancer) — prioritizes the currently-focused task. Noticeably snappier for single-app workloads (gaming, DAWs, video editing). Can slightly penalize heavy background tasks.
 
 **CachyOS vs vanilla kernels:**
-CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — install them post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
+CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — for a pure CachyOS install, enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and select the kernel here; otherwise install it post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
 
 **Recommended approach:**
-Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` after the CachyOS repos are set up. GRUB picks the first kernel by default; hold Shift during boot to choose another.
+Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` — best picked up front via [§3.0a](#30a-optional-enable-cachyos-repos-live-iso), or swapped in after the CachyOS repos are set up. GRUB picks the first kernel by default; hold Shift during boot to choose another.
 
 </details>
 
@@ -410,6 +453,8 @@ EOF
 `pacstrap` bootstraps a new Arch system onto `/mnt`. It installs the package group `base`, your chosen kernel, firmware, essential tools, networking, SSH, and PipeWire for audio:
 
 ```bash
+# KERNEL_PKGS may include a linux-cachyos* variant if you enabled §3.0a on the live ISO.
+# pacstrap resolves them from the live ISO's pacman.conf (already carrying the [cachyos-*] repos).
 pacstrap -K /mnt \
   base base-devel \
   "${KERNEL_PKGS[@]}" linux-firmware "${cpu}-ucode" \
@@ -421,6 +466,13 @@ pacstrap -K /mnt \
 
 cp /etc/pacman.conf /mnt/etc/pacman.conf
 cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
+
+# If you enabled CachyOS repos on the live ISO (§3.0a), pacstrap copied pacman.conf
+# (it already has the [cachyos-*] sections) but NOT the separate cachyos-*-mirrorlist
+# files. Copy them too or pacman in the chroot can't reach the repos:
+for m in cachyos-mirrorlist cachyos-v3-mirrorlist cachyos-v4-mirrorlist; do
+  [ -f /etc/pacman.d/$m ] && cp /etc/pacman.d/$m /mnt/etc/pacman.d/$m
+done
 ```
 
 > **What we're installing:**
@@ -443,7 +495,7 @@ arch-chroot /mnt
 
 ### CachyOS Repos (optional)
 
-> Skip if using Vanilla Arch repos. This is the **only** place CachyOS repos are added (the live ISO stage always uses vanilla repos — no space pressure, simpler pacstrap).
+> Skip if using Vanilla Arch repos. If you enabled the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) you've already done the keyring/mirrorlist/pacman.conf steps — **jump straight to the `cachyos-repo.sh` part below** (it also installs the forked pacman + reinstall). For the vanilla-first route, this whole block adds the repos from scratch.
 >
 > **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (the old §3.1 block in git history is exactly this).
 
@@ -481,7 +533,7 @@ sudo cachyos-rate-mirrors
 
 #### Optional: swap to a CachyOS kernel
 
-If you want a `linux-cachyos*` kernel (instead of the vanilla one from §3.1), install it now — the repos are live:
+If you chose a `linux-cachyos*` kernel up front via [§3.0a](#30a-optional-enable-cachyos-repos-live-iso), you already have it and can skip this. Otherwise, if you want a CachyOS kernel instead of the vanilla one from §3.1, install it now — the repos are live:
 
 ```bash
 # Pick your variant — linux-cachyos (default), linux-cachyos-bore (gaming/audio), linux-cachyos-eevdf

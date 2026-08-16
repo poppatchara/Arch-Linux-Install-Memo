@@ -4,7 +4,7 @@ Installing Hyprland (native tiling Wayland compositor — **dwindle** default, *
 
 > **This guide targets Hyprland 0.55+.** Since 0.55, Hyprland's config language is **Lua** (`hyprland.lua`) — the old hyprlang syntax (`hyprland.conf`) is deprecated. Check your version with `hyprctl version` before following any config examples.
 >
-> **Prefer scrolling?** There's a companion guide — `hyprland-Scrolling.md` — for the Niri-style scrolling layout with ScrollOverview.
+> **Prefer scrolling?** There's a companion guide — `Hyprland-Scrolling.md` — for the Niri-style scrolling layout with ScrollOverview.
 >
 > **Sources:** [Hyprland wiki](https://wiki.hypr.land/) (crawled 2026-08-11), [Noctalia v5 docs](https://github.com/noctalia-dev/noctalia), [SDDM](https://github.com/sddm/sddm).
 

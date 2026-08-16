@@ -904,7 +904,7 @@ Each path has a dedicated companion guide with the full install + config. Open t
 |------|-------|-------------|--------------|
 | 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
 | 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `sddm` + `pixie-sddm-git` |
-| 🪟 **Hyprland + Noctalia (Scrolling)** | [`hyprland-Scrolling.md`](hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
+| 🪟 **Hyprland + Noctalia (Scrolling)** | [`Hyprland-Scrolling.md`](Hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
 | 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
 | 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |
 

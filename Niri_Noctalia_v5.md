@@ -43,6 +43,13 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 ## Quick Reference — Keybinds & Usage
 
 > **Mod** = <kbd>Super</kbd> (Windows key) on TTY, or <kbd>Alt</kbd> when running nested.
+>
+> **niri 26.04 action/key names differ from older niri configs.** Verified working bindings:
+> - `Mod+R` → `switch-preset-column-width` (older name `cycle-column-width` is gone)
+> - No `widen-column`/`narrow-column` action exists in 26.04 — use `set-column-width <+/-10%>`
+> - Workspace paging keys are `Page_Up`/`Page_Down` (not `PageUp`)
+> - Terminal is `Mod+Return` (ghostty), **not** `Mod+T` (see Keybind Additions)
+> - Rely on `niri validate` before applying; `niri msg action --help` lists the exact action names.
 
 ### 🪟 Window & Column Management
 
@@ -56,8 +63,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>F</kbd> | Maximize column (keeps gaps) |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Fullscreen window |
 | <kbd>Mod</kbd> + <kbd>V</kbd> | Toggle window floating |
-| <kbd>Mod</kbd> + <kbd>R</kbd> | Cycle column width presets (1/3, 1/2, 2/3) |
-| <kbd>Mod</kbd> + <kbd>=</kbd>/<kbd>-</kbd> | Widen/narrow column (±10%) |
+| <kbd>Mod</kbd> + <kbd>R</kbd> | Cycle column width presets (`switch-preset-column-width`) |
 | <kbd>Mod</kbd> + <kbd>W</kbd> | Toggle tabbed display (vertical tabs) |
 | <kbd>Mod</kbd> + <kbd>[</kbd>/<kbd>]</kbd> | Consume/expel window into/from column |
 | <kbd>Mod</kbd> + <kbd>C</kbd> | Center column on screen |
@@ -67,9 +73,9 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | Key | Action |
 |-----|--------|
 | <kbd>Mod</kbd> + <kbd>1</kbd>–<kbd>9</kbd> | Switch to workspace N |
-| <kbd>Mod</kbd> + <kbd>PageUp</kbd>/<kbd>PageDown</kbd> or <kbd>U</kbd>/<kbd>I</kbd> | Focus workspace up/down |
+| <kbd>Mod</kbd> + <kbd>Page_Up</kbd>/<kbd>Page_Down</kbd> | Focus workspace up/down (`focus-workspace-up`/`down`) |
 | <kbd>Mod</kbd> + <kbd>Ctrl</kbd> + <kbd>1</kbd>–<kbd>9</kbd> | Move column to workspace N |
-| <kbd>Mod</kbd> + <kbd>Ctrl</kbd> + <kbd>PageUp</kbd>/<kbd>PageDown</kbd> | Move column to workspace up/down |
+| <kbd>Mod</kbd> + <kbd>Ctrl</kbd> + <kbd>Page_Up</kbd>/<kbd>Page_Down</kbd> | Move column to workspace up/down |
 | <kbd>Mod</kbd> + <kbd>Tab</kbd> | Toggle Overview (zoom-out view) |
 | <kbd>Mod</kbd> + <kbd>Scroll</kbd> | Scroll through workspaces |
 
@@ -111,7 +117,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Power off monitors |
 | <kbd>Mod</kbd> + <kbd>Esc</kbd> | Toggle keyboard shortcuts inhibit |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Show hotkey overlay |
-| <kbd>Mod</kbd> + <kbd>T</kbd> | Launch terminal (default: `ghostty`) |
+| <kbd>Mod</kbd> + <kbd>Return</kbd> | Launch terminal (default: `ghostty`) — **`Mod+T` is NOT bound** (CachyOS convention uses `Mod+Return`; see [Keybind Additions](#keybind-additions)) |
 
 ### 🐭 Mouse Gestures
 

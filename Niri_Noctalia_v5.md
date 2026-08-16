@@ -429,18 +429,43 @@ Run `niri msg layers` to list all layer surfaces and see exact namespaces.
 
 ### Create Wrapper Script
 
-> **Important:** Use `niri-session` (not plain `niri`) — it exports environment variables to systemd correctly.
+> **Critical — `XDG_RUNTIME_DIR` must be set explicitly.** sddm 0.21 does not
+> always export `XDG_RUNTIME_DIR` into the Wayland session it launches. Without
+> it, `niri --session` **panics with `RuntimeDirNotSet`** (`src/niri.rs:2435`),
+> and the compositor never starts → the sddm login "bounces back" with a black
+> screen. Every downstream error that looks like a GPU problem (`DRM atomic
+> commit Permission denied`, `failed to add a framebuffer for the bo`,
+> nvidia-open driver suspicion) is a **false signal** from the missing runtime
+> env — not a driver bug. Always set it in the session wrapper.
+> Also `exec niri --session` (not `/usr/bin/niri-session`): the latter re-execs
+> through a login shell and pushes the compositor into the systemd user unit
+> path (`niri.service`), which fails to open its TTY backend on the sddm VT.
+>
+> **Seat prerequisites (niri needs a DRM seat):** enable + start `seatd.service`
+> (`systemctl enable --now seatd`) and add your user to the `seat` group
+> (`sudo usermod -aG seat "$USER"`). Without a running seatd, niri cannot open
+> the TTY/DRM and exits with "error initializing the TTY backend".
 
 ```bash
 sudo tee /usr/local/bin/niri-noctalia-session << 'EOF'
 #!/usr/bin/env bash
+# THE FIX: sddm 0.21 does not always export XDG_RUNTIME_DIR into the session.
+# niri panics RuntimeDirNotSet without it. Set it explicitly (uid 1000 = pop).
+export XDG_RUNTIME_DIR=/run/user/1000
+export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=Noctalia
 export XDG_SESSION_DESKTOP=noctalia
-exec niri-session
+exec niri --session
 EOF
 
 sudo chmod +x /usr/local/bin/niri-noctalia-session
 ```
+
+> **Debug when the session still bounces:** redirect niri's stderr so you can
+> see the real panic/error the sddm launch produces (SSH-based tests of niri
+> are misleading — they have no seat and always show "atomic denied"):
+> change the last line to `exec niri --session 2>/tmp/niri_debug.log`, trigger a
+> login, then read `/tmp/niri_debug.log`.
 
 ### Create Session `.desktop` File
 
@@ -839,11 +864,26 @@ KDE apps (Dolphin network passwords, KDE Connect) need KWallet. GTK apps (VS Cod
 ```bash
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
 
-# PAM hooks for sddm (auto-unlock at login)
-sudo tee -a /etc/pam.d/sddm <<'EOF'
-auth       optional     pam_gnome_keyring.so
-session    optional     pam_gnome_keyring.so auto_start
-session    optional     pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+# PAM hooks for sddm — create the FULL sddm PAM stack, not just the hooks.
+# WARNING: do NOT write only the 3 hook lines above (auth/session optional) —
+# that yields a broken /etc/pam.d/sddm missing `auth include system-auth`,
+# so EVERY login fails with "Authentication failure" + "gkr-pam: no password
+# is available". If sddm's PAM file doesn't exist yet (fresh install), build it
+# complete; if it exists, append the optional hook lines to it.
+if [ -f /etc/pam.d/sddm ] && ! grep -q 'system-auth' /etc/pam.d/sddm; then
+  echo "NOTE: existing /etc/pam.d/sddm lacks system-auth include — check it"
+fi
+sudo tee /etc/pam.d/sddm <<'EOF'
+auth        include     system-auth
+auth        optional    pam_gnome_keyring.so
+
+account     include     system-auth
+
+password    include     system-auth
+
+session     include     system-auth
+session     optional    pam_gnome_keyring.so auto_start
+session     optional    pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
 EOF
 ```
 

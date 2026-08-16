@@ -142,7 +142,7 @@ pacman -Syy
 
 The bootloader determines the partition layout. The key difference:
 
-- **GRUB** can read Btrfs natively. This means `/boot` (kernels + initramfs) can live on a Btrfs subvolume, getting included in snapshots and rollbacks.
+- **GRUB** can read Btrfs natively. `/boot` lives inside `@`, so kernel + initramfs are covered by root snapshots and rollbacks (no separate `@boot` to manage).
 - **Limine** only reads FAT. Kernels and initramfs must be copied to the EFI System Partition (FAT32), which is outside snapshot coverage.
 
 This affects where swap goes too — we want swap at the end for Limine (easy to resize away), and in the middle for GRUB (maximizing contiguous Btrfs space, with `/boot/EFI` at the edge).
@@ -282,10 +282,9 @@ btrfs subvolume create /mnt/@root
 
 The GRUB and Limine paths share almost everything — only the boot/ESP handling differs. So we do the shared part once here, then the bootloader-specific part in §2.3.
 
-We create both `@boot` (GRUB: snapshotted kernels via `snap-pac`) and `@srv` (Limine: server data separation) up front — creating the unused one is harmless, only the mount below matters:
+We create `@srv` (server data separation for Limine) up front. `/boot` is **not** a separate subvolume — it lives inside `@`, so a single rollback of `@` covers the kernel + initramfs + system together:
 
 ```bash
-btrfs subvolume create /mnt/@boot
 btrfs subvolume create /mnt/@srv
 
 umount -R /mnt
@@ -298,26 +297,29 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /m
 swapon UUID="${swap_uuid}"
 ```
 
-> `@boot` is only used by GRUB, `@srv` only by Limine. Creating both costs nothing on a fresh install; skip the line for the one your bootloader won't use if you prefer a leaner subvolume list.
+> `/boot` now shadows a path inside `@` (its contents live at `@/boot`), so kernel/initramfs are captured by every `@` snapshot. No separate `@boot` subvolume to manage. `@srv` is created here because it costs nothing on a fresh install and keeps server data out of snapshots; it's only mounted if you actually use it.
 
 ### ▸ 2.3 Boot & ESP Mount (per-bootloader)
 
 Everything above is identical — here is where GRUB and Limine diverge. Pick the block for your bootloader from the [Decision Matrix](#decision-matrix).
 
-**GRUB** — reads Btrfs natively, so `/boot` stays on a `@boot` Btrfs subvolume (kernel updates get snapshotted). The ESP is mounted *inside* it at `/boot/EFI`:
+With `/boot` living inside `@` (mounted at `/mnt` since §2.2), neither bootloader mounts a Btrfs `/boot` — the only thing left to mount is the FAT32 ESP, and its *location* is the sole difference:
+
+**GRUB** — reads Btrfs natively, so it reads the kernel from `@/boot` directly. The ESP is mounted *inside* it at `/boot/EFI` (chain-load target):
 
 ```bash
-mount --mkdir -o compress=zstd:1,noatime,subvol=@boot UUID="${root_uuid}" /mnt/boot
 mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 ```
 
-> The ESP is mounted at `/boot/EFI` — inside the Btrfs `/boot`. GRUB reads the kernel from Btrfs `/boot`, then chain-loads from the FAT32 ESP at `/boot/EFI`.
+> The ESP is mounted at `/boot/EFI` — inside the Btrfs `/boot` (which is `@/boot`). GRUB reads the kernel from Btrfs `@/boot`, then chain-loads from the FAT32 ESP at `/boot/EFI`. Because `/boot` is inside `@`, kernel + initramfs are part of every `@` snapshot, so a rollback restores the whole system including boot files.
 
-**Limine** — can't read Btrfs, so the ESP is mounted directly at `/boot`. No `@boot` mount (kernel artifacts get copied to FAT32 in the [Bootloader section](#5--bootloader)):
+**Limine** — can't read Btrfs, so the ESP is mounted directly *over* `/boot`. Kernel/initramfs artifacts get copied to FAT32 in the [Bootloader section](#5--bootloader):
 
 ```bash
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 ```
+
+> This shadows the `@/boot` directory with the ESP. Only the FAT32 contents are visible at `/boot`; nothing is written back into `@/boot` for Limine. The Btrfs `@/boot` path still exists (and is snapshotted) but stays empty for Limine installs.
 
 ### 2.4 fstab
 
@@ -655,18 +657,11 @@ efibootmgr -v                         # list all entries
 
 > Keep the entry for your current bootloader. If you see old "Linux Boot Manager", "Windows Boot Manager" from a wiped disk, or duplicates — remove them. The boot order (`BootOrder`) auto-updates.
 
-### ▸ GRUB
+### ▸ 5.1 Shared Bootloader Prep
 
-GRUB is the most widely-used Linux bootloader. It reads Btrfs directly, chain-loads from the ESP, and supports snapshot boot entries via `grub-btrfs`.
+These steps are identical for GRUB and Limine — do them once, pick a bootloader in 5.2/5.3.
 
-Install and deploy to the ESP:
-
-```bash
-pacman -S --noconfirm --needed grub
-grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
-```
-
-Now configure the kernel command line — these parameters are passed to the kernel at every boot:
+First, detect CPU microcode and partition UUIDs (used by both the kernel command line and config generation):
 
 ```bash
 ucode_img="intel"
@@ -675,21 +670,14 @@ lscpu | grep -qi amd && ucode_img="amd"
 swap_part="$(blkid -t TYPE=swap -o device | head -1)"
 swap_uuid="$(blkid -s UUID -o value "$swap_part")"
 
-sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
-sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
+# root UUID is only needed by Limine (GRUB discovers / via search at mkconfig time)
+root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
+root_uuid="$(blkid -s UUID -o value "$root_part")"
 ```
 
-> **Kernel parameters explained:**
-> - `loglevel=3` — only show errors and warnings (quieter boot)
-> - `resume=UUID=...` — where to resume from for hibernation
-> - `zswap.enabled=1` — enable compressed RAM cache for swap pages (faster than disk swap)
-> - `zswap.compressor=lz4` — use LZ4 compression (fast, decent ratio)
-> - `zswap.max_pool_percent=50` — max 50% of RAM used for compressed swap cache
-> - `zswap.zpool=zsmalloc` — use zsmalloc allocator (efficient for compressed pages)
-> - `iommu=pt` — IOMMU in passthrough mode (needed for GPU passthrough, safe default)
-> - `${ucode_img}_iommu=on` — enable CPU IOMMU (Intel VT-d / AMD-Vi)
+> **Kernel parameters (shared core):** both bootloaders pass the same base tuning on the command line — `loglevel=3` (quiet boot), `resume=UUID=${swap_uuid}` (hibernation), `zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc` (compressed RAM swap cache), `${ucode_img}_iommu=on iommu=pt` (GPU passthrough / IOMMU). GRUB gets these via `GRUB_CMDLINE_LINUX_DEFAULT`; Limine inlines them in each `limine.conf` entry. The one real difference — **root specification** — is handled per-bootloader below: GRUB omits `root=` (its `search` hook finds `/` automatically), while Limine must declare `root=UUID=${root_uuid} rootflags=subvol=@ rootfstype=btrfs rw`.
 
-Add zswap compression modules to the initramfs so they're available immediately at boot:
+Add the zswap compression modules to the initramfs so they're available immediately at boot (identical for both):
 
 ```bash
 perl -0777 -i.bak -pe '
@@ -705,6 +693,24 @@ perl -0777 -i.bak -pe '
 mkinitcpio -P
 ```
 
+### ▸ 5.2 GRUB
+
+GRUB is the most widely-used Linux bootloader. It reads Btrfs directly, chain-loads from the ESP, and supports snapshot boot entries via `grub-btrfs`.
+
+Install and deploy to the ESP:
+
+```bash
+pacman -S --noconfirm --needed grub
+grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB
+```
+
+Now apply the shared kernel parameters from §5.1 to GRUB's config. Note GRUB deliberately omits `root=` — its `search` hook finds `/` automatically at `grub-mkconfig` time:
+
+```bash
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
+sed -i "/^GRUB_CMDLINE_LINUX=/a GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 resume=UUID=${swap_uuid} zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=50 zswap.zpool=zsmalloc ${ucode_img}_iommu=on iommu=pt\"" /etc/default/grub
+```
+
 Generate the GRUB configuration file and we're done:
 
 ```bash
@@ -713,9 +719,9 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 > **Dual-boot (optional):** If you have Windows or another OS on the same disk, install `os-prober` and regenerate: `pacman -S --needed os-prober && echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub && grub-mkconfig -o /boot/grub/grub.cfg`
 
-### ▸ Limine
+### ▸ 5.3 Limine
 
-Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`.
+Limine is a simpler, modern bootloader that works via the Limine boot protocol. It reads kernel + initramfs directly from the ESP (FAT32), so we copy artifacts there and generate a `limine.conf`. It reuses the `$root_uuid`, `$swap_uuid`, and `$ucode_img` variables set in §5.1.
 
 Install and register with the UEFI firmware:
 
@@ -735,14 +741,6 @@ efibootmgr --create --disk /dev/nvme0n1 --part 1 \
 Now copy kernel, initramfs, and microcode to the ESP, then generate a `limine.conf` entry for each kernel. The first kernel in your list becomes the default:
 
 ```bash
-root_part="$(blkid -t TYPE=btrfs -o device | head -1)"
-swap_part="$(blkid -t TYPE=swap -o device | head -1)"
-root_uuid="$(blkid -s UUID -o value "$root_part")"
-swap_uuid="$(blkid -s UUID -o value "$swap_part")"
-
-ucode_img="intel"
-lscpu | grep -qi amd && ucode_img="amd"
-
 # Copy artifacts
 cp -v "/boot/${ucode_img}-ucode.img" /boot/limine/
 
@@ -794,26 +792,13 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/limine/
 EOF
 ```
 
-Add zswap modules and rebuild (same as GRUB), then re-copy:
+The zswap initramfs modules were already added and rebuilt in §5.1 (`mkinitcpio -P`), so the fresh initramfs files are ready. Copy them to the ESP alongside the already-copied kernel + microcode:
 
 ```bash
-perl -0777 -i.bak -pe '
-  s{^(?!\s*#)\s*MODULES=\(([^)]*)\)\s*$}{
-    my @mods = grep { length } split " ", $1;
-    my %seen; @mods = grep { !$seen{$_}++ } @mods;
-    for my $add (qw(lz4 lz4_compress zsmalloc)) {
-      push @mods, $add unless $seen{$add}++;
-    }
-    "MODULES=(" . join(" ", @mods) . ")"
-  }mge;
-' /etc/mkinitcpio.conf
-mkinitcpio -P
-
-# Re-copy updated initramfs
 cp -v /boot/initramfs-*.img /boot/limine/
 ```
 
-> ⚠️ **Remember:** After any kernel update, you must re-copy the new initramfs to `/boot/limine/`. The Limine hook only copies its own EFI binary, not kernel artifacts. Consider `limine-mkinitcpio-hook` (AUR) for automation.
+> ⚠️ **Remember:** After any kernel update, you must re-run the §5.1 prep (which rebuilds initramfs) then re-copy the new initramfs to `/boot/limine/`. The Limine hook above only copies its own EFI binary, not kernel artifacts. Consider `limine-mkinitcpio-hook` (AUR) for automation.
 
 ---
 
@@ -1074,15 +1059,15 @@ Create configs — one per subvolume you want to snapshot:
 sudo snapper -c root create-config /
 sudo snapper -c home create-config /home   # skip if you don't want /home snapshots
 
-# GRUB only — /boot is on Btrfs so we can snapshot it too
-sudo snapper -c boot create-config /boot
 sudo systemctl enable --now grub-btrfsd
 ```
 
-**Retention settings.** `snap-pac` hooks already create pre/post snapshots on every `pacman` transaction — that covers `/` and `/boot` for all package updates (kernel, drivers, system tools). Timeline snapshots on top of that are redundant. Just set number limits as a hard cap:
+> `/boot` is **not** a separate snapper config — it lives inside `@` (per §2.2), so it's already covered by the `root` config. Kernel + initramfs roll back with the rest of the system in a single `@` snapshot.
+
+**Retention settings.** `snap-pac` hooks already create pre/post snapshots on every `pacman` transaction — that covers `/` (which includes `/boot`) for all package updates (kernel, drivers, system tools). Timeline snapshots on top of that are redundant. Just set number limits as a hard cap:
 
 ```bash
-# root — no timeline, snap-pac handles package updates
+# root — no timeline, snap-pac handles package updates (incl. /boot, since it's part of @)
 sudo snapper -c root set-config TIMELINE_CREATE=no
 sudo snapper -c root set-config NUMBER_LIMIT=15 NUMBER_LIMIT_IMPORTANT=5
 
@@ -1090,10 +1075,6 @@ sudo snapper -c root set-config NUMBER_LIMIT=15 NUMBER_LIMIT_IMPORTANT=5
 sudo snapper -c home set-config TIMELINE_CREATE=yes
 sudo snapper -c home set-config TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2
 sudo snapper -c home set-config NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=3
-
-# boot (GRUB) — no timeline needed, snap-pac captures kernel updates
-sudo snapper -c boot set-config TIMELINE_CREATE=no 2>/dev/null
-sudo snapper -c boot set-config NUMBER_LIMIT=5 NUMBER_LIMIT_IMPORTANT=3 2>/dev/null
 ```
 
 > `IMPORTANT` snapshots are pre/post pairs from `snap-pac`. Number limits keep them from eating your disk.

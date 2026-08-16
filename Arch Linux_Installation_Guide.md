@@ -282,7 +282,7 @@ btrfs subvolume create /mnt/@root
 
 The GRUB and Limine paths share almost everything — only the boot/ESP handling differs. So we do the shared part once here, then the bootloader-specific part in §2.3.
 
-We create `@srv` (server data separation for Limine) up front. `/boot` is **not** a separate subvolume — it lives inside `@`, so a single rollback of `@` covers the kernel + initramfs + system together:
+We create `@srv` (server data separation for Limine) up front. `/boot` is **not** a separate `@boot` subvolume — for GRUB it lives inside `@`, so a single rollback of `@` covers kernel + initramfs + system together; Limine's `/boot` is the ESP (handled in §2.3):
 
 ```bash
 btrfs subvolume create /mnt/@srv
@@ -297,13 +297,13 @@ mount --mkdir -o compress=zstd:1,noatime,subvol=@root     UUID="${root_uuid}" /m
 swapon UUID="${swap_uuid}"
 ```
 
-> `/boot` now shadows a path inside `@` (its contents live at `@/boot`), so kernel/initramfs are captured by every `@` snapshot. No separate `@boot` subvolume to manage. `@srv` is created here because it costs nothing on a fresh install and keeps server data out of snapshots; it's only mounted if you actually use it.
+> `/boot` is a path inside `@` (for GRUB), not a separate `@boot` subvolume. This matters **only for GRUB**: its kernel + initramfs live at `@/boot`, so they're captured by every `@` snapshot and roll back with the system. Limine ignores `@/boot` entirely — it reads kernels from the FAT32 ESP (see §2.3), so its boot files are never snapshotted. `@srv` is created here because it costs nothing on a fresh install and keeps server data out of snapshots; it's only mounted if you actually use it.
 
 ### ▸ 2.3 Boot & ESP Mount (per-bootloader)
 
 Everything above is identical — here is where GRUB and Limine diverge. Pick the block for your bootloader from the [Decision Matrix](#decision-matrix).
 
-With `/boot` living inside `@` (mounted at `/mnt` since §2.2), neither bootloader mounts a Btrfs `/boot` — the only thing left to mount is the FAT32 ESP, and its *location* is the sole difference:
+With `/boot` now a path inside `@` (per §2.2), the bootloaders differ only in how the FAT32 ESP relates to it: **GRUB** keeps `/boot` as the Btrfs `@/boot` and tucks the ESP *inside* it; **Limine** can't read Btrfs, so the ESP shadows `/boot` entirely.
 
 **GRUB** — reads Btrfs natively, so it reads the kernel from `@/boot` directly. The ESP is mounted *inside* it at `/boot/EFI` (chain-load target):
 
@@ -319,7 +319,7 @@ mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 ```
 
-> This shadows the `@/boot` directory with the ESP. Only the FAT32 contents are visible at `/boot`; nothing is written back into `@/boot` for Limine. The Btrfs `@/boot` path still exists (and is snapshotted) but stays empty for Limine installs.
+> This shadows the `@/boot` directory with the ESP — only the FAT32 contents are visible at `/boot`, so Limine's kernel/initramfs live **on the ESP, outside `@`**, and are **never captured by snapshots**. A rollback of `@` won't touch the boot files. If you want bootable snapshots with Limine, you need `limine-snapper-sync` (copies each snapshot's kernel + initramfs into the ESP and boots via an overlayfs hook) — see §9.4. The empty `@/boot` path still exists but is unused on Limine installs.
 
 ### 2.4 fstab
 
@@ -1062,9 +1062,9 @@ sudo snapper -c home create-config /home   # skip if you don't want /home snapsh
 sudo systemctl enable --now grub-btrfsd
 ```
 
-> `/boot` is **not** a separate snapper config — it lives inside `@` (per §2.2), so it's already covered by the `root` config. Kernel + initramfs roll back with the rest of the system in a single `@` snapshot.
+> No separate `boot` snapper config — for **GRUB**, `/boot` lives inside `@` (per §2.2), so `root` already covers kernel + initramfs and they roll back with the system. For **Limine**, `/boot` is the FAT32 ESP (outside `@`), so `root` snapshots do *not* include boot files — if you want bootable Limine snapshots, add `limine-snapper-sync` (it copies each snapshot's kernel + initramfs into the ESP and boots via a `btrfs-overlayfs`/`sd-btrfs-overlayfs` mkinitcpio hook), then enable `limine-snapper-sync.service`:
 
-**Retention settings.** `snap-pac` hooks already create pre/post snapshots on every `pacman` transaction — that covers `/` (which includes `/boot`) for all package updates (kernel, drivers, system tools). Timeline snapshots on top of that are redundant. Just set number limits as a hard cap:
+**Retention settings.** `snap-pac` hooks already create pre/post snapshots on every `pacman` transaction — that covers `/` (and, for GRUB, the `/boot` inside it) for all package updates (kernel, drivers, system tools). Timeline snapshots on top of that are redundant. Just set number limits as a hard cap:
 
 ```bash
 # root — no timeline, snap-pac handles package updates (incl. /boot, since it's part of @)

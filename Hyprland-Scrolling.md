@@ -665,7 +665,27 @@ sudo pacman -S kwallet kwalletmanager kwallet-pam libsecret
 
 > **Enable the Secret Service interface:** open KWallet settings (System Settings → KDE Wallet) and check **"Enable the KWallet Secret Service interface"** — otherwise GTK apps can't see the wallet. (GNOME Keyring is only needed for `gnome-online-accounts` or if you want a separate secret store.)
 
-> **SDDM auto-unlock:** on Arch, SDDM ships with `pam_kwallet`/`pam_gnome_keyring` hooks in `/etc/pam.d/sddm`. Verify they're present (`grep -i kwallet /etc/pam.d/sddm`) — if missing, add the `auth optional` / `session optional` lines from the Niri guide's SDDM setup. KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+> **SDDM PAM stack — build it complete, not just the hooks.** On Arch the `sddm` package does **not** ship a ready-made `/etc/pam.d/sddm` with the kwallet/keyring hooks — you must write the **full** stack. Writing only the two `optional` hook lines yields a broken file missing `auth include system-auth`, so **every login fails** with "Authentication failure" / "gkr-pam: no password is available". If `/etc/pam.d/sddm` already exists (from a prior plasma/sddm install), append the optional hook lines instead. Note: Arch's `kwallet-pam` (even on Plasma 6) ships `pam_kwallet5.so` — there is no `pam_kwallet6.so`.
+>
+> ```bash
+> if [ -f /etc/pam.d/sddm ] && ! grep -q 'system-auth' /etc/pam.d/sddm; then
+>   echo "NOTE: existing /etc/pam.d/sddm lacks system-auth include — check it"
+> fi
+> sudo tee /etc/pam.d/sddm <<'EOF'
+> auth        include     system-auth
+> auth        optional    pam_gnome_keyring.so
+>
+> account     include     system-auth
+>
+> password    include     system-auth
+>
+> session     include     system-auth
+> session     optional    pam_gnome_keyring.so auto_start
+> session     optional    pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+> EOF
+> ```
+>
+> KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`. (`ksecretd` is the correct kwalletd path on Plasma 6 — do not use `kwalletd5`.)
 
 ### Dolphin "Open With" Blank Popup Fix
 
@@ -756,22 +776,29 @@ Current=pixie" > /etc/sddm.conf.d/theme.conf'
 
 ### Use the Wayland greeter (drop the stuck Xorg process — save ~135MB)
 
-SDDM defaults to an **X11 greeter** (`/usr/lib/Xorg` on VT1). On a Hyprland machine that Xorg exists only for the login screen; after login it can be left running on VT1 (wasting ~135MB) if the session switches VT. Switch SDDM to a **Wayland greeter** so the greeter is torn down with the session. Requires `kwin` (for `kwin_wayland` — present if Plasma is installed, else `sudo pacman -S kwin`):
+SDDM defaults to an **X11 greeter** (`/usr/lib/Xorg` on VT1). On a Hyprland machine that Xorg exists only for the login screen; after login it can be left running on VT1 (wasting ~135MB) if the session switches VT. Switch SDDM to a **Wayland greeter** so the greeter is torn down with the session. Requires `kwin` (for `kwin_wayland` — present if Plasma is installed, else `sudo pacman -S kwin`) and `layer-shell-qt` (lets the QML theme render as a `wlr_layer_shell` surface):
 
 ```bash
+sudo pacman -S --needed kwin layer-shell-qt
+
 sudo tee /etc/sddm.conf.d/01-wayland.conf > /dev/null <<'EOF'
 [General]
 DisplayServer=wayland
+GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell,XCURSOR_THEME=phinger-cursors-dark
 
 [Wayland]
-CompositorCommand=kwin_wayland --no-lockscreen
-SessionCommand=/usr/share/sddm/scripts/wayland-session
-SessionDir=/usr/local/share/wayland-sessions,/usr/share/wayland-sessions
+CompositorCommand=kwin_wayland --drm --no-lockscreen --no-global-shortcuts --locale1
 EOF
 sudo systemctl restart sddm
 ```
 
+> **Config is from [Arch Wiki — SDDM §Wayland → KDE Plasma/KWin](https://wiki.archlinux.org/title/SDDM#KDE_Plasma_/_KWin).** `CompositorCommand` needs the full flag set (`--drm` selects KMS/DRM rendering, `--no-global-shortcuts` drops the KWin shortcuts layer that has no meaning on a login screen, `--locale1` reads the keyboard layout from `localectl`); `--no-lockscreen` alone is not enough. `GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell` is what makes a QML theme (pixie, breeze) composite as an actual layer-shell surface — without it the greeter window may not render.
+>
+> **`XCURSOR_THEME` is required, not optional:** sddm injects `GreeterEnvironment` verbatim into the greeter, and its packaged default leaves `XCURSOR_THEME` empty — which makes the Wayland greeter show **no cursor at all**. Set it to your active cursor theme here (e.g. `phinger-cursors-dark`); do **not** try to force it via `~/.config` X resources or PAM `pam_env` inside the greeter, which are ignored on the Wayland greeter path.
+>
 > **Prereq — `XDG_RUNTIME_DIR`:** sddm 0.21 does **not** always export `XDG_RUNTIME_DIR` into the Wayland session it launches. If Hyprland (or anything spawned by the session) panics with `RuntimeDirNotSet` / spurious `DRM atomic commit Permission denied`, set it explicitly in the session's launch wrapper (`export XDG_RUNTIME_DIR=/run/user/$(id -u)`) *before* exec'ing the compositor. This is what makes a Wayland-greeter boot reliable.
+>
+> **`uwsm` is NOT needed here.** [Hyprland wiki — Systemd startup](https://wiki.hypr.land/Useful-Utilities/Systemd-start/) describes `uwsm` only for launching a compositor **from a tty/console** (it generates a `hyprland-uwsm.desktop`). When SDDM is the display manager it lists the session and starts it with its own PAM-integrated session handling — no `uwsm` involved.
 >
 > **Verify:** after restart, `pgrep -x Xorg` returns nothing; `pgrep -f kwin_wayland` shows the greeter. Revert with `rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm`.
 

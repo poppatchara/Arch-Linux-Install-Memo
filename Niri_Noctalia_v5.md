@@ -1108,22 +1108,29 @@ Current=pixie" > /etc/sddm.conf.d/theme.conf'
 
 SDDM defaults to an **X11 greeter** (`/usr/lib/Xorg` + `sddm-greeter-qt6` on VT1). On a Niri/Wayland machine that Xorg serves **only the login screen** — after login it is dead weight and, worse, can be left running (stuck on VT1) if the session switches VT, wasting ~135MB forever.
 
-Switch SDDM to a **Wayland greeter** so the greeter runs inside a Wayland compositor and is torn down cleanly with the session. Requires the `kwin` package (has `kwin_wayland`) — present if Plasma is installed, or `sudo pacman -S kwin`:
+Switch SDDM to a **Wayland greeter** so the greeter runs inside a Wayland compositor and is torn down cleanly with the session. Requires the `kwin` package (has `kwin_wayland`) — present if Plasma is installed, or `sudo pacman -S kwin` — plus `layer-shell-qt` (lets the QML theme render as a `wlr_layer_shell` surface):
 
 ```bash
+sudo pacman -S --needed kwin layer-shell-qt
+
 sudo tee /etc/sddm.conf.d/01-wayland.conf > /dev/null <<'EOF'
 [General]
 DisplayServer=wayland
+GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell,XCURSOR_THEME=phinger-cursors-dark
 
 [Wayland]
-CompositorCommand=kwin_wayland --no-lockscreen
-SessionCommand=/usr/share/sddm/scripts/wayland-session
-SessionDir=/usr/local/share/wayland-sessions,/usr/share/wayland-sessions
+CompositorCommand=kwin_wayland --drm --no-lockscreen --no-global-shortcuts --locale1
 EOF
 sudo systemctl restart sddm
 ```
 
+> **Config is from [Arch Wiki — SDDM §Wayland → KDE Plasma/KWin](https://wiki.archlinux.org/title/SDDM#KDE_Plasma_/_KWin).** `CompositorCommand` needs the full flag set (`--drm` selects KMS/DRM rendering, `--no-global-shortcuts` drops the KWin shortcuts layer that has no meaning on a login screen, `--locale1` reads the keyboard layout from `localectl`); `--no-lockscreen` alone is not enough. `GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell` is what makes a QML theme (pixie, breeze) composite as an actual layer-shell surface — without it the greeter window may not render.
+>
+> **`XCURSOR_THEME` is required, not optional:** sddm injects `GreeterEnvironment` verbatim into the greeter, and its packaged default leaves `XCURSOR_THEME` empty — which makes the Wayland greeter show **no cursor at all**. Set it to your active cursor theme here (e.g. `phinger-cursors-dark`); do **not** try to force it via `~/.config` X resources or PAM `pam_env` inside the greeter, which are ignored on the Wayland greeter path.
+>
 > **Prereq for the Wayland greeter:** the session wrapper **must** export `XDG_RUNTIME_DIR` (see the [Wrapper Script](#create-wrapper-script) fix above). Without it SDDM's Wayland-path session launch fails with `RuntimeDirNotSet` and the login "bounces back" — that is why the greeter was reverted to X11 before; it is now safe because the wrapper sets `XDG_RUNTIME_DIR=/run/user/1000`.
+>
+> **`uwsm` is NOT needed here.** [Hyprland wiki — Systemd startup](https://wiki.hypr.land/Useful-Utilities/Systemd-start/) describes `uwsm` only for launching a compositor **from a tty/console** (it generates a `hyprland-uwsm.desktop`). When SDDM is the display manager it lists the session and starts it with its own PAM-integrated session handling — no `uwsm` involved.
 >
 > **Verify the greeter is Wayland (no Xorg):** after restart, `pgrep -x Xorg` returns nothing; `pgrep -f kwin_wayland` shows the greeter compositor. Revert to the X11 greeter with `rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm`.
 

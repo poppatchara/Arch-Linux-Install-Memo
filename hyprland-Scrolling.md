@@ -754,6 +754,27 @@ Current=pixie" > /etc/sddm.conf.d/theme.conf'
 >
 > **Other themes:** any SDDM theme from the [KDE Store](https://store.kde.org/browse/cat/106/order/latest/) or AUR (`sddm-theme-*`) works — just change `Current=` accordingly.
 
+### Use the Wayland greeter (drop the stuck Xorg process — save ~135MB)
+
+SDDM defaults to an **X11 greeter** (`/usr/lib/Xorg` on VT1). On a Hyprland machine that Xorg exists only for the login screen; after login it can be left running on VT1 (wasting ~135MB) if the session switches VT. Switch SDDM to a **Wayland greeter** so the greeter is torn down with the session. Requires `kwin` (for `kwin_wayland` — present if Plasma is installed, else `sudo pacman -S kwin`):
+
+```bash
+sudo tee /etc/sddm.conf.d/01-wayland.conf > /dev/null <<'EOF'
+[General]
+DisplayServer=wayland
+
+[Wayland]
+CompositorCommand=kwin_wayland --no-lockscreen
+SessionCommand=/usr/share/sddm/scripts/wayland-session
+SessionDir=/usr/local/share/wayland-sessions,/usr/share/wayland-sessions
+EOF
+sudo systemctl restart sddm
+```
+
+> **Prereq — `XDG_RUNTIME_DIR`:** sddm 0.21 does **not** always export `XDG_RUNTIME_DIR` into the Wayland session it launches. If Hyprland (or anything spawned by the session) panics with `RuntimeDirNotSet` / spurious `DRM atomic commit Permission denied`, set it explicitly in the session's launch wrapper (`export XDG_RUNTIME_DIR=/run/user/$(id -u)`) *before* exec'ing the compositor. This is what makes a Wayland-greeter boot reliable.
+>
+> **Verify:** after restart, `pgrep -x Xorg` returns nothing; `pgrep -f kwin_wayland` shows the greeter. Revert with `rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm`.
+
 ### Verifying the session entry
 
 ```bash
@@ -771,6 +792,8 @@ sudo cp /usr/share/wayland-sessions/hyprland.desktop /usr/share/wayland-sessions
 ## XWayland
 
 **Keep XWayland enabled (default).** Hyprland pulls `xorg-xwayland` as a dependency and enables it by default — legacy X11 apps (older Electron, some GTK, games) need it.
+
+> **On-demand:** Hyprland starts XWayland **on demand** — it is not resident until the first X11 client appears, so an idle session doesn't pay the ~217MB resident footprint. (Contrast: niri 26.04 via `xwayland-satellite` spawns it at startup unconditionally — no lazy option.) If you see XWayland in `ps` on an idle Hyprland, something (a tray icon, a KDE daemon) is holding an X11 client open.
 
 ### HiDPI XWayland (only if you have a HiDPI screen)
 

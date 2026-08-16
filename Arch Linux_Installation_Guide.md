@@ -396,16 +396,19 @@ for p in cachyos-keyring cachyos-mirrorlist cachyos-v3-mirrorlist cachyos-v4-mir
   sudo pacman -U --noconfirm "$url"
 done
 
-# 3. Enable the repos in the live ISO's pacman.conf
-sudo tee -a /etc/pacman.conf <<'EOF'
+# 3. Enable the repos in the live ISO's pacman.conf.
+#    MUST be inserted BEFORE [core] (not appended at the end) so that
+#    (a) CachyOS's forked pacman / optimized binaries win over vanilla Arch
+#    (b) a linux-cachyos* kernel is actually selectable at pacstrap time.
+#    Appending puts them last → [core] (first) wins → you get vanilla Arch
+#    pacman, which warns "unknown key '%INSTALLED_DB%'" on every yay/pacman -Qi
+#    (the %INSTALLED_DB% field is CachyOS-only package metadata the vanilla
+#    libalpm doesn't recognize).
+sudo sed -i '/^\[core\]/i \
+[cachyos]\nInclude = /etc/pacman.d/cachyos-mirrorlist\n[cachyos-v3]\nInclude = /etc/pacman.d/cachyos-v3-mirrorlist\n[cachyos-v4]\nInclude = /etc/pacman.d/cachyos-v4-mirrorlist\n' /etc/pacman.conf
 
-[cachyos]
-Include = /etc/pacman.d/cachyos-mirrorlist
-[cachyos-v3]
-Include = /etc/pacman.d/cachyos-v3-mirrorlist
-[cachyos-v4]
-Include = /etc/pacman.d/cachyos-v4-mirrorlist
-EOF
+# Verify the repos landed ABOVE [core]:
+grep -nE '^\[(core|cachyos)' /etc/pacman.conf
 
 # 4. Refresh the live ISO's package DB with the new repos
 sudo pacman -Syy
@@ -545,7 +548,7 @@ arch-chroot /mnt
 
 > Skip if using Vanilla Arch repos. If you enabled the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) you've already done the keyring/mirrorlist/pacman.conf steps — **jump straight to the `cachyos-repo.sh` part below** (it also installs the forked pacman + reinstall). For the vanilla-first route, this whole block adds the repos from scratch.
 >
-> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` (the old §3.1 block in git history is exactly this).
+> **Note — the script also installs CachyOS's forked pacman** (`INSTALLED_FROM` tracking + auto arch detection). It's optional: vanilla Arch pacman works fine with the repos. To skip the fork, don't use the script — install just the keyring + mirrorlists by hand and add `cachyos-v3`/`cachyos-v4` to `/etc/pacman.conf` **above `[core]`** (the old §3.1 block in git history is exactly this, but it appends at the end — that ordering gives you vanilla Arch pacman, which warns on the CachyOS-only `%INSTALLED_DB%` field; placing the repos above `[core]` is what gets you the forked pacman instead).
 
 ```bash
 # Trust the CachyOS signing key FIRST — without --lsign-key, pacman rejects the

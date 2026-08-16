@@ -67,12 +67,12 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 
 | # | Decision | A | B | C | § |
 |---|----------|---|---|---|---|
-| 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(up-front §3.0a, or swap post-chroot)* | `linux` / `linux-lts` | §3 + CachyOS Repos |
-| 2 | **Repos** | Vanilla Arch | CachyOS repos | | §3.0a (live ISO) or CachyOS Repos (post-chroot) |
+| 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(only via §3.0a, up front — no post-chroot swap)* | `linux` / `linux-lts` | §3 |
+| 2 | **Repos** | Vanilla Arch | CachyOS repos *(packages only — kernels must be chosen up front)* | | §3.0a (live ISO) or CachyOS Repos (post-chroot) |
 | 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Noctalia *(scrolling or tiling — see §7)* | §7 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
-> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none of them are in the official `[extra]` repo. Two routes: **CachyOS-first** — enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and pacstrap a `linux-cachyos*` kernel directly; or **post-chroot** (default) — start vanilla, add the repos in the [CachyOS Repos](#cachyos-repos-optional) section, then swap the kernel there.
+> **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none are in the official `[extra]` repo, and a kernel can only be picked up front: enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and pacstrap a `linux-cachyos*` kernel directly in §3.1. **CachyOS repos post-chroot** ([CachyOS Repos](#cachyos-repos-optional)) still give you CachyOS-optimized binaries for other packages — there is just no kernel swap.
 
 ### Recommended Combos
 
@@ -338,15 +338,15 @@ cat /mnt/etc/fstab  # sanity check
 - `linux-zen` — kernel tuned for desktop/laptop responsiveness (lower latency, different scheduler defaults). My daily driver.
 - `linux` — vanilla stable kernel. Conservative, well-tested.
 - `linux-lts` — long-term support. Older but extremely stable. Good fallback.
-- `linux-cachyos*` (cachyos / bore / eevdf) — needs the CachyOS repos. Two options: **enable the repos on the live ISO first** ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) so you can pick it here, or stay vanilla-now and swap kernels post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
+- `linux-cachyos*` (cachyos / bore / eevdf / bmq / lts / deckify / hardened) — needs the CachyOS repos, which can only be resolved from the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)). If you want a CachyOS kernel, decide now — there is no post-chroot kernel swap.
 
 > **Decision: Repos.** Vanilla Arch (`[core]`, `[extra]`, `[multilib]`) vs adding CachyOS repos. Two entry points:
-> - **CachyOS-first** — enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) before §3.1, then pacstrap installs a `linux-cachyos*` kernel directly. No double-install.
-> - **Post-chroot (default)** — start vanilla, install the repos after chroot in the [CachyOS Repos](#cachyos-repos-optional) section, then swap kernels there. Simpler start, but you install a vanilla kernel first then replace it.
+> - **CachyOS-first** — enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) before §3.1, then pacstrap installs a `linux-cachyos*` kernel directly. The only way to get a CachyOS kernel.
+> - **Post-chroot (default)** — start vanilla (any kernel from §3.1), then install the repos after chroot in the [CachyOS Repos](#cachyos-repos-optional) section for CachyOS-optimized binaries of other packages. Note: this does **not** change your kernel — pick a `linux-cachyos*` kernel up front if you want one.
 
 ### 3.0a Optional: Enable CachyOS Repos (Live ISO)
 
-Do this **only** if you want a `linux-cachyos*` kernel installed from the start (pure CachyOS route). This adds the repos to the **live ISO's** pacman so §3.1/§3.3 can resolve them. For the vanilla-first route, skip this and use the [CachyOS Repos](#cachyos-repos-optional) section post-chroot instead.
+Do this **only** if you want a `linux-cachyos*` kernel installed from the start (pure CachyOS route) — it's the only way to get a CachyOS kernel. This adds the repos to the **live ISO's** pacman so §3.1/§3.3 can resolve them. Skipping it means you get a vanilla kernel and CachyOS repos later ([CachyOS Repos](#cachyos-repos-optional)) only for non-kernel packages.
 
 > **Don't run `cachyos-repo.sh` here.** That script (a) installs CachyOS's forked pacman and (b) does a full package reinstall — both are **chroot operations** for the [CachyOS Repos](#cachyos-repos-optional) section. On the live ISO we only add the repos themselves (keyring + mirrorlists + pacman.conf), which is all pacstrap needs.
 
@@ -394,7 +394,7 @@ lscpu | grep -qi amd && cpu=amd
 
 Install at least one. You can install multiple — common combos: `linux-zen` (daily) + `linux-lts` (fallback).
 
-> `linux-cachyos*` kernels need the CachyOS repos. If you enabled them on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)), you can pick a CachyOS kernel here and pacstrap installs it directly. Otherwise stay vanilla here and swap to `linux-cachyos*` post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
+> `linux-cachyos*` kernels need the CachyOS repos. If you enabled them on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)), you can pick a CachyOS kernel here and pacstrap installs it directly. Otherwise stay with one of the vanilla kernels above — the CachyOS repos (and their kernels) are only available from the live ISO, so a `linux-cachyos*` kernel must be chosen here if you want one.
 
 ```bash
 # Uncomment the kernels you want. You can install several - GRUB picks the first.
@@ -446,10 +446,10 @@ done
 - **BMQ** (BitMap Queue) — simple bitmap-based scheduler. Great raw throughput on heavy multi-thread workloads, but niche and **no `sched-ext`** support. Pick only if a specific workload prefers it.
 
 **CachyOS vs vanilla kernels:**
-CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — for a pure CachyOS install, enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and select the kernel here; otherwise install it post-chroot in the [CachyOS Repos](#cachyos-repos-optional) section.
+CachyOS kernels add patches for: x86-64-v3/v4 optimized code paths, BBRv3 TCP congestion control, AMD P-State EPP, LZ4 compression in the kernel, and various scheduler/MM tweaks. They live in the **CachyOS repos**, not `[extra]` — so for a CachyOS kernel you must enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and select it here in §3.1. There is no post-chroot swap; CachyOS repos are only set up from the live ISO.
 
 **Recommended approach:**
-Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` — best picked up front via [§3.0a](#30a-optional-enable-cachyos-repos-live-iso), or swapped in after the CachyOS repos are set up. GRUB picks the first kernel by default; hold Shift during boot to choose another.
+Install `linux-zen` as your daily driver and `linux-lts` as fallback. If you game or do real-time audio, add `linux-cachyos-bore` — picked up front via [§3.0a](#30a-optional-enable-cachyos-repos-live-iso) (CachyOS kernels can't be added later). GRUB picks the first kernel by default; hold Shift during boot to choose another.
 
 </details>
 
@@ -546,24 +546,6 @@ sudo cachyos-rate-mirrors
 ```
 
 > After this, every package on the system is the CachyOS-optimized version.
-
-#### Optional: swap to a CachyOS kernel
-
-If you chose a `linux-cachyos*` kernel up front via [§3.0a](#30a-optional-enable-cachyos-repos-live-iso), you already have it and can skip this. Otherwise, if you want a CachyOS kernel instead of the vanilla one from §3.1, install it now — the repos are live:
-
-```bash
-# Pick your variant — linux-cachyos (default), linux-cachyos-bore (gaming/audio), linux-cachyos-eevdf
-sudo pacman -S --noconfirm linux-cachyos-bore linux-cachyos-bore-headers
-
-# Build initramfs for the new kernel (GRUB entries are generated later in §5 — the
-# pacman kernel hook already regenerated them on install, and §5's grub-mkconfig picks up every installed kernel)
-sudo mkinitcpio -P
-
-# Optional: drop the vanilla kernel you installed in §3.1 (keep linux-lts as a fallback if you have it)
-# sudo pacman -R --noconfirm linux-zen linux-zen-headers
-```
-
-> GRUB picks the first installed kernel by default; hold Shift during boot to choose. Keep at least one fallback kernel until the new one boots cleanly.
 
 ---
 

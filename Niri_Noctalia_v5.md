@@ -29,7 +29,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 |-----------|---------|--------|---------|
 | **Niri** | `niri` | `extra` (official) | Scrollable-tiling Wayland compositor |
 | **Noctalia v5** | `noctalia-git` | AUR | Desktop shell: bars, launcher, dock, notifications, wallpaper, OSD, lock screen, clipboard, night light |
-| **Plasma Login Manager** | `plasma-login-manager` | Already installed | Session switcher at login — keep KDE Plasma as alternative session |
+| **SDDM** | `sddm` | `extra` (official) | Display manager — replaces `plasma-login-manager` (see [SDDM Login Manager](#sddm-login-manager)) |
 
 **Key differences from Noctalia v4:**
 - v5 is **native C++** (not Quickshell/QML)
@@ -148,74 +148,65 @@ sudo pacman -S --noconfirm --needed niri
 
 ### 2. Install Recommended Packages
 
-From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installation), filtered for Noctalia v5 compatibility. Packages that Noctalia v5 already provides (launcher, bar, notifications, wallpaper, lock screen) are **excluded**.
+From the [Arch Wiki Niri page](https://wiki.archlinux.org/title/Niri#Installation), filtered for Noctalia v5 compatibility. Packages that Noctalia v5 already provides (launcher, bar, notifications, wallpaper, lock screen, clipboard, night light) are **excluded**.
+
+> **This list is Qt6/KDE-native** — it uses `plasma-integration` + `kded6` as the single Qt theme path (no `qt5ct`/`qt6ct`/`kvantum`, which fight each other), and assumes you keep `plasma-workspace` installed for KDE app integration. See [KDE Integration](#kde-integration) for why.
 
 **Core packages:**
 
 ```bash
 sudo pacman -S --noconfirm --needed \
   ghostty \
-  libcanberra \
+  libcanberra sound-theme-freedesktop \
   gnome-keyring \
-  xdg-desktop-portal-gnome \
+  xdg-desktop-portal-kde \
   xdg-desktop-portal-gtk \
   xdg-utils \
   shared-mime-info \
   kde-cli-tools \
-  accountsservice \
-  qt5-wayland \
-  gvfs-mtp \
-  gvfs-gphoto2 \
+  plasma-integration \
+  kded \
   xwayland-satellite \
-  udiskie \
   noto-fonts-emoji \
   wl-clipboard \
-  adw-gtk-theme
+  adw-gtk-theme \
+  polkit-kde-agent
 ```
 
 | Package | Purpose | Why included |
 |---------|---------|-------------|
-| `ghostty` | Terminal emulator (`Mod+T`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
+| `ghostty` | Terminal emulator (`Mod+Return`) | Fast, native, feature-rich — replaces Niri's factory default (alacritty) |
 | `libcanberra` | Sound event player | Freedesktop sound theme — plays feedback for volume, mute, notifications |
-| `gnome-keyring` | Secret portal backend | Required for the Secret portal — password storage for GTK/Flatpak apps |
-| `xdg-desktop-portal-gnome` | Screen sharing | GNOME portal backend — more reliable on non-KDE compositors |
-| `xdg-desktop-portal-gtk` | Screen sharing (fallback) | GTK portal backend for apps that don't use the GNOME one |
+| `sound-theme-freedesktop` | Sound theme for `libcanberra` | The actual audio files `canberra-gtk-play -i audio-volume-change` plays — without this the volume binds are silent |
+| `gnome-keyring` | Secret portal backend | Required for the Secret portal — password storage for GTK/Flatpak apps; PAM hook auto-starts it (see [Secret Storage](#secret-storage)) |
+| `xdg-desktop-portal-kde` | Screen sharing (KDE) | Preferred portal for a KDE-app setup — file picker, screencast |
+| `xdg-desktop-portal-gtk` | Screen sharing (fallback) | GTK portal backend for apps that don't use the KDE one |
 | `xdg-utils` | MIME type & default apps | `xdg-open`, `xdg-mime` — without this Dolphin's "Open With" is empty |
 | `shared-mime-info` | MIME type database | Freedesktop MIME database — file type detection |
 | `kde-cli-tools` | KDE file associations | `keditfiletype`, `kioclient` — KDE app file type integration |
-| `accountsservice` | User account D-Bus interface | Needed by `sddm` for the user list + avatar display on the login screen |
-| `qt5-wayland` | Qt5 Wayland plugin | Some apps (VLC, older Qt5 apps) need this — not all are Qt6 yet |
-| `gvfs-mtp` | Android/phone file transfer | Mount Android devices via MTP in Dolphin |
-| `gvfs-gphoto2` | Camera import | Import photos from digital cameras |
-| `xwayland-satellite` | Run X11 applications | Some apps (e.g., older Electron apps) need XWayland |
-| `udiskie` | Auto-mount USB drives | Convenience — tray icon for removable media |
+| `plasma-integration` | Qt Platform Theme | Applies Breeze theme/colors/fonts to Qt apps when Plasma isn't running — the Qt6-native replacement for `qt6ct-kde` |
+| `kded` | KDE daemon (`kded6`) | KDE file dialogs, mime types, trash — required for Dolphin/Kate to function fully |
+| `xwayland-satellite` | Run X11 applications | Some apps (e.g., older Electron apps) need XWayland; niri has no built-in XWayland |
 | `noto-fonts-emoji` | Emoji fonts | Emoji rendering in terminal, browser, GTK apps |
 | `wl-clipboard` | CLI clipboard | `wl-copy` / `wl-paste` — clipboard from terminal and scripts |
 | `adw-gtk-theme` | GTK theme | Makes GTK apps (Firefox, VS Code) match the system look |
-| `matugen` | Material You color generation | Generates color schemes from wallpaper - Noctalia does not provide this |
-| `cliphist` | Clipboard history manager | Persistent clipboard history - Noctalia built-in clipboard is session-only |
-| `noto-fonts-cjk` | CJK fonts | Chinese, Japanese, Korean text rendering |
-| `perl-file-mimeinfo` | MIME type detection | file --mime-type backend - some apps need this for file type detection |
-| `xsettingsd` | Xsettings daemon | Reads GNOME/GTK settings - some GTK apps rely on this for theme/icons |
-| `network-manager-applet` | Network tray applet | Wi-Fi/Ethernet tray icon - Noctalia tray uses this for NM status |
-| `blueman` | Bluetooth manager | Bluetooth tray applet and device management |
-| `qt5ct` | Qt5 configuration tool | Theme/style editor for Qt5 apps (older KDE apps) |
-| `kvantum` | Qt theme engine | SVG-based Qt theme engine - needed for many custom Qt themes |
-| `fuzzel` | Wayland application launcher | Fallback launcher - Noctalia built-in launcher is primary |
+| `polkit-kde-agent` | GUI auth dialogs | Required for any app needing root (partition managers, systemsettings) — auto-started in the Niri config |
 
-**KDE users:** If you already have KDE Plasma, use `xdg-desktop-portal-kde` instead of `-gnome` for better integration:
+**Packages NOT needed (replaced by Noctalia v5 or the Qt6 path):**
 
-```bash
-sudo pacman -S --noconfirm --needed xdg-desktop-portal-kde
-```
+| Replaced | Provided by |
+|----------|-------------|
+| `cliphist` | Noctalia v5 built-in clipboard |
+| `fuzzel` / `wofi` | Noctalia v5 built-in launcher (`Mod+Space`) |
+| `matugen` | Noctalia v5 wallpaper engine |
+| `qt5-wayland` / `qt5ct` / `qt6ct-kde` / `kvantum` | `plasma-integration` (single Qt6 theme path) |
+| `udiskie` | (dropped — no tray autostart wired in this config) |
+| `gvfs-mtp` / `gvfs-gphoto2` | (optional — install only if you use MTP/camera import) |
+| `accountsservice` | (auto-pulled by sddm if it needs it) |
 
-**Qt theme consistency:** Without Plasma running, Qt apps may look wrong. Install `qt6ct-kde` to apply KDE color schemes and styles to Qt applications under Niri:
+**Optional — USB auto-mount (`udiskie`):** if you want removable-media mounting, install `udiskie` **and** add `spawn-at-startup "udiskie"` to the Niri config (it is not auto-started otherwise).
 
-```bash
-# 🔒 AUR — `qt6ct-kde`: KDE-patched Qt 6 Config Utility (theme consistency for Qt apps under Niri).
-# `qt6ct` (unpatched) is in [extra], but the KDE variant is AUR-only — must use yay, not pacman.
-yay -S --noconfirm --needed qt6ct-kde
-```
+**Optional — MTP / camera import:** `sudo pacman -S --noconfirm --needed gvfs-mtp gvfs-gphoto2` for Android file transfer / digital camera import in Dolphin.
 
 **Optional:**
 
@@ -443,14 +434,27 @@ Run `niri msg layers` to list all layer surfaces and see exact namespaces.
 > commit Permission denied`, `failed to add a framebuffer for the bo`,
 > nvidia-open driver suspicion) is a **false signal** from the missing runtime
 > env — not a driver bug. Always set it in the session wrapper.
-> Also `exec niri --session` (not `/usr/bin/niri-session`): the latter re-execs
-> through a login shell and pushes the compositor into the systemd user unit
-> path (`niri.service`), which fails to open its TTY backend on the sddm VT.
 >
-> **Seat prerequisites (niri needs a DRM seat):** enable + start `seatd.service`
-> (`systemctl enable --now seatd`) and add your user to the `seat` group
-> (`sudo usermod -aG seat "$USER"`). Without a running seatd, niri cannot open
-> the TTY/DRM and exits with "error initializing the TTY backend".
+> **`niri --session` vs `niri-session`:** upstream's shipped
+> [`niri.desktop`](https://github.com/YaLTeR/niri/blob/main/resources/niri.desktop)
+> uses `Exec=niri-session`, and the [Arch Wiki](https://wiki.archlinux.org/title/Niri)
+> documents `niri-session` as the display-manager entry (it imports the login
+> manager env via `systemd --user import-environment`, runs
+> `dbus-update-activation-environment --all`, and starts `niri.service` → brings
+> up `graphical-session.target`, which portals need). The direct `exec niri --session`
+> is the **fallback**: on some sddm setups `niri-session` re-execs through a
+> login shell and routes the compositor into `niri.service` detached with no
+> controlling TTY → `error initializing the TTY backend`. **Try `exec niri-session`
+> first** (keeps portal/graphical-session wiring); if the session black-screens
+> or bounces, switch the wrapper's final line to `exec niri --session` (shown
+> below — verified working on pop_arch).
+>
+> **Do NOT install `seatd`.** When a display manager (sddm) starts the session,
+> systemd-logind grants the DRM seat automatically via the `pam_systemd` module
+> in your `systemd-login`/`system-auth` stack; `seatd` is only for launching a
+> compositor from a bare TTY with **no** display manager. Running `seatd` and
+> logind together means two seat managers fighting over `/dev/dri/card*` — it
+> does not help, and can break DRM master handoff on login.
 
 ```bash
 sudo tee /usr/local/bin/niri-noctalia-session << 'EOF'
@@ -491,7 +495,9 @@ EOF
 Before rebooting, test that Noctalia starts under Niri:
 
 ```bash
-# From a TTY (not inside Plasma)
+# From a TTY (not inside Plasma). niri-session -l is the TTY launch path —
+# note it needs seatd/libseat for a bare-TTY seat, which is separate from the
+# display-manager launch (logind grants the seat there). Don't confuse the two.
 niri-session -l
 ```
 
@@ -649,21 +655,7 @@ Alternative: [niri-session-manager](https://github.com/MTeaHead/niri-session-man
 
 ### Run Command Dialog (Alt+F2 style)
 
-Install `wofi` for a KDE-style run dialog:
-
-```bash
-sudo pacman -S wofi
-
-# Compact config (~/.config/wofi/config)
-echo 'show=drun,run
-width=600
-height=250
-prompt=Run:
-allow_images=false
-insensitive=true' > ~/.config/wofi/config
-```
-
-Bind `Mod+F2` to wofi run mode (see [Keybind Additions](#keybind-additions)).
+Noctalia v5's built-in launcher (`Mod+Space`) already covers app search **and** "run command" (type a command, press Enter) — so no separate `wofi`/`fuzzel` is needed. To get a KDE-style *run* dialog, bind `Mod+F2` to the built-in launcher instead (see [Keybind Additions](#keybind-additions)):
 
 ### Keybind Additions
 
@@ -677,7 +669,7 @@ the key), and `spawn-sh` on a separate line inside the block:
         spawn "ghostty"
     }
     Mod+F2 {
-        spawn "wofi" "--show" "run"
+        spawn-sh "noctalia msg panel-toggle launcher"
     }
     Mod+E {
         spawn "dolphin"
@@ -866,11 +858,11 @@ KDE apps (Dolphin, Kate, Okular) run fine standalone, but they need background s
 
 ### Required Services
 
+> **Already covered.** `plasma-integration` + `kded` are part of the [core package list](#2-install-recommended-packages) above. This section explains *why* they're needed and how to autostart them.
+
 ```bash
-# KDE file dialogs + Qt platform theme
-sudo pacman -S --noconfirm --needed \
-  plasma-integration \
-  kded
+# If you skipped them earlier, install now (KDE file dialogs + Qt platform theme)
+sudo pacman -S --noconfirm --needed plasma-integration kded
 ```
 
 | Package | Provides | What breaks without it |
@@ -1071,8 +1063,10 @@ sudo pacman -S --noconfirm --needed ffmpegthumbnailer
 Noctalia's shell is compositor-agnostic, so the login manager is independent of it. This guide uses **SDDM** with the **pixie** theme — the same choice as the Hyprland guide — for a consistent Material-style login screen and a large theme ecosystem.
 
 > **Why SDDM + pixie:** SDDM is a battle-tested Qt6 login manager in the official `extra` repo; pixie is a Material Design 3 / Google Pixel-inspired theme (two-tone stacked clock, dynamic wallpaper color extraction, blur, circular avatar). Keeps the same login look across both Niri and Hyprland machines.
+>
+> **Why SDDM over `plasma-login-manager`:** `plasma-login-manager` **depends on** `plasma-workspace`, which drags in `plasmashell` + `kwin` + the whole Plasma session stack even if you never log into Plasma. SDDM is compositor-agnostic (no Plasma dependency), so it lets you drop `plasma-desktop` / `kdeplasma-addons` / `plasma-login-manager` and run a leaner Niri-native system. This is **Option B (lean)** — you lose the "Plasma" fallback session but keep `plasma-workspace` + `plasma-integration` + `kded6` so KDE apps (Dolphin/Kate) still get proper file dialogs, trash, and theming.
 
-> **⚠️ Safe approach:** install + configure first, then switch the enabled display manager. You can always switch back to Plasma Login Manager.
+> **⚠️ Safe approach:** install + configure SDDM first, then switch the enabled display manager and remove the Plasma session packages.
 
 ### 1. Install SDDM + pixie theme
 
@@ -1174,20 +1168,39 @@ sudo systemctl disable plasmalogin
 sudo reboot
 ```
 
-After reboot, SDDM shows the pixie login screen. Select **"Niri + Noctalia"** (or "Plasma" to go back to KDE).
+After reboot, SDDM shows the pixie login screen — select **"Niri + Noctalia"**.
 
-### Rollback to Plasma Login Manager
+### 5. Remove the Plasma session packages (Option B — lean)
+
+Once Niri + Noctalia is stable and you no longer need the Plasma *session* fallback, remove the desktop shell and the old login manager (which forces `plasma-workspace`):
+
+```bash
+# -Rns removes unused deps that only these pulled in.
+# plasma-desktop + kdeplasma-addons = the Plasma session (plasmashell) you won't log into.
+# plasma-login-manager  = the DM that depends on plasma-workspace.
+sudo pacman -Rns --noconfirm plasma-desktop kdeplasma-addons plasma-login-manager
+
+# systemctl will complain that plasmalogin.service no longer exists — confirm sddm is enabled:
+systemctl is-enabled sddm
+```
+
+> **Keep** `plasma-workspace`, `plasma-integration`, `kded` — these provide the KDE file dialogs, trash, and Qt6 Breeze theming that Dolphin/Kate rely on (they are **not** the Plasma *session*, and they don't auto-start plasmashell/kwin). This is why Dolphin/Kate keep working after the removal.
+
+### Rollback
 
 If anything goes wrong:
 
 ```bash
 # From a TTY (Ctrl+Alt+F3), log in and:
+# To go back to SDDM's X11 greeter (drop the Wayland greeter config):
+sudo rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm
+
+# To restore the full Plasma session fallback (reinstalls the DM + desktop you removed):
+sudo pacman -S --noconfirm plasma-login-manager plasma-desktop
 sudo systemctl disable sddm
 sudo systemctl enable plasmalogin
 sudo reboot
 ```
-
-You'll be back to the Plasma login screen. All sessions (Plasma, Niri+Noctalia) still work.
 
 ## Migration Notes (from KDE Plasma)
 
@@ -1195,8 +1208,9 @@ You'll be back to the Plasma login screen. All sessions (Plasma, Niri+Noctalia) 
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **KDE Plasma** | 🟢 Available | Select "Plasma" session at login to go back |
-| **Plasma Login Manager** | 🟢 Stays | Manages both sessions |
+| **KDE Plasma (session)** | 🔴 Removed | `plasma-desktop`/`kdeplasma-addons` dropped — no Plasma session fallback |
+| **KDE app services** (`plasma-workspace`/`plasma-integration`/`kded`) | 🟢 Stays | Keeps Dolphin/Kate file dialogs, trash, Qt6 Breeze theming |
+| **SDDM** | 🟢 Stays | Now the sole display manager |
 | **KDE apps** (Dolphin, Kate, Konsole) | 🟢 Work fine | Run under Wayland via Niri |
 | **PipeWire** | 🟢 Already installed | Noctalia uses it for audio |
 | **NetworkManager** | 🟢 Already installed | Noctalia reads NM state |
@@ -1240,7 +1254,7 @@ If you have NVIDIA (from your existing guide):
 | Clipboard not working | Missing `cliphist` | v5 has built-in clipboard — do NOT install `cliphist` |
 | Night light not working | Missing `wlsunset` | v5 has built-in night light — do NOT install `wlsunset` |
 | Screen share broken | xdg-desktop-portal not running | `systemctl --user enable --now xdg-desktop-portal` |
-| Qt apps look wrong | Missing Qt Wayland support or `qt6ct-kde` | Ensure `qt6-wayland` is installed (pulled by KDE) and `qt6ct-kde` is installed for theme consistency |
+| Qt apps look wrong | Missing Qt Wayland support or `plasma-integration` | Ensure `qt6-wayland` is installed (pulled by `plasma-integration`) and `plasma-integration` + `kded6` are installed + autostarted (see [Required Services](#required-services)) |
 | Dolphin "Open With" empty | Missing `xdg-utils` + `kde-cli-tools` | `sudo pacman -S --noconfirm --needed xdg-utils shared-mime-info kde-cli-tools`, then set defaults with `xdg-mime` (see [Default Applications](#default-applications)) |
 | Wallpaper wrong namespace | Using v4 namespace | Match `^noctalia-wallpaper` (Option 2) or `^noctalia-backdrop` (Option 1) |
 
@@ -1304,10 +1318,10 @@ rm -rf ~/.local/state/noctalia
 rm -rf ~/.cache/noctalia
 
 # Remove optional packages (if not needed by other things)
-sudo pacman -Rns --noconfirm xwayland-satellite udiskie
+sudo pacman -Rns --noconfirm xwayland-satellite
 
-# Verify Plasma login still works
-systemctl status plasmalogin
+# Verify SDDM is still your display manager
+systemctl status sddm
 ```
 
 ---

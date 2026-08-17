@@ -42,21 +42,22 @@ Not the best way. Just the way I like.
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
   - [6.3 YAY (AUR Helper)](#63-yay-aur-helper)
-- [§7 — Desktop Stack](#7--desktop-stack)
+- [§7 — Reboot](#7--reboot)
+- [§8 — Post-Install](#8--post-install)
+  - [8.1 XDG User Dirs](#81-xdg-user-dirs)
+  - [8.2 CachyOS Extras](#82-cachyos-extras-optional)
+  - [8.3 GPU Driver](#83-gpu-driver)
+  - [8.4 Snapper](#84-snapper)
+  - [8.5 SSH Hardening](#85-ssh-hardening)
+  - [8.6 Firewall](#86-firewall)
+  - [8.7 AppArmor](#87-apparmor-optional)
+  - [8.8 Extra Packages & Fonts](#88-extra-packages--fonts)
+  - [8.9 pyenv](#89-pyenv)
+  - [8.10 SPDIF Audio Fix](#810-spdif-audio-fix-optional)
+  - [8.11 Cache Cleanup](#811-cache-cleanup)
+- [§9 — Desktop Stack](#9--desktop-stack)
   - [▸ Secret Storage (all paths)](#-secret-storage-all-paths)
-- [§8 — Reboot](#8--reboot)
-- [§9 — Post-Install](#9--post-install)
-  - [9.1 XDG User Dirs](#91-xdg-user-dirs)
-  - [9.2 CachyOS Extras](#92-cachyos-extras-optional)
-  - [9.3 GPU Driver](#93-gpu-driver)
-  - [9.4 Snapper](#94-snapper)
-  - [9.5 SSH Hardening](#95-ssh-hardening)
-  - [9.6 Firewall](#96-firewall)
-  - [9.7 AppArmor](#97-apparmor-optional)
-  - [9.8 Extra Packages & Fonts](#98-extra-packages--fonts)
-  - [9.9 pyenv](#99-pyenv)
-  - [9.10 SPDIF Audio Fix](#910-spdif-audio-fix-optional)
-  - [9.11 Cache Cleanup](#911-cache-cleanup)
+- [§10 — Flatpak & GUI Apps](#10--flatpak--gui-apps)
 - [Credits](#credits)
 
 ---
@@ -69,7 +70,7 @@ Choose ONE per row (multiple kernels OK). Each choice maps to the section where 
 |---|----------|---|---|---|---|
 | 1 | **Kernel** | `linux-zen` | `linux-cachyos` *(only via §3.0a, up front — no post-chroot swap)* | `linux` / `linux-lts` | §3 |
 | 2 | **Repos** | Vanilla Arch | CachyOS repos *(packages only — kernels must be chosen up front)* | | §3.0a (live ISO) or CachyOS Repos (post-chroot) |
-| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Noctalia *(scrolling or tiling — see §7)* | §7 |
+| 3 | **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Noctalia *(scrolling or tiling — see §9)* | §9 |
 | 4 | **Bootloader** | GRUB | Limine | | §1,§2,§5 |
 
 > **Kernel & repos — mostly independent.** `linux-zen`, `linux`, `linux-lts` work on Vanilla Arch. **Any `linux-cachyos*` kernel requires the CachyOS repos** — none are in the official `[extra]` repo, and a kernel can only be picked up front: enable the repos on the live ISO ([§3.0a](#30a-optional-enable-cachyos-repos-live-iso)) and pacstrap a `linux-cachyos*` kernel directly in §3.1. **CachyOS repos post-chroot** ([CachyOS Repos](#cachyos-repos-optional)) still give you CachyOS-optimized binaries for other packages — there is just no kernel swap.
@@ -344,7 +345,7 @@ mount --mkdir UUID="${esp_uuid}" /mnt/boot/EFI
 mount --mkdir UUID="${esp_uuid}" /mnt/boot
 ```
 
-> This shadows the `@/boot` directory with the ESP — only the FAT32 contents are visible at `/boot`, so Limine's kernel/initramfs live **on the ESP, outside `@`**, and are **never captured by snapshots**. A rollback of `@` won't touch the boot files. If you want bootable snapshots with Limine, you need `limine-snapper-sync` (copies each snapshot's kernel + initramfs into the ESP and boots via an overlayfs hook) — see §9.4. The empty `@/boot` path still exists but is unused on Limine installs.
+> This shadows the `@/boot` directory with the ESP — only the FAT32 contents are visible at `/boot`, so Limine's kernel/initramfs live **on the ESP, outside `@`**, and are **never captured by snapshots**. A rollback of `@` won't touch the boot files. If you want bootable snapshots with Limine, you need `limine-snapper-sync` (copies each snapshot's kernel + initramfs into the ESP and boots via an overlayfs hook) — see §8.4. The empty `@/boot` path still exists but is unused on Limine installs.
 
 ### 2.4 fstab
 
@@ -586,7 +587,7 @@ sudo cachyos-rate-mirrors
 
 ## §4 — Chroot Configuration
 
-We're now "inside" the new system. Everything from here through §7 runs in this chroot.
+We're now "inside" the new system. Everything from here through §7 runs in this chroot; the first reboot (§7) leaves it.
 
 ### 4.1 Safety Check
 
@@ -876,11 +877,11 @@ systemctl enable fstrim.timer
 
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
-> - `sshd` — SSH server (we enabled password auth during install; harden in §9.5)
+> - `sshd` — SSH server (we enabled password auth during install; harden in §8.5)
 
 ### 6.3 YAY (AUR Helper)
 
-`yay` is needed for AUR packages in §7 (Noctalia, sddm theme, HyprMod, etc.). Install it now inside chroot so §7 can use it:
+`yay` is needed for AUR packages in §9 (Noctalia, sddm theme, HyprMod, etc.). Install it now inside chroot so it's ready when you reach §9 (post-reboot TTY):
 
 ```bash
 sudo pacman -S --noconfirm --needed git base-devel
@@ -894,39 +895,7 @@ cd ~ && rm -rf /tmp/yay-bin
 
 ---
 
-## §7 — Desktop Stack
-
-> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Noctalia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
-
-Each path has a dedicated companion guide with the full install + config. Open the one you picked:
-
-| Path | Guide | What you get | Login screen |
-|------|-------|-------------|--------------|
-| 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
-| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `sddm` + `pixie-sddm-git` |
-| 🪟 **Hyprland + Noctalia (Scrolling)** | [`Hyprland-Scrolling.md`](Hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
-| 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
-| 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |
-
-KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Noctalia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same native C++ Noctalia shell.
-
-**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri + Hyprland → `sddm` (with the `pixie` theme). Enable exactly one. The KDE packages referenced in the guides (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* a compositor — they don't pull the Plasma desktop.
-
-### ▸ Secret Storage (all paths)
-
-Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromium, Firefox, Git) use `libsecret`. KDE apps (Dolphin network passwords, KDE Connect) use KWallet. Install both — they coexist fine:
-
-```bash
-sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
-```
-
-> PAM hooks for the login manager are added in the SDDM setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/sddm` to exist first.
->
-> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks — verify with `grep -i kwallet /etc/pam.d/plasmalogin`; if missing, add the same `auth optional` / `session optional` lines used for sddm above.
->
-> KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
-
-## §8 — Reboot
+## §7 — Reboot
 
 Time to leave the installer and boot into the real system:
 
@@ -941,11 +910,11 @@ Remove the USB drive when prompted. Log in as your user.
 
 ---
 
-## §9 — Post-Install
+## §8 — Post-Install
 
 Everything below runs on the new system, logged in as your user.
 
-### 9.1 XDG User Dirs
+### 8.1 XDG User Dirs
 
 Creates `~/Desktop`, `~/Documents`, `~/Downloads`, etc.:
 
@@ -953,7 +922,7 @@ Creates `~/Desktop`, `~/Documents`, `~/Downloads`, etc.:
 xdg-user-dirs-update
 ```
 
-### 9.2 CachyOS Extras (optional)
+### 8.2 CachyOS Extras (optional)
 
 > Skip if using Vanilla Arch repos. The CachyOS repos were added [after §5](#cachyos-repos-optional).
 
@@ -975,9 +944,9 @@ sudo systemctl enable --now ananicy-cpp
 # sudo systemctl enable --now systemd-oomd
 ```
 
-> `cachyos-settings` pulls in `ananicy-cpp` (auto process priority — games/media get higher priority, background tasks lower), `zram-generator` (compressed RAM swap), and CachyOS-specific defaults. `cachyos-gaming-meta` is a convenience bundle — you can also install gaming packages individually in §9.8.
+> `cachyos-settings` pulls in `ananicy-cpp` (auto process priority — games/media get higher priority, background tasks lower), `zram-generator` (compressed RAM swap), and CachyOS-specific defaults. `cachyos-gaming-meta` is a convenience bundle — you can also install gaming packages individually in §8.8.
 
-### 9.3 GPU Driver
+### 8.3 GPU Driver
 
 Auto-detect your GPU and install the right driver:
 
@@ -1077,7 +1046,7 @@ fi
 > - `libva-utils` — `vainfo` to verify hardware video support
 > - `vulkan-tools` — `vkcube`, `vulkaninfo` for Vulkan verification
 
-### 9.4 Snapper
+### 8.4 Snapper
 
 Snapper manages Btrfs snapshots — point-in-time copies of your subvolumes. Combined with `snap-pac` (automatic pre/post snapshots on every `pacman` transaction) and `grub-btrfs` (boot into snapshots from GRUB), you get a safety net for system updates:
 
@@ -1119,9 +1088,9 @@ Enable the timers that create and clean up snapshots:
 sudo systemctl enable --now snapper-timeline.timer snapper-cleanup.timer
 ```
 
-### 9.5 SSH Hardening
+### 8.5 SSH Hardening
 
-> ⚠️ **Do this after setting up SSH keys** (§9.1 client keygen + `ssh-copy-id`). Otherwise you'll lock yourself out.
+> ⚠️ **Do this after setting up SSH keys** (generate a keypair with `ssh-keygen`, then `ssh-copy-id` it to this host). Otherwise you'll lock yourself out.
 
 ```bash
 sudo tee -a /etc/ssh/sshd_config <<'EOF'
@@ -1152,7 +1121,7 @@ sudo systemctl restart sshd
 
 > After changing the port: `ssh -p 2222 user@host`. Update `~/.ssh/config` on your client with `Port 2222` under the host entry.
 
-### 9.6 Firewall
+### 8.6 Firewall
 
 `ufw` is a simple frontend for `iptables`/`nftables`. Default deny incoming, allow SSH:
 
@@ -1169,7 +1138,7 @@ sudo systemctl enable ufw
 
 > For KDE Connect, gaming (Steam), or local dev servers, add specific rules as needed. Desktop firewalls are mostly defense-in-depth — your router already blocks inbound traffic.
 
-### 9.7 AppArmor (optional)
+### 8.7 AppArmor (optional)
 
 AppArmor restricts what each application can do — it's Mandatory Access Control (MAC) like SELinux but simpler. Enable it with a kernel parameter, then install profiles:
 
@@ -1187,7 +1156,7 @@ sudo systemctl enable apparmor
 
 > After reboot, check: `sudo aa-status`. AppArmor needs profile packages for each app — start with `apparmor-profiles` from AUR. This is advanced; skip if you just want a working desktop.
 
-### 9.8 Extra Packages & Fonts
+### 8.8 Extra Packages & Fonts
 
 Personal pick list — install what you need:
 
@@ -1214,7 +1183,7 @@ yay -S --noconfirm --needed proton-ge-custom-bin  # 🔒
 sudo usermod -aG gamemode $USER
 
 # Fonts
-# noto-fonts-emoji already installed if you chose Niri (§7.2)
+# noto-fonts-emoji already installed if you chose Niri (see the Niri guide — Secret Storage)
 
 # Custom Nerd Font — Thai + Nerd Icons (Ghostty terminal)
 # Download: https://github.com/poppatchara/NotoSansMThaiNerdFont
@@ -1231,26 +1200,8 @@ yay -S --noconfirm --needed ttf-ms-fonts
 sudo pacman -S --noconfirm --needed hunspell hunspell-en_us hunspell-en_gb
 yay -S --noconfirm --needed hunspell-th  # Thai dictionary
 
-# Flatpak (optional — for sandboxed apps)
-sudo pacman -S --noconfirm --needed flatpak
-```
 
-> Run this from the logged-in session (not SSH):
-
-```bash
-flatpak install -y flathub \
-  io.github.jonmagon.kdiskmark \
-  io.github.flattool.Warehouse \
-  io.missioncenter.MissionCenter \
-  xyz.z3ntu.razergenie \
-  io.github.arunsivaramanneo.GPUViewer \
-  com.kgurgul.cpuinfo \
-  org.raspberrypi.rpi-imager \
-  io.github.shonubot.Spruce \
-  org.localsend.localsend_app
-```
-
-### 9.9 pyenv
+### 8.9 pyenv
 
 `pyenv` manages multiple Python versions per-user without conflicting with the system Python:
 
@@ -1286,7 +1237,7 @@ pyenv global 3.13.2
 
 > **Why the zlib guard?** CachyOS replaces `zlib` with `zlib-ng-compat` (same ABI, faster, done in the CachyOS Repos section). The lines above detect which one this system uses and install it — so the command works on **both** vanilla Arch and CachyOS paths without pacman asking to remove `zlib-ng-compat`. pyenv compiles fine against either. `--needed` skips anything already installed.
 
-### 9.10 SPDIF Audio Fix (optional)
+### 8.10 SPDIF Audio Fix (optional)
 
 Some SPDIF DACs sleep after idle → first 1–3 seconds of audio get cut off. Two fixes:
 
@@ -1308,12 +1259,80 @@ EOF
 systemctl --user restart wireplumber
 ```
 
-### 9.11 Cache Cleanup
+### 8.11 Cache Cleanup
 
 Clear pacman's package cache to reclaim disk space:
 
 ```bash
 sudo pacman -Scc
+```
+
+---
+
+## §9 — Desktop Stack
+
+> 📌 **Moved after the first reboot.** You're at a bare TTY after §7 — install your desktop here (no GUI yet). When done, reboot again to reach the graphical login screen, then continue to [§10](#10--flatpak--gui-apps).
+
+> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Noctalia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
+
+Each path has a dedicated companion guide with the full install + config. Open the one you picked:
+
+| Path | Guide | What you get | Login screen |
+|------|-------|-------------|--------------|
+| 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
+| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `sddm` + `pixie-sddm-git` |
+| 🪟 **Hyprland + Noctalia (Scrolling)** | [`Hyprland-Scrolling.md`](Hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
+| 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
+| 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |
+
+KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Noctalia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same native C++ Noctalia shell.
+
+**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri + Hyprland → `sddm` (with the `pixie` theme). Enable exactly one. The KDE packages referenced in the guides (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* a compositor — they don't pull the Plasma desktop.
+
+### ▸ Secret Storage (all paths)
+
+Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromium, Firefox, Git) use `libsecret`. KDE apps (Dolphin network passwords, KDE Connect) use KWallet. Install both — they coexist fine:
+
+```bash
+sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
+```
+
+> PAM hooks for the login manager are added in the SDDM setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/sddm` to exist first.
+>
+> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks — verify with `grep -i kwallet /etc/pam.d/plasmalogin`; if missing, add the same `auth optional` / `session optional` lines used for sddm above.
+>
+> KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+
+After the desktop is installed and its display manager enabled, **reboot to reach the graphical session**:
+
+```bash
+systemctl reboot
+```
+
+---
+
+## §10 — Flatpak & GUI Apps
+
+> 📦 **Needs a graphical session.** Flatpak apps install through the desktop portal — run this after your desktop is up (post-§9 reboot), not over SSH.
+
+```bash
+sudo pacman -S --noconfirm --needed flatpak
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+```
+
+Run this from the logged-in graphical session (not SSH):
+
+```bash
+flatpak install -y flathub \
+  io.github.jonmagon.kdiskmark \
+  io.github.flattool.Warehouse \
+  io.missioncenter.MissionCenter \
+  xyz.z3ntu.razergenie \
+  io.github.arunsivaramanneo.GPUViewer \
+  com.kgurgul.cpuinfo \
+  org.raspberrypi.rpi-imager \
+  io.github.shonubot.Spruce \
+  org.localsend.localsend_app
 ```
 
 ---

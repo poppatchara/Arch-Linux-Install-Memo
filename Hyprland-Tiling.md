@@ -269,6 +269,10 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("kitty -e nvim"))     -- editor
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())                    -- close window
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))  -- toggle floating
 
+--  Mouse drag (bindm): SUPER+drag move, SUPER+right-drag resize
+hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })    -- SUPER + LMB drag: move window
+hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })  -- SUPER + RMB drag: resize window
+
 --  Focus window (hjkl + arrows)
 hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "l" }))
 hl.bind(mainMod .. " + L", hl.dsp.focus({ direction = "r" }))
@@ -464,7 +468,9 @@ end)
 - **Pending Changes page** — review every unsaved edit before saving
 - **Config DNA** — a unique visual fingerprint per profile
 
-> **Why it's safe:** HyprMod writes only to its own `hyprland-gui.conf`, never touching your main `hyprland.lua`. Profiles are plain `.conf` files you can save, name, and share.
+> **Why it's safe:** HyprMod writes only to its own managed file — `hyprland-gui.lua` in Lua mode (Hyprland 0.55+), `hyprland-gui.conf` in hyprlang mode — never touching your main `hyprland.lua`. Profiles are plain `.conf` files you can save, name, and share.
+
+> **First-run wiring:** on first launch HyprMod auto-generates `~/.config/hypr/hyprland-gui.lua` and appends `require("hyprland-gui")` to the end of `hyprland.lua` (or `source = ~/.config/hypr/hyprland-gui.conf` in hyprlang mode). Do **not** hand-edit that line — HyprMod owns it. If you wiped `hyprland.lua` after installing HyprMod, just relaunch HyprMod once and it will re-inject the `require`.
 
 ### CLI — switch profiles from a keybind
 

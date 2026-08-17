@@ -110,16 +110,15 @@ sudo pacman -S xdg-desktop-portal-hyprland hyprpolkitagent sddm kitty
 
 > **Why:** `xdg-desktop-portal-hyprland` (XDPH) enables screen sharing under Wayland (also required for DBus global shortcuts). `hyprpolkitagent` shows GUI auth dialogs (e.g. package managers). `sddm` is the login manager.
 
-### 3. Install ScrollOverview plugin (Niri-style overview)
+### 3. ScrollOverview plugin (install deps now, enable after login)
 
 ```bash
-# Add the plugin repository and build it
-hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
-hyprpm update
-hyprpm enable scrolloverview
+# Build dependencies only — the plugin itself is built from inside a running
+# Hyprland session (hyprpm needs the live compositor; see the section below).
+sudo pacman -S --noconfirm --needed cmake cpio pkg-config
 ```
 
-> **Why:** Hyprland has no built-in overview (unlike Niri's `Mod+R`). ScrollOverview adds the Niri-style zoomed-out overview of all workspaces, a trackpad swipe gesture, and a visual ALT+Tab switcher. `hyprpm` is Hyprland's bundled plugin manager. If you run a git build of Hyprland, add the `new-release` branch instead: `hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git origin/new-release`.
+> **Why split like this:** `hyprpm` (Hyprland's plugin manager) talks to the **running** compositor over its instance socket — it needs the `HYPRLAND_INSTANCE_SIGNATURE` environment variable that Hyprland only sets inside a launched session. From a bare TTY or SSH you'll get `HYPRLAND_INSTANCE_SIGNATURE was not set` and `failed to get the current hyprland version`. `g++`/`gcc`/`git` are already present via `base-devel` (installed with `yay` in §6.3 of the main guide); the three packages above are the remaining build tools. The actual `hyprpm add/update/enable` steps live in the [ScrollOverview](#scrolloverview--niri-style-overview) section — run them after your first login.
 
 ### 4. Install screenshot stack (native)
 
@@ -451,6 +450,19 @@ end)
 ## ScrollOverview — Niri-Style Overview
 
 [ScrollOverview](https://github.com/yayuuu/hyprland-scroll-overview) adds what Hyprland lacks out of the box: a **Niri-style overview** — zoom out to see all workspaces at once, like macOS Mission Control. It also provides a trackpad swipe gesture and a visual ALT+Tab switcher.
+
+### Install & enable (inside a running Hyprland session)
+
+> ⚠️ **Run these from a terminal *inside* Hyprland — not SSH or a bare TTY.** `hyprpm` needs the live compositor (the `HYPRLAND_INSTANCE_SIGNATURE` env var). Build deps (`cmake`, `cpio`, `pkg-config`) were installed in [§3](#3-scrolloverview-plugin-install-deps-now-enable-after-login) of the Installation section.
+
+```bash
+# Add the plugin repository, build it, and enable it
+hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
+hyprpm update
+hyprpm enable scrolloverview
+```
+
+> **Why:** Hyprland has no built-in overview (unlike Niri's `Mod+R`). ScrollOverview adds the Niri-style zoomed-out overview of all workspaces, a trackpad swipe gesture, and a visual ALT+Tab switcher. `hyprpm` is Hyprland's bundled plugin manager. If you run a git build of Hyprland, add the `new-release` branch instead: `hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git origin/new-release`.
 
 ### 5.1 Basic configuration
 
@@ -994,14 +1006,22 @@ Bug [#1476](https://github.com/sddm/sddm/issues/1476) — fixed in SDDM ≥ 0.20
 
 ### ScrollOverview won't load / `.so` mismatch after Hyprland update
 
-`hyprpm` plugins are built against your exact Hyprland version. After a Hyprland update, rebuild the plugin:
+`hyprpm` plugins are built against your exact Hyprland version. After a Hyprland update, rebuild the plugin (again, from a terminal **inside** Hyprland — not SSH):
 
 ```bash
 hyprpm update      # rebuild + fetch dependencies
 hyprpm enable scrolloverview
 ```
 
-If you run a git build of Hyprland, the plugin must come from the `new-release` branch (see §3) — and expect to recompile on every compositor update.
+If you run a git build of Hyprland, the plugin must come from the `new-release` branch (see the [install steps](#install--enable-inside-a-running-hyprland-session) above) — and expect to recompile on every compositor update.
+
+### `HYPRLAND_INSTANCE_SIGNATURE was not set` / `failed to get the current hyprland version`
+
+`hyprpm` can only talk to a **running** Hyprland. If you see these errors, you're either on a bare TTY or SSH'd in — open a terminal *inside* the graphical session (e.g. the kitty you get with `SUPER+Return`) and run `hyprpm` from there. It's not a bug and not fixable by setting the variable by hand; the value is per-session and only Hyprland can issue it.
+
+### Missing dependency: cmake / cpio / pkg-config
+
+`hyprpm` needs `cmake`, `cpio`, `pkg-config`, `git`, `g++`, and `gcc` to build plugins. The first three are installed in [§3](#3-scrolloverview-plugin-install-deps-now-enable-after-login); the rest come from `base-devel` (pulled in with `yay`). If you skipped §3, install them now: `sudo pacman -S --noconfirm --needed cmake cpio pkg-config`.
 
 ### XWayland apps blurry on HiDPI
 

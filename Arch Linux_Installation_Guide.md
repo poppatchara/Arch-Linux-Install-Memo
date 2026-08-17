@@ -511,7 +511,7 @@ pacstrap -K /mnt \
   "${KERNEL_PKGS[@]}" linux-firmware "${cpu}-ucode" \
   efibootmgr btrfs-progs dosfstools e2fsprogs exfatprogs \
   networkmanager openssh \
-  nvim git sudo man curl \
+  nvim vim git sudo man curl \
   zsh zsh-completions zsh-autosuggestions bash-completion tmux \
   pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector
 
@@ -641,7 +641,7 @@ echo "Set password for ${user}:"
 passwd $user
 
 # Uncomment %wheel ALL=(ALL) ALL
-EDITOR=nvim visudo
+EDITOR=vim visudo
 ```
 
 > The group memberships: `wheel` (sudo access), `storage` (disk management), `power` (shutdown/reboot), `audio` (sound), `video` (GPU/backlight), `docker` (container management).

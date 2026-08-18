@@ -613,6 +613,8 @@ locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 ```
 
+> `hwclock --systohc` writes the current system time to the hardware clock — this is a **one-time** baseline. For the clock to stay correct after reboots, enable **automatic NTP sync** in [§6.2 Enable Services](#62-enable-services) (`systemd-timesyncd`).
+
 ### 4.3 Hostname
 
 The system's network name. Change `host_name` to whatever identifies this machine:
@@ -867,6 +869,7 @@ systemctl enable iwd
 systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer
+systemctl enable systemd-timesyncd   # automatic time sync (NTP)
 
 # Optional (uncomment if needed):
 # systemctl enable iwd
@@ -875,6 +878,7 @@ systemctl enable fstrim.timer
 # pacman -S --needed acpi  # battery status CLI (systemd-logind handles ACPI events now)
 ```
 
+> - `systemd-timesyncd` — **automatic time sync over NTP** (comes with systemd, no extra package). Without it the clock drifts after every reboot — HTTPS/TLS, `pacman -Syu`, and cron timers all misbehave on a wrong clock. Verify after boot: `timedatectl status` should show `System clock synchronized: yes`; toggle manually with `timedatectl set-ntp true` / `false`.
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
 > - `sshd` — SSH server (we enabled password auth during install; harden in §8.5)

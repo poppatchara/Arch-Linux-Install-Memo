@@ -41,7 +41,7 @@ Not the best way. Just the way I like.
 - [§6 — Services & QoL](#6--services--qol)
   - [6.1 Extra Packages](#61-extra-packages)
   - [6.2 Enable Services](#62-enable-services)
-  - [6.3 YAY (AUR Helper)](#63-yay-aur-helper)
+  - [6.3 AUR Helper (yay or paru)](#63-aur-helper-yay-or-paru)
 - [§7 — Reboot](#7--reboot)
 - [§8 — Post-Install](#8--post-install)
   - [8.1 XDG User Dirs](#81-xdg-user-dirs)
@@ -902,19 +902,35 @@ grep '^hosts:' /etc/nsswitch.conf   # verify mdns_minimal is present
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
 > - `sshd` — SSH server (we enabled password auth during install; harden in §8.5)
 
-### 6.3 YAY (AUR Helper)
+### 6.3 AUR Helper (yay or paru)
 
-`yay` is needed for AUR packages in §9 (Noctalia, sddm theme, HyprMod, etc.). Install it now inside chroot so it's ready when you reach §9 (post-reboot TTY):
+AUR helpers are needed for AUR packages in §8–§9 (DXVK, grub-btrfs, Noctalia, sddm theme, HyprMod, etc.). **Pick ONE** — both work identically for the `yay -S ...` commands in this guide (paru is drop-in compatible with the same syntax). Install it now inside chroot so it's ready when you reach §8 (post-reboot TTY):
+
+| Helper | Why pick it |
+|--------|-------------|
+| `yay-bin` (default) | Prebuilt binary, the most battle-tested AUR helper. The guide's examples use `yay` throughout. |
+| `paru-bin` | Rust, faster + cleaner output, **CachyOS's default AUR helper** (recommended if you chose the CachyOS repos path). Drop-in: just run `paru` wherever the guide says `yay`. |
 
 ```bash
 sudo pacman -S --noconfirm --needed git base-devel
+
+# Pick ONE: uncomment your choice
+# yay-bin (default):
 cd /tmp
 sudo -u pop git clone https://aur.archlinux.org/yay-bin.git
 cd yay-bin && sudo -u pop makepkg -si --noconfirm
 cd ~ && rm -rf /tmp/yay-bin
+
+# paru-bin (alternative — CachyOS default):
+# cd /tmp
+# sudo -u pop git clone https://aur.archlinux.org/paru-bin.git
+# cd paru-bin && sudo -u pop makepkg -si --noconfirm
+# cd ~ && rm -rf /tmp/paru-bin
 ```
 
-> We use `yay-bin` (prebuilt) to avoid compiling yay from source. `sudo -u pop` runs the build as your user since `makepkg` refuses to run as root.
+> We use the `-bin` variants (prebuilt) to avoid compiling from source. `sudo -u pop` runs the build as your user since `makepkg` refuses to run as root.
+>
+> **If you picked paru:** every `yay -S ...` block later in this guide works unchanged by swapping the command to `paru -S ...` — same flags, same behavior. The `yay -G <pkg>` review hint in §8.3 is `paru -G <pkg>` for paru.
 
 ---
 

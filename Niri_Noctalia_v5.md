@@ -16,7 +16,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 6. [Post-Install & Tweaks](#post-install--tweaks)
 7. [Complete DE Experience](#complete-de-experience)
 8. [KDE Integration](#kde-integration)
-9. [SDDM Login Manager](#sddm-login-manager)
+9. [Login Manager (greeter choice)](#login-manager-greeter-choice)
 10. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
 11. [Troubleshooting](#troubleshooting)
 12. [DMS Shell Setup (secondary)](#dms-shell-setup-secondary)
@@ -31,7 +31,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | **Niri** | `niri` | `extra` (official) | Scrollable-tiling Wayland compositor |
 | **Noctalia v5** | `noctalia-git` | AUR | Desktop shell: bars, launcher, dock, notifications, wallpaper, OSD, lock screen, clipboard, night light |
 | **DMS** *(secondary)* | `dms-shell-niri` | `extra` (official) | DankMaterialShell — Quickshell+Go desktop shell: bar, spotlight launcher, notifications, control center, lock/idle, clipboard, wallpaper, night mode, theming |
-| **SDDM** | `sddm` | `extra` (official) | Display manager — replaces `plasma-login-manager` (see [SDDM Login Manager](#sddm-login-manager)) |
+| **Login manager** | `greetd` + greeter *or* `sddm` | `extra`/AUR | Display manager — **pick one**: builtin greeter (DankGreeter/Noctalia Greeter, lean) or SDDM + pixie (see [Login Manager (greeter choice)](#login-manager-greeter-choice)) |
 
 **Pick one shell — Noctalia (default) or DMS (secondary).** Noctalia is a native C++ shell that replaces 6 separate tools (bar / launcher / notifications / wallpaper / lock+idle / clipboard / night light). DMS is the Quickshell+Go alternative — see [DMS Shell Setup (secondary)](#dms-shell-setup-secondary). Do **not** install both.
 
@@ -116,8 +116,8 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>N</kbd> | `dms ipc call notifications toggle` (notification center) |
 | <kbd>Mod</kbd> + <kbd>Alt</kbd> + <kbd>N</kbd> | `dms ipc call night toggle` (night mode — see [Night Mode](#night-mode-built-in)) |
 | <kbd>Mod</kbd> + <kbd>P</kbd> | `dms ipc call wallpaper set <path>` (set wallpaper — see [Wallpaper & Layer Rules](#wallpaper--layer-rules)) |
-| <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 5` |
-| <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 5` |
+| <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 3` |
+| <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 3` |
 | <kbd>XF86AudioMute</kbd> | `dms ipc call audio mute` |
 | <kbd>XF86MonBrightnessUp</kbd> | `dms ipc call brightness list` → set (see [DMS Shell Setup](#dms-shell-setup-secondary)) |
 | <kbd>XF86MonBrightnessDown</kbd> | same as above |
@@ -707,12 +707,10 @@ Noctalia v5's built-in launcher (`Mod+Space`) already covers app search **and** 
 
 ### Keybind Additions
 
-Add these to the `binds {}` block in your niri config. Each keybind **must be
-multiline** (niri 26.04 rejects one-line `{ ...; }` blocks on the same line as
-the key), and `spawn-sh` on a separate line inside the block:
+Add these to the `binds {}` block in your niri config. Multi-line blocks are used here for readability — note that **niri 26.04 also accepts inline one-line blocks** (`Mod+Space { spawn "..."; }` — verified with `niri validate` on 2026-08-19; DMS's own embedded binds use inline style), so either form deploys fine. `spawn-sh` goes on a separate line inside the block:
 
 ```kdl
-    // ─── DE Applications (multiline — niri 26.04 requires blocks on their own lines) ───
+    // ─── DE Applications (multiline for readability — inline also works on niri 26.04) ───
     Mod+Return {
         spawn "ghostty"
     }
@@ -948,24 +946,37 @@ sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanag
 
 # PAM hooks for sddm — create the FULL sddm PAM stack, not just the hooks.
 # WARNING: do NOT write only the 3 hook lines above (auth/session optional) —
-# that yields a broken /etc/pam.d/sddm missing `auth include system-auth`,
+# that yields a broken /etc/pam.d/sddm missing `auth include system-login`,
 # so EVERY login fails with "Authentication failure" + "gkr-pam: no password
 # is available". If sddm's PAM file doesn't exist yet (fresh install), build it
 # complete; if it exists, append the optional hook lines to it.
-if [ -f /etc/pam.d/sddm ] && ! grep -q 'system-auth' /etc/pam.d/sddm; then
-  echo "NOTE: existing /etc/pam.d/sddm lacks system-auth include — check it"
+#
+# ⚠️ PAM CORRECTION (2026-08-19, verified on pop_arch): the session phase MUST
+# keep `pam_systemd` — it lives in `system-login`, NOT `system-auth`. If you write
+# `session include system-auth` (no system-login), niri 26.04 (TTY backend via
+# smithay LibSeatSession/libseat) gets NO logind session → panics
+# "error initializing the TTY backend ... Failed to open session: Function not
+# implemented (os error 38)" → SDDM login bounces straight back to the greeter
+# (sddm-helper exited with 101 = Rust panic). `system-login` carries pam_systemd
+# which registers the session with logind.
+if [ -f /etc/pam.d/sddm ] && ! grep -q 'system-login' /etc/pam.d/sddm; then
+  echo "NOTE: existing /etc/pam.d/sddm lacks system-login include — check it"
 fi
 sudo tee /etc/pam.d/sddm <<'EOF'
-auth        include     system-auth
-auth        optional    pam_gnome_keyring.so
+#%PAM-1.0
+auth        include     system-login
+-auth       optional    pam_gnome_keyring.so
+-auth       optional    pam_kwallet5.so
 
-account     include     system-auth
+account     include     system-login
 
-password    include     system-auth
+password    include     system-login
+-password   optional    pam_gnome_keyring.so    use_authtok
 
-session     include     system-auth
-session     optional    pam_gnome_keyring.so auto_start
-session     optional    pam_kwallet5.so auto_start kwalletd=/usr/bin/ksecretd
+session     optional    pam_keyinit.so          force revoke
+session     include     system-login
+-session    optional    pam_gnome_keyring.so    auto_start
+-session    optional    pam_kwallet5.so         auto_start kwalletd=/usr/bin/ksecretd
 EOF
 ```
 
@@ -1106,15 +1117,64 @@ sudo pacman -S --noconfirm --needed ffmpegthumbnailer
 
 ---
 
-## SDDM Login Manager
+## Login Manager (greeter choice)
 
-Noctalia's shell is compositor-agnostic, so the login manager is independent of it. This guide uses **SDDM** with the **pixie** theme — the same choice as the Hyprland guide — for a consistent Material-style login screen and a large theme ecosystem.
+Both Noctalia and DMS have a **built-in greetd-based greeter** — the lean option. SDDM + pixie remains available for a KDE-style login. **Pick ONE:**
 
-> **Why SDDM + pixie:** SDDM is a battle-tested Qt6 login manager in the official `extra` repo; pixie is a Material Design 3 / Google Pixel-inspired theme (two-tone stacked clock, dynamic wallpaper color extraction, blur, circular avatar). Keeps the same login look across both Niri and Hyprland machines.
+| Option | Shell path | Packages added | Setup | Look |
+|--------|-----------|----------------|-------|------|
+| **A — Builtin greeter** (recommended, lean) | DMS → **DankGreeter** (`greetd-dms-greeter-bin`); Noctalia → **Noctalia Greeter** (`noctalia-greeter`) | `greetd` + greeter (DankGreeter adds **only `quickshell`** — already present from `dms-shell`; Noctalia Greeter bundles its own wlroots compositor) | `dms greeter install` (DMS) / config drop-in (Noctalia) | Matches the shell's Material/noctalia theme automatically |
+| **B — SDDM + pixie** | Both | `sddm` + `kwin` (65 deps — whole Plasma stack) + `layer-shell-qt` + `pixie-sddm-git` | Manual: PAM rewrite + Wayland greeter config + session wrapper | KDE Material-style (two-tone clock, blur, avatar) |
+
+> **Why Option A is lean:** sddm's Wayland greeter runs **`kwin_wayland`** as its compositor, and `kwin` pulls in ~35 KDE/Plasma packages (aurorae, breeze, plasma-activities, kauth, kcmutils, kcolorscheme, kconfig, kcoreaddons, kcrash, kdbusaddons, kdeclarative, kdecoration, kglobalaccel, kpackage, ksvg, kwayland, …) **plus** `xorg-server`/`xorg-xauth` (sddm deps even on the Wayland path). DankGreeter runs on **Quickshell** — already a `dms-shell` dependency, so switching to it adds exactly **one** package (`greetd`). No PAM rewriting, no session wrapper, no X11. Verified dependency counts 2026-08-19 on pop_arch.
 >
-> **Why SDDM over `plasma-login-manager`:** `plasma-login-manager` **depends on** `plasma-workspace`, which drags in `plasmashell` + `kwin` + the whole Plasma session stack even if you never log into Plasma. SDDM is compositor-agnostic (no Plasma dependency), so it lets you drop `plasma-desktop` / `kdeplasma-addons` / `plasma-login-manager` and run a leaner Niri-native system. This is **Option B (lean)** — you lose the "Plasma" fallback session but keep `plasma-workspace` + `plasma-integration` + `kded6` so KDE apps (Dolphin/Kate) still get proper file dialogs, trash, and theming.
+> **Noctalia Greeter vs DankGreeter:** `noctalia-greeter` (AUR, maintainer `noctalia-dev` = the shell's author, 1.2.1) bundles a wlroots compositor and greets with the noctalia Material theme; use it on the Noctalia path. `greetd-dms-greeter-bin` (AUR, 1.5.2, deps `greetd` + `quickshell`) is DMS's own greeter — the DMS docs call it **DankGreeter** (`dms greeter install` automates the whole setup). **Do not install both greeters.**
+>
+> **When SDDM still makes sense (Option B):** you already have Plasma installed (kwin etc. are already present as deps), or you want the KDE login-theme ecosystem and the same greeter as your Hyprland machines.
 
-> **⚠️ Safe approach:** install + configure SDDM first, then switch the enabled display manager and remove the Plasma session packages.
+### Option A — Builtin greeter (DankGreeter / Noctalia Greeter)
+
+**DMS path (DankGreeter)** — install + auto-configure:
+
+```bash
+# 1. greetd (minimal display manager) + DMS's greeter (deps: greetd + quickshell — already installed)
+yay -S --noconfirm --needed greetd-dms-greeter-bin
+
+# 2. One command replaces your current display manager with the greeter (installs/updates
+#    /etc/greetd/config.toml, creates the greeter user, enables greetd.service, disables sddm)
+dms greeter install
+```
+
+> `dms greeter` subcommands: `install` (install + configure + switch DM), `enable`/`disable` (toggle in greetd config), `status` (check sync), `sync` (push DMS theme/settings to the greeter), `uninstall` (restore previous display manager). Greeter system user + tmpfiles are shipped by the package (`/usr/lib/sysusers.d/dms-greeter.conf`, `/usr/lib/tmpfiles.d/dms-greeter.conf`). The greeter UI matches your DMS theme automatically via `dms greeter sync`.
+
+**Noctalia path (Noctalia Greeter)**:
+
+```bash
+# 1. greetd + Noctalia's greeter (bundles a wlroots compositor; maintainer = noctalia-dev)
+yay -S --noconfirm --needed greetd noctalia-greeter
+
+# 2. Point greetd at it
+sudo tee /etc/greetd/config.toml <<'EOF'
+[terminal]
+vt = 1
+
+[default_session]
+command = "/usr/bin/noctalia-greeter-session"
+user = "greeter"
+EOF
+
+# 3. Enable greetd (replaces sddm)
+sudo systemctl enable --now greetd
+sudo systemctl disable sddm 2>/dev/null || true
+```
+
+> Greeter user needs seat access: `sudo usermod -aG video,seat greeter` (the Noctalia Greeter package may do this itself — verify with `getent group greeter`). Do **not** install `seatd` — `systemd-logind` already provides seat management; `seatd` conflicts with it.
+>
+> **Session files work the same** — greetd lists `/usr/share/wayland-sessions/*.desktop`, so "Niri + Noctalia"/"Niri + DMS" appear automatically (no wrapper needed on the greetd path; the compositor runs directly on the VT).
+
+### Option B — SDDM + pixie theme
+
+> Skip to [Migration Notes](#migration-notes-from-kde-plasma) if you chose Option A. Everything below is the SDDM path (heavier, KDE-style login).
 
 ### 1. Install SDDM + pixie theme
 
@@ -1384,8 +1444,13 @@ environment {
     XDG_CURRENT_DESKTOP "niri"
     QT_QPA_PLATFORM "wayland"
     ELECTRON_OZONE_PLATFORM_HINT "auto"
+    // DMS official docs use gtk3 (NOT kde) — DMS themes Qt apps itself via matugen
+    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_QPA_PLATFORMTHEME_QT6 "gtk3"
 }
 ```
+
+> **DMS path: do NOT inherit the KDE-theming env vars** (`QT_QPA_PLATFORMTHEME=kde`, `QT_STYLE_OVERRIDE=breeze`) from the [KDE Integration](#kde-integration) / [Complete Environment Variables](#complete-environment-variables) sections. Those are the Noctalia path's KDE-app behavior; DMS uses `gtk3` so its own Qt UI + GTK apps follow the matugen Material theme. If KDE apps (Dolphin) must still be themed on the DMS path, `QT_QPA_PLATFORMTHEME_QT6=kde` is a per-app override — but DMS's bar/settings render best with `gtk3`.
 
 ### Wallpaper & Layer Rules
 
@@ -1423,9 +1488,12 @@ binds {
     Mod+M     { spawn "dms" "ipc" "call" "processlist" "focusOrToggle"; }
     Mod+Comma { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
     Mod+N     { spawn "dms" "ipc" "call" "notifications" "toggle"; }
-    XF86AudioRaiseVolume  { spawn "dms" "ipc" "call" "audio" "increment" "5"; }
-    XF86AudioLowerVolume  { spawn "dms" "ipc" "call" "audio" "decrement" "5"; }
+    XF86AudioRaiseVolume  { spawn "dms" "ipc" "call" "audio" "increment" "3"; }
+    XF86AudioLowerVolume  { spawn "dms" "ipc" "call" "audio" "decrement" "3"; }
     XF86AudioMute         { spawn "dms" "ipc" "call" "audio" "mute"; }
+    Mod+Alt+N             { spawn "dms" "ipc" "call" "night" "toggle"; }
+    Mod+Alt+L             { spawn "dms" "ipc" "call" "lock" "lock"; }
+    Mod+Y                 { spawn "dms" "ipc" "call" "dankdash" "wallpaper"; } // browse wallpapers (docs v1.5)
 }
 ```
 
@@ -1493,8 +1561,8 @@ rm -rf ~/.cache/noctalia
 # Remove optional packages (if not needed by other things)
 sudo pacman -Rns --noconfirm xwayland-satellite
 
-# Verify SDDM is still your display manager
-systemctl status sddm
+# Verify your display manager is still the one you chose (greetd or sddm)
+systemctl status greetd sddm 2>/dev/null | grep -E "●|Active"
 ```
 
 **If you used the DMS (secondary) path instead of Noctalia:**
@@ -1502,6 +1570,9 @@ systemctl status sddm
 ```bash
 # Remove DMS shell (dms-shell-niri pulls dms-shell + dgop + quickshell)
 sudo pacman -Rns --noconfirm dms-shell-niri dms-shell dgop
+
+# If you used DankGreeter (Option A), restore the previous display manager first
+dms greeter uninstall   # restores previous DM (e.g. sddm or plasmalogin)
 
 # Remove DMS config + niri dms fragments
 rm -rf ~/.config/DankMaterialShell

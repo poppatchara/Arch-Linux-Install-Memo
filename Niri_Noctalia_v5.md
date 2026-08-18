@@ -19,7 +19,8 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 9. [SDDM Login Manager](#sddm-login-manager)
 10. [Migration Notes (from KDE Plasma)](#migration-notes-from-kde-plasma)
 11. [Troubleshooting](#troubleshooting)
-12. [Uninstalling](#uninstalling)
+12. [DMS Shell Setup (secondary)](#dms-shell-setup-secondary)
+13. [Uninstalling](#uninstalling)
 
 ---
 
@@ -29,7 +30,10 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 |-----------|---------|--------|---------|
 | **Niri** | `niri` | `extra` (official) | Scrollable-tiling Wayland compositor |
 | **Noctalia v5** | `noctalia-git` | AUR | Desktop shell: bars, launcher, dock, notifications, wallpaper, OSD, lock screen, clipboard, night light |
+| **DMS** *(secondary)* | `dms-shell-niri` | `extra` (official) | DankMaterialShell — Quickshell+Go desktop shell: bar, spotlight launcher, notifications, control center, lock/idle, clipboard, theming |
 | **SDDM** | `sddm` | `extra` (official) | Display manager — replaces `plasma-login-manager` (see [SDDM Login Manager](#sddm-login-manager)) |
+
+**Pick one shell — Noctalia (default) or DMS (secondary).** Noctalia is a native C++ shell that replaces 6 separate tools (bar / launcher / notifications / wallpaper / lock+idle / clipboard / night light). DMS is the Quickshell+Go alternative — see [DMS Shell Setup (secondary)](#dms-shell-setup-secondary). Do **not** install both.
 
 **Key differences from Noctalia v4:**
 - v5 is **native C++** (not Quickshell/QML)
@@ -98,6 +102,25 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>XF86AudioMute</kbd> | Mute toggle |
 | <kbd>XF86MonBrightnessUp</kbd> | Brightness up |
 | <kbd>XF86MonBrightnessDown</kbd> | Brightness down |
+
+### 🎛️ DMS IPC *(secondary shell only)*
+
+> **Only if you chose DMS over Noctalia** — see [DMS Shell Setup (secondary)](#dms-shell-setup-secondary). Noctalia uses `noctalia msg ...` (table above); DMS uses `dms ipc call <target> <function>`. Run `dms ipc list` to enumerate available targets/functions while the shell is running.
+
+| Key | DMS IPC command |
+|-----|-----------------|
+| <kbd>Mod</kbd> + <kbd>Space</kbd> | `dms ipc call spotlight toggle` (launcher) |
+| <kbd>Mod</kbd> + <kbd>V</kbd> | `dms ipc call clipboard toggle` (clipboard manager) |
+| <kbd>Mod</kbd> + <kbd>M</kbd> | `dms ipc call processlist focusOrToggle` (task manager) |
+| <kbd>Mod</kbd> + <kbd>,</kbd> | `dms ipc call settings focusOrToggle` (settings) |
+| <kbd>Mod</kbd> + <kbd>N</kbd> | `dms ipc call notifications toggle` (notification center) |
+| <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 5` |
+| <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 5` |
+| <kbd>XF86AudioMute</kbd> | `dms ipc call audio mute` |
+| <kbd>XF86MonBrightnessUp</kbd> | `dms ipc call brightness list` → set (see [DMS Shell Setup](#dms-shell-setup-secondary)) |
+| <kbd>XF86MonBrightnessDown</kbd> | same as above |
+
+> **Verify function names on the live install** — `dms ipc list` is authoritative; DMS releases rename IPC functions between versions (the bind examples above come from the official docs).
 
 ### 📸 Screenshots
 
@@ -250,6 +273,21 @@ yay -S --noconfirm --needed noctalia-git
 
 This pulls in all native dependencies automatically. Noctalia v5 has **built-in** clipboard, night light, and lock screen — do NOT install `cliphist`, `wlsunset`, `swayidle`, or `swaylock` (they conflict with Noctalia's built-in functionality).
 
+### 3b. Install DMS (ALTERNATIVE — secondary, instead of step 3)
+
+Skip this step unless you chose the DMS path — do **not** install both shells.
+
+```bash
+# DankMaterialShell — official extra (pulls dms-shell + dgop + quickshell + accountsservice)
+sudo pacman -S --noconfirm --needed dms-shell-niri
+```
+
+> **What this is:** [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) is a **Quickshell + Go** desktop shell with Material 3 design — the Quickshell-based alternative to Noctalia's native C++ rewrite. `dms-shell-niri` is the Niri-specific extra package (depends on `dms-shell` + `niri`); a generic `dms-shell` variant exists for other compositors. Binary: `dms`, start with `dms run`, control with `dms ipc call <target> <function>`. Config lives in `~/.config/DankMaterialShell/`.
+>
+> **What DMS replaces:** bar, launcher (`dms ipc call spotlight toggle`), notifications, control center, lock screen + idle, clipboard manager, and wallpaper via `matugen` theming. It does **not** provide a night-light (use `wlsunset` if you need one on this path) — unlike Noctalia which bundles everything.
+>
+> **AUR policy:** `dms-shell-git` exists on AUR (development build) if you want newer than extra's `dms-shell` — review the PKGBUILD first (`yay -G dms-shell-git`). Extra's stable 1.5.x is the recommended choice.
+
 **Packages NOT needed (provided by Noctalia v5):**
 
 | Replaced | Provided by Noctalia v5 |
@@ -261,7 +299,9 @@ This pulls in all native dependencies automatically. Noctalia v5 has **built-in*
 | `swayidle` + `swaylock` (lock/idle) | Built-in lock screen + idle service |
 | `cliphist` (clipboard) | Built-in clipboard manager |
 | `wlsunset` (night light) | Built-in night light |
-| `dms-shell-niri` / `noctalia-shell` | Replaced by `noctalia-git` (v5) |
+| `noctalia-shell` | Replaced by `noctalia-git` (v5) |
+
+> **DMS path note:** if you chose DMS (secondary) instead of Noctalia, the same "NOT needed" row applies to DMS differently — DMS covers bar / launcher / notifications / lock+idle / clipboard, but **not** wallpaper or night light. Install `dms-shell-niri` in step 3b and skip step 3; do **not** install both shells.
 
 ---
 
@@ -1295,6 +1335,127 @@ export DISPLAY=:0
 > **Note:** `environment.d` files use `KEY=VALUE` syntax and require **absolute paths**. They are read by systemd user services and portals on login.
 
 ---
+## DMS Shell Setup (secondary)
+
+> **Alternative path — only if you chose DMS over Noctalia.** Skip this entire section otherwise.
+
+[DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) is a **Quickshell + Go** desktop shell — the Material-3-styled alternative to Noctalia's native C++ rewrite. It replaces bar, launcher (spotlight), notifications, control center, lock screen + idle, clipboard, and wallpaper theming (via `matugen`). Unlike Noctalia it does **not** bundle a night light.
+
+### Niri Config Integration
+
+DMS ships niri-ready config fragments. Include them at the end of `~/.config/niri/config.kdl` (create the files first):
+
+```bash
+mkdir -p ~/.config/niri/dms
+touch ~/.config/niri/dms/{colors,layout,alttab,binds}.kdl
+```
+
+```kdl
+// ~/.config/niri/config.kdl — append at the end
+// DMS managed fragments: colors (theme), layout (gaps/radius), alttab (switcher), binds (DMS IPC)
+include "dms/colors.kdl"
+include "dms/layout.kdl"
+include "dms/alttab.kdl"
+include "dms/binds.kdl"
+```
+
+> **Files must exist before the include lines** — niri fails to parse a config that includes a missing file. If a fragment is not wanted, delete its `include` line instead of leaving a dangling file.
+
+### Startup & Environment
+
+Autostart DMS from niri (replace the `spawn-at-startup "noctalia"` line if you removed it):
+
+```kdl
+spawn-at-startup "dms" "run"
+```
+
+Niri environment block for DMS (Qt/Electron theming):
+
+```kdl
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    QT_QPA_PLATFORM "wayland"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+}
+```
+
+### Wallpaper & Layer Rules
+
+DMS draws its wallpaper on the niri backdrop layer. Tell niri to place it on the overview:
+
+```kdl
+layout {
+    gaps 5
+    background-color "transparent"
+}
+
+layer-rule {
+    match namespace="^quickshell$"
+    place-within-backdrop true
+}
+```
+
+If "Blur Layer" is enabled, also place the blurred wallpaper on the overview:
+
+```kdl
+layer-rule {
+    match namespace="dms:blurwallpaper"
+    place-within-backdrop true
+}
+```
+
+### Keybinds
+
+Bind DMS IPC actions in niri `binds { }` (the DMS fragment `dms/binds.kdl` provides defaults — override here to match the [Quick Reference](#quick-reference--keybinds--usage)):
+
+```kdl
+binds {
+    Mod+Space { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
+    Mod+V     { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
+    Mod+M     { spawn "dms" "ipc" "call" "processlist" "focusOrToggle"; }
+    Mod+Comma { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
+    Mod+N     { spawn "dms" "ipc" "call" "notifications" "toggle"; }
+    XF86AudioRaiseVolume  { spawn "dms" "ipc" "call" "audio" "increment" "5"; }
+    XF86AudioLowerVolume  { spawn "dms" "ipc" "call" "audio" "decrement" "5"; }
+    XF86AudioMute         { spawn "dms" "ipc" "call" "audio" "mute"; }
+}
+```
+
+> **Verify with `dms ipc list`** — function names differ between DMS releases; this table comes from the official 1.5 docs.
+
+### Lock / Idle
+
+DMS bundles lock + idle. Bind a lock key:
+
+```kdl
+binds {
+    Mod+Alt+L { spawn "dms" "ipc" "call" "lock" "lock"; }
+}
+```
+
+> **Confirm the lock target/function name on the live install** (`dms ipc list`) — lock IPC naming changed between DMS versions.
+
+### Night Light (not provided by DMS)
+
+Unlike Noctalia, DMS has no built-in night light. Install `wlsunset` if you want it:
+
+```bash
+sudo pacman -S --noconfirm --needed wlsunset
+```
+
+```kdl
+spawn-at-startup "wlsunset" "-l" "13.7" "-t" "100.5"
+```
+
+### Troubleshooting (DMS)
+
+- **Shell won't start** — run `dms run` in a terminal and read the error. DMS needs `quickshell` (pulled by `dms-shell`); the tagged `quickshell` release works (unlike Caelestia which needs `quickshell-git`).
+- **Missing fonts / icons** — DMS needs a Material Symbols icon font plus a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`); install via `sudo pacman -S --noconfirm --needed ttf-material-symbols-variable`.
+- **IPC returns "not running"** — `dms ipc` only works while the shell is up; ensure `spawn-at-startup "dms" "run"` fired (check with `pgrep -x dms`).
+- **Customizing** — DMS keeps config under `~/.config/DankMaterialShell/`; the settings UI is `dms ipc call settings focusOrToggle`.
+
+---
+
 
 ## Uninstalling
 
@@ -1324,6 +1485,19 @@ sudo pacman -Rns --noconfirm xwayland-satellite
 systemctl status sddm
 ```
 
+**If you used the DMS (secondary) path instead of Noctalia:**
+
+```bash
+# Remove DMS shell (dms-shell-niri pulls dms-shell + dgop + quickshell)
+sudo pacman -Rns --noconfirm dms-shell-niri dms-shell dgop
+
+# Remove DMS config + niri dms fragments
+rm -rf ~/.config/DankMaterialShell
+rm -rf ~/.config/niri/dms
+rm -rf ~/.local/state/dms
+rm -rf ~/.cache/dms
+```
+
 ---
 
 *Noctalia v5 is beta — expect occasional updates. Keep packages up to date: `yay -Syu noctalia-git`.*
@@ -1344,6 +1518,8 @@ systemctl status sddm
 | Noctalia v4 Docs | <https://docs.noctalia.dev/v4/> |
 | Noctalia GitHub | <https://github.com/noctalia-dev/noctalia> |
 | Noctalia Discord | <https://discord.noctalia.dev> |
+| DMS Docs | <https://danklinux.com/docs/> |
+| DMS GitHub | <https://github.com/AvengeMedia/DankMaterialShell> |
 
 ### Arch Wiki
 

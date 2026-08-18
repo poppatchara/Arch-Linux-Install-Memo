@@ -1273,14 +1273,14 @@ sudo pacman -Scc
 
 > 📌 **Moved after the first reboot.** You're at a bare TTY after §7 — install your desktop here (no GUI yet). When done, reboot again to reach the graphical login screen, then continue to [§10](#10--flatpak--gui-apps).
 
-> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia. Hyprland needs a shell — install Hyprland then Noctalia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
+> ⚠️ **Pick ONE path.** KDE is all-in-one — install it and stop. Niri needs a shell — install Niri then Noctalia (DMS is the secondary shell alternative, see the Niri guide). Hyprland needs a shell — install Hyprland then Noctalia (choose Scrolling or Tiling, not both). Do not mix KDE, Niri, and Hyprland.
 
 Each path has a dedicated companion guide with the full install + config. Open the one you picked:
 
 | Path | Guide | What you get | Login screen |
 |------|-------|-------------|--------------|
 | 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
-| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) | `sddm` + `pixie-sddm-git` |
+| 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) — DMS as secondary shell option | `sddm` + `pixie-sddm-git` |
 | 🪟 **Hyprland + Noctalia (Scrolling)** | [`Hyprland-Scrolling.md`](Hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
 | 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
 | 💀 **Niri alone** | N/A — hand-pick every component (waybar, fuzzel, swaybg…) | Bare compositor — no bar, no launcher, no wallpaper | none (start from TTY) |

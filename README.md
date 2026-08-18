@@ -11,7 +11,7 @@ Not the best way. Just the way I like.
 |-------|-------------|
 | [**Arch Linux Installation Guide**](Arch%20Linux_Installation_Guide.md) ⭐ | **Unified guide** — all decisions in one file; §7 links to each desktop guide |
 | [KDE Plasma](KDE_Plasma.md) 🖥️ | Companion — KDE install, mandatory PAM config, apps, KWallet (+ [theming](KDE_Theming.md)) |
-| [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference |
+| [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference (Noctalia default, DMS secondary) |
 | [Hyprland + Celestia](Hyprland-Scrolling.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
 | [Hyprland + Celestia — Native Tiling](Hyprland-Tiling.md) 🪟 | Companion — Hyprland dwindle/master tiling, Lua config, Celestia shell, SDDM |
 
@@ -29,6 +29,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 ---
 
 ## 📝 Changelog
+
+### 2026-08-18
+
+- **Niri guide gains DMS (DankMaterialShell) as a secondary shell path:** `Niri_Noctalia_v5.md` now offers **Noctalia v5 (default) or DMS (secondary)** — a Quickshell+Go desktop shell (official `dms-shell-niri` from extra, Material 3 design) that replaces bar/launcher/notifications/control-center/lock+idle/clipboard. Added: "Pick one shell" note in Overview, DMS IPC keybind table in Quick Reference, install step **3b** (alternative to step 3, official package — no AUR needed), a full **DMS Shell Setup (secondary)** section (niri config fragments `dms/*.kdl`, startup/env, wallpaper layer rules, keybinds, lock/idle, night-light gap note, troubleshooting), conditional "NOT needed" table note, and DMS removal in Uninstalling. DMS does **not** bundle a night light (unlike Noctalia) — `wslunset` noted as the gap.
 
 ### 2026-08-16
 

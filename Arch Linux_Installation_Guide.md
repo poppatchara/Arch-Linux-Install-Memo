@@ -852,12 +852,18 @@ pacman -Syu --noconfirm --needed \
   alsa-utils sof-firmware easyeffects \
   bluez bluez-utils \
   iwd \
+  pacman-contrib \
+  fwupd \
+  power-profiles-daemon \
   xdg-user-dirs
 ```
 
 > - `sof-firmware` — audio DSP firmware for modern Intel/AMD laptops
 > - `easyeffects` — PipeWire audio effects (EQ, compression, etc.)
-> - `avahi nss-mdns` — mDNS (`.local` hostname resolution, printer discovery)
+> - `avahi nss-mdns` — mDNS (`.local` hostname resolution, printer discovery). Needs an `/etc/nsswitch.conf` edit + the `avahi-daemon` service to actually work — done in §6.2.
+> - `pacman-contrib` — `paccache` (pacman cache cleaner) + the automatic `paccache.timer`
+> - `fwupd` — firmware update service (UEFI/BIOS, SSD, peripherals) via `fwupdmgr`
+> - `power-profiles-daemon` — power/performance profiles (see `powerprofilesctl`; KDE has a UI in System Settings). Conflicts with TLP — don't install both.
 > - `xdg-user-dirs` — creates standard folders (Desktop, Documents, Downloads, etc.)
 
 ### 6.2 Enable Services
@@ -870,15 +876,28 @@ systemctl enable reflector.timer
 systemctl enable sshd
 systemctl enable fstrim.timer
 systemctl enable systemd-timesyncd   # automatic time sync (NTP)
+systemctl enable paccache.timer      # auto-clean pacman cache (keeps last 3 versions)
+systemctl enable fwupd-refresh.timer # auto-refresh firmware metadata (weekly)
+systemctl enable --now power-profiles-daemon
+systemctl enable avahi-daemon        # mDNS/.local resolution (needed for nss-mdns)
+
+# mDNS actually works only with this /etc/nsswitch.conf edit — nss-mdns needs
+# mdns_minimal [NOTFOUND=return] in the hosts line, otherwise .local lookups
+# never reach Avahi. (Idempotent — safe to re-run.)
+grep -q 'mdns_minimal' /etc/nsswitch.conf || \
+  sed -i 's/^hosts:.*/hosts: mymachines mdns_minimal [NOTFOUND=return] resolve [!UNAVAIL=return] files myhostname dns/' /etc/nsswitch.conf
+grep '^hosts:' /etc/nsswitch.conf   # verify mdns_minimal is present
 
 # Optional (uncomment if needed):
-# systemctl enable iwd
 # systemctl enable cups
 # systemctl enable avahi-daemon
 # pacman -S --needed acpi  # battery status CLI (systemd-logind handles ACPI events now)
 ```
 
 > - `systemd-timesyncd` — **automatic time sync over NTP** (comes with systemd, no extra package). Without it the clock drifts after every reboot — HTTPS/TLS, `pacman -Syu`, and cron timers all misbehave on a wrong clock. Verify after boot: `timedatectl status` should show `System clock synchronized: yes`; toggle manually with `timedatectl set-ntp true` / `false`.
+> - `paccache.timer` — weekly auto-clean of the pacman cache, keeping the last 3 versions of each package (from `pacman-contrib`). Manual fallback: `sudo paccache -rk3` or the nuke-everything `sudo pacman -Scc` in §8.11.
+> - `fwupd-refresh.timer` — weekly refresh of firmware metadata. Check/apply firmware with `fwupdmgr get-updates` / `fwupdmgr update`.
+> - `power-profiles-daemon` — power/performance profiles; KDE shows a UI in System Settings → Power, CLI is `powerprofilesctl` (`powerprofilesctl get` / `set balanced`). Conflicts with TLP.
 > - `reflector.timer` — weekly mirror list refresh (keeps downloads fast)
 > - `fstrim.timer` — weekly SSD TRIM (maintains performance)
 > - `sshd` — SSH server (we enabled password auth during install; harden in §8.5)
@@ -1050,6 +1069,25 @@ fi
 > - `libva-utils` — `vainfo` to verify hardware video support
 > - `vulkan-tools` — `vkcube`, `vulkaninfo` for Vulkan verification
 
+**AMD Radeon / APU (if detected):**
+
+AMD drivers are built into the kernel (amdgpu) — no kernel module to install. The `mesa` package provides the OpenGL driver AND the VA-API driver (`libva-mesa-driver` is a virtual package provided by `mesa`). Add the Vulkan driver (RADV) plus verification tools:
+
+```bash
+if [ "$gpu_vendor" = "amd" ]; then
+  sudo pacman -S --noconfirm --needed \
+    mesa vulkan-radeon \
+    mesa-utils libva-utils vulkan-tools radeontop
+fi
+```
+
+> - `mesa` — OpenGL driver + VA-API hardware video decode (provides `libva-mesa-driver`)
+> - `vulkan-radeon` — RADV, the AMD Vulkan driver (games, GPU compute)
+> - `radeontop` — GPU usage monitor (like `nvtop` for NVIDIA)
+> - `mesa-utils` — `glxinfo` for OpenGL verification
+> - `libva-utils` — `vainfo` to verify hardware video support
+> - `vulkan-tools` — `vkcube`, `vulkaninfo` for Vulkan verification
+
 ### 8.4 Snapper
 
 Snapper manages Btrfs snapshots — point-in-time copies of your subvolumes. Combined with `snap-pac` (automatic pre/post snapshots on every `pacman` transaction) and `grub-btrfs` (boot into snapshots from GRUB), you get a safety net for system updates:
@@ -1203,7 +1241,7 @@ yay -S --noconfirm --needed ttf-ms-fonts
 # Spell check
 sudo pacman -S --noconfirm --needed hunspell hunspell-en_us hunspell-en_gb
 yay -S --noconfirm --needed hunspell-th  # Thai dictionary
-
+```
 
 ### 8.9 pyenv
 
@@ -1265,9 +1303,13 @@ systemctl --user restart wireplumber
 
 ### 8.11 Cache Cleanup
 
-Clear pacman's package cache to reclaim disk space:
+`paccache.timer` (enabled in §6.2) already keeps the cache at the last 3 versions automatically — this is the manual nuke when you want the disk space back immediately:
 
 ```bash
+# Keep only the latest version of every package:
+sudo paccache -rk1
+
+# Or delete the entire cache (aggressive — frees the most space):
 sudo pacman -Scc
 ```
 

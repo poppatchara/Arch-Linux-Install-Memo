@@ -1485,7 +1485,7 @@ environment {
 }
 ```
 
-> **DMS path: do NOT inherit the KDE-theming env vars** (`QT_QPA_PLATFORMTHEME=kde`, `QT_STYLE_OVERRIDE=breeze`) from the [KDE Integration](#kde-integration) / [Complete Environment Variables](#complete-environment-variables) sections. Those are the Noctalia path's KDE-app behavior; DMS uses `gtk3` so its own Qt UI + GTK apps follow the matugen Material theme. If KDE apps (Dolphin) must still be themed on the DMS path, `QT_QPA_PLATFORMTHEME_QT6=kde` is a per-app override — but DMS's bar/settings render best with `gtk3`.
+> **DMS path: do NOT inherit the KDE-theming env vars** (`QT_QPA_PLATFORMTHEME=kde`, `QT_STYLE_OVERRIDE=breeze`) from the [KDE Integration](#kde-integration) / [Complete Environment Variables](#complete-environment-variables) sections. Those are the Noctalia path's KDE-app behavior; DMS uses `gtk3` so its own Qt UI + GTK apps follow the matugen Material theme. To theme standalone KDE apps (Dolphin, Kate, Gwenview, Ark, Spectacle) on the DMS path, use **`qt6ct-kde`** (AUR) with `QT_QPA_PLATFORMTHEME=qt6ct` — see [Qt/KDE App Theming](#qtkde-app-theming) below. (The `kde` platformtheme plugin ships with `plasma-integration`, which drags in krunner/libplasma/kscreenlocker — avoid on a Niri+DMS desktop.)
 
 ### Wallpaper & Layer Rules
 
@@ -1590,6 +1590,39 @@ dms ipc call night automation location   # auto schedule via suncalc (or "time")
 dms ipc call night schedule 20:00 06:00  # manual time-based schedule
 ```
 
+### Qt/KDE App Theming
+
+DMS themes its own Qt UI + GTK apps via matugen with the `gtk3` platform theme. Standalone KDE apps (Dolphin, Kate, Gwenview, Ark, Spectacle) use the Qt fallback theme unless you give them a platform theme that reads KDE color schemes — verified path on pop_arch (2026-08-19):
+
+**Why not `QT_QPA_PLATFORMTHEME=kde`:** the `kde` platformtheme plugin ships with `plasma-integration`, which pulls krunner/libplasma/kscreenlocker — heavy on a Niri+DMS desktop. **`qt6ct-kde`** (AUR) is a patched `qt6ct` that understands KDE `.colors` files — exactly what matugen generates.
+
+```bash
+# 🔒 AUR — review PKGBUILD before installing
+yay -S --noconfirm qt6ct-kde
+```
+
+**1. Point qt6ct at the matugen-generated KDE scheme.** DMS already generates one (`matugenTemplateKcolorscheme: true` in Settings → `~/.config/DankMaterialShell/settings.json` → output `~/.local/share/color-schemes/DankMatugen{.colors,Light.colors,Dark.colors}`). Pick the variant matching your DMS theme mode (dark → `DankMatugenDark.colors`):
+
+```ini
+# ~/.config/qt6ct/qt6ct.conf
+[Appearance]
+custom_palette=true
+color_scheme_path=/home/<user>/.local/share/color-schemes/DankMatugenDark.colors
+```
+
+(DMS also writes `~/.config/qt6ct/colors/matugen.conf`, but with `qt6ct-kde` point at the KDE `.colors` path above.)
+
+**2. Set the platform theme to `qt6ct`** — the *package* is `qt6ct-kde`, but the *plugin/env value* is `qt6ct`. Set it in BOTH `~/.config/environment.d/10-kde-on-niri.conf` and the niri `environment {}` block:
+
+```kdl
+QT_QPA_PLATFORMTHEME "qt6ct"
+QT_QPA_PLATFORMTHEME_QT6 "qt6ct"
+```
+
+**3. Enable DMS Qt theming.** Settings → toggle **Qt Theming** (`qtThemingEnabled: true` in `~/.config/DankMaterialShell/settings.json`). DMS's `scripts/qt.sh` writes the qt6ct config when it detects `/usr/bin/qt6ct` on PATH.
+
+**Verify:** relaunch Dolphin — palette should match the active matugen scheme (cyan accent on flexoki dark). Note the `kdeglobals` `ColorScheme` is cosmetic-only here; `qt6ct-kde` reads the `.colors` file directly.
+
 ### Troubleshooting (DMS)
 
 - **Shell won't start** — run `dms run` in a terminal and read the error. DMS needs `quickshell` (pulled by `dms-shell`); the tagged `quickshell` release works (unlike Caelestia which needs `quickshell-git`).
@@ -1598,6 +1631,7 @@ dms ipc call night schedule 20:00 06:00  # manual time-based schedule
 - **Customizing** — DMS keeps config under `~/.config/DankMaterialShell/`; the settings UI is `dms ipc call settings focusOrToggle`.
 - **Default keybinds missing (only custom binds work)** — `dms/binds.kdl` was created empty (e.g. `touch`ed) so DMS defaults never loaded. Populate it from the canonical source (see [Niri Config Integration](#niri-config-integration)) and verify with `dms keybinds show niri` (expect ~140 binds, `source: dms-default`).
 - **`dms greeter install` fails over SSH with "a terminal is required"** — the installer's internal sudo needs a TTY. Replicate its steps manually with `SUDO_ASKPASS` (see the [greeter choice](#login-manager-greeter-choice) section): `usermod -aG greeter <user>`, write `/etc/greetd/config.toml` (`command = "dms-greeter --command niri"`, `user = "greeter"`), `systemctl enable greetd`, `systemctl disable sddm`, then `dms greeter sync` (as user, NOT root) to initialize `/var/cache/dms-greeter` + theme symlinks.
+- **faillock lock loop — sudo fails even with the correct password, greeter login bounces** (2026-08-19, verified on pop_arch): `sudo -A`/askpass is broken over SSH — journal shows `pam_unix(sudo:auth): conversation failed`; the askpass password never reaches `pam_unix`, so sudo fails 3× regardless of correctness. A background `yay --sudoloop --sudoflags "-A"` compounds this by failing repeatedly → 3 failures → `pam_faillock` locks the account → the greeter login also fails (system-auth is shared, `unlock_time=600`) → more failures extend the lock. **Fix:** never use `-A` on this machine — `echo "<password>" | sudo -S <cmd>`; never `yay --sudoloop -A` (build with plain `yay`, install via `sudo -S pacman -U`). If locked, reset via root `su` (pam.d/su has no faillock chain): `su -c "faillock --reset --user <user>"`, or delete the tally: `su -c "rm -f /run/faillock/<user>"`.
 
 ---
 

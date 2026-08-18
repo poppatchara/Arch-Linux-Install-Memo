@@ -30,6 +30,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-08-19
+
+- **Niri guide — DMS Qt/KDE app theming via `qt6ct-kde` + faillock lock-loop pitfall:** `Niri_Noctalia_v5.md` DMS path — new **Qt/KDE App Theming** subsection (AUR `qt6ct-kde` is a patched `qt6ct` that reads KDE `.colors`; point `~/.config/qt6ct/qt6ct.conf` at the matugen-generated `DankMatugenDark.colors`, set `QT_QPA_PLATFORMTHEME=qt6ct` in environment.d + niri env block, enable DMS `qtThemingEnabled`). The DMS env note's per-app `QT_QPA_PLATFORMTHEME_QT6=kde` override is replaced (the `kde` plugin needs `plasma-integration` → krunner/libplasma). Troubleshooting gains the **faillock lock loop** (verified on pop_arch): `sudo -A`/askpass broken over SSH (`pam_unix(sudo:auth): conversation failed` — fails even with the correct password) + a background `yay --sudoloop --sudoflags "-A"` compounding → `pam_faillock` locks the shared system-auth → greeter login bounces too. Fixes: `echo "<pw>" | sudo -S <cmd>` instead of `-A`, never `yay --sudoloop -A`, reset via `su -c "faillock --reset --user <user>"` (su has no faillock chain).
+
 ### 2026-08-18
 
 - **§6.3 now offers paru as an alternative AUR helper:** `Arch Linux_Installation_Guide.md` — **pick ONE**: `yay-bin` (default, battle-tested, guide examples use `yay` throughout) or `paru-bin` (Rust, CachyOS's default AUR helper — recommended on the CachyOS repos path). Both install via `-bin` prebuilt in the same block (pick by uncommenting). Paru is drop-in: every `yay -S ...` later in the guide works unchanged as `paru -S ...` (incl. `yay -G <pkg>` → `paru -G <pkg>`). TOC anchor updated for the renamed header.

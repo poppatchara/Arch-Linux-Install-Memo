@@ -110,11 +110,15 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | Key | DMS IPC command |
 |-----|-----------------|
 | <kbd>Mod</kbd> + <kbd>Space</kbd> | `dms ipc call spotlight toggle` (launcher) |
+| <kbd>Mod</kbd> + <kbd>T</kbd> | Terminal (DMS default — `{{TERMINAL_COMMAND}}` → `ghostty`) |
 | <kbd>Mod</kbd> + <kbd>V</kbd> | `dms ipc call clipboard toggle` (clipboard manager) |
-| <kbd>Mod</kbd> + <kbd>M</kbd> | `dms ipc call processlist focusOrToggle` (task manager) |
+| <kbd>Mod</kbd> + <kbd>M</kbd> | `dms ipc call mux toggle` (task manager — v1.5.3 target is `mux`, NOT `processlist`) |
 | <kbd>Mod</kbd> + <kbd>,</kbd> | `dms ipc call settings focusOrToggle` (settings) |
 | <kbd>Mod</kbd> + <kbd>N</kbd> | `dms ipc call notifications toggle` (notification center) |
 | <kbd>Mod</kbd> + <kbd>Alt</kbd> + <kbd>N</kbd> | `dms ipc call night toggle` (night mode — see [Night Mode](#night-mode-built-in)) |
+| <kbd>Mod</kbd> + <kbd>Y</kbd> | `dms ipc call dash toggle wallpaper` (wallpaper browser — `dankdash` deprecated in v1.5.3) |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Hotkey overlay / keybind cheatsheet (DMS default) |
+| <kbd>Mod</kbd> + <kbd>O</kbd> / <kbd>Mod</kbd> + <kbd>Tab</kbd> | Toggle overview (DMS default) |
 | <kbd>Mod</kbd> + <kbd>P</kbd> | `dms ipc call wallpaper set <path>` (set wallpaper — see [Wallpaper & Layer Rules](#wallpaper--layer-rules)) |
 | <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 3` |
 | <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 3` |
@@ -142,7 +146,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Power off monitors |
 | <kbd>Mod</kbd> + <kbd>Esc</kbd> | Toggle keyboard shortcuts inhibit |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Show hotkey overlay |
-| <kbd>Mod</kbd> + <kbd>Return</kbd> | Launch terminal (default: `ghostty`) — **`Mod+T` is NOT bound** (CachyOS convention uses `Mod+Return`; see [Keybind Additions](#keybind-additions)) |
+| <kbd>Mod</kbd> + <kbd>Return</kbd> | Launch terminal (default: `ghostty`) — **`Mod+T` is NOT bound on the Noctalia path** (CachyOS convention uses `Mod+Return`; see [Keybind Additions](#keybind-additions)). On the **DMS path**, `Mod+T` IS bound by DMS defaults (opens the same terminal) |
 
 ### 🐭 Mouse Gestures
 
@@ -646,6 +650,8 @@ sudo pacman -S --noconfirm --needed \
 yay -S --noconfirm --needed phinger-cursors
 ```
 
+> **⚠️ Theme name is NOT `phinger-cursors`** — the package installs four themes: `phinger-cursors-dark`, `phinger-cursors-light`, and `-left` variants. Use **`phinger-cursors-dark`** as the active theme in niri/GTK (see [Cursor Theme](#cursor-theme)). Setting `phinger-cursors` (no variant) renders nothing — verified on pop_arch 2026-08-19.
+
 **Alternative:** Bibata Classic (AUR `bibata-cursor-git`) if you prefer the rounded Classic look — both work with Niri; just set the active theme in the cursors section above.
 
 ### Session Restore (Testing)
@@ -885,7 +891,7 @@ environment {
 }
 
 cursor {
-    xcursor-theme "phinger-cursors"
+    xcursor-theme "phinger-cursors-dark"
     xcursor-size 24
 }
 
@@ -1370,19 +1376,37 @@ If you have NVIDIA (from your existing guide):
 
 ## Troubleshooting
 
-### polkit-kde-agent -- GUI Auth Dialogs
+### polkit Authentication Agent
 
 Some applications (grub-customizer, systemsettings, etc.) need a polkit authentication dialog. Without a polkit agent, these apps either fail silently or show a text prompt in the terminal.
+
+**Noctalia path** (KDE stack present):
 
 ```bash
 sudo pacman -S --noconfirm --needed polkit-kde-agent
 ```
 
-Add to your niri config autostart:
-
 ```kdl
 spawn-at-startup "/usr/lib/polkit-kde-authentication-agent-1"
 ```
+
+**DMS path** (KDE stack removed — `polkit-kde-agent` was part of the KDE/Plasma dependency chain and got removed with it):
+
+```bash
+sudo pacman -S --noconfirm --needed polkit-gnome
+```
+
+```kdl
+spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
+```
+
+> **⚠️ Portal impl on the DMS path:** `niri` and `lutris` depend on `xdg-desktop-portal-impl`. The KDE path satisfies it with `xdg-desktop-portal-kde`; on the DMS path (no KDE stack) install the lightweight wlroots backend instead:
+>
+> ```bash
+> sudo pacman -S --noconfirm --needed xdg-desktop-portal-wlr
+> ```
+>
+> Verified on pop_arch 2026-08-19 — `xdg-desktop-portal-wlr` 0.8.2 satisfies `niri` + `lutris` after removing `xdg-desktop-portal-kde`.
 
 ### DISPLAY=:0 for X11 Apps
 
@@ -1415,7 +1439,8 @@ DMS ships niri-ready config fragments. Include them at the end of `~/.config/nir
 
 ```bash
 mkdir -p ~/.config/niri/dms
-touch ~/.config/niri/dms/{colors,layout,alttab,binds}.kdl
+touch ~/.config/niri/dms/{colors,layout,alttab}.kdl
+# ⚠️ Do NOT touch binds.kdl empty — see "Keybinds" below. It must contain DMS's default binds.
 ```
 
 ```kdl
@@ -1428,6 +1453,16 @@ include "dms/binds.kdl"
 ```
 
 > **Files must exist before the include lines** — niri fails to parse a config that includes a missing file. If a fragment is not wanted, delete its `include` line instead of leaving a dangling file.
+>
+> **⚠️ `dms/binds.kdl` must contain DMS's default binds** — do NOT create it empty with `touch` (that silently disables all DMS default keybinds: window management, workspace switching, media keys, screenshots, etc. — verified on pop_arch 2026-08-19: only guide-added binds worked, all 120+ DMS defaults were gone). DMS creates/updates this file when you open **Settings → Keybinds** (`dms ipc call settings focusOrToggle`) and save, but the file must already exist for niri to parse the include. To populate it from scratch, fetch the canonical default binds:
+>
+> ```bash
+> curl -sL https://raw.githubusercontent.com/AvengeMedia/DankMaterialShell/master/core/internal/config/embedded/niri-binds.kdl \
+>   | sed 's/{{TERMINAL_COMMAND}}/ghostty/; s/"processlist" "focusOrToggle"/"mux" "toggle"/' \
+>   > ~/.config/niri/dms/binds.kdl
+> ```
+>
+> Then verify with `dms keybinds show niri` — expect ~140 binds with `source: dms-default`, and your custom binds as `source: config`. `niri validate` must pass.
 
 ### Startup & Environment
 
@@ -1479,25 +1514,53 @@ layer-rule {
 
 ### Keybinds
 
-Bind DMS IPC actions in niri `binds { }` (the DMS fragment `dms/binds.kdl` provides defaults — override here to match the [Quick Reference](#quick-reference--keybinds--usage)):
+DMS's default keybinds live in `dms/binds.kdl` (populated above — ~140 binds: window management, workspace switching, media keys, screenshots, launchers, etc.). You do NOT need to re-bind them in `config.kdl` — that only creates duplicates. Use `dms keybinds show niri` to inspect, or **Settings → Keybinds** to edit visually.
+
+Only add binds in `config.kdl` that DMS defaults do not provide (e.g. terminal alternative, file manager, browser — verified working pattern on pop_arch):
 
 ```kdl
 binds {
-    Mod+Space { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
-    Mod+V     { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
-    Mod+M     { spawn "dms" "ipc" "call" "processlist" "focusOrToggle"; }
-    Mod+Comma { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
-    Mod+N     { spawn "dms" "ipc" "call" "notifications" "toggle"; }
-    XF86AudioRaiseVolume  { spawn "dms" "ipc" "call" "audio" "increment" "3"; }
-    XF86AudioLowerVolume  { spawn "dms" "ipc" "call" "audio" "decrement" "3"; }
-    XF86AudioMute         { spawn "dms" "ipc" "call" "audio" "mute"; }
-    Mod+Alt+N             { spawn "dms" "ipc" "call" "night" "toggle"; }
-    Mod+Alt+L             { spawn "dms" "ipc" "call" "lock" "lock"; }
-    Mod+Y                 { spawn "dms" "ipc" "call" "dankdash" "wallpaper"; } // browse wallpapers (docs v1.5)
+    Mod+Return { spawn "ghostty"; }
+    Mod+E      { spawn "dolphin"; }
+    Mod+B      { spawn "firefox"; }
+    Mod+Shift+Q { spawn "dms" "ipc" "call" "sessions" "open"; }
+    Mod+Shift+S { spawn "spectacle" "-r"; }
+    Mod+Alt+N  { spawn "dms" "ipc" "call" "night" "toggle"; }  // DMS defaults lack night toggle
 }
 ```
 
-> **Verify with `dms ipc list`** — function names differ between DMS releases; this table comes from the official 1.5 docs.
+DMS default keybinds you get for free (not exhaustive — verify with `dms keybinds show niri`):
+
+| Key | Action |
+|-----|--------|
+| <kbd>Mod</kbd> + <kbd>T</kbd> | Terminal (`ghostty` — `{{TERMINAL_COMMAND}}` substitution) |
+| <kbd>Mod</kbd> + <kbd>Space</kbd> | Spotlight launcher |
+| <kbd>Alt</kbd> + <kbd>Space</kbd> | Spotlight bar |
+| <kbd>Mod</kbd> + <kbd>V</kbd> | Clipboard manager |
+| <kbd>Mod</kbd> + <kbd>M</kbd> | Task manager (`mux toggle`) |
+| <kbd>Super</kbd> + <kbd>X</kbd> | Power menu |
+| <kbd>Mod</kbd> + <kbd>Comma</kbd> | Settings |
+| <kbd>Mod</kbd> + <kbd>Y</kbd> | Browse wallpapers (`dash toggle wallpaper`) |
+| <kbd>Mod</kbd> + <kbd>N</kbd> | Notification center |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> | Notepad |
+| <kbd>Mod</kbd> + <kbd>Alt</kbd> + <kbd>L</kbd> | Lock screen |
+| <kbd>Mod</kbd> + <kbd>O</kbd> / <kbd>Mod</kbd> + <kbd>Tab</kbd> | Toggle overview |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Hotkey overlay (cheatsheet!) |
+| <kbd>Mod</kbd> + <kbd>Q</kbd> | Close window |
+| <kbd>Mod</kbd> + <kbd>F</kbd> | Maximize column |
+| <kbd>Mod</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Focus navigation |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Move window/column |
+| <kbd>Mod</kbd> + <kbd>1</kbd>…<kbd>9</kbd> | Focus workspace |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd>…<kbd>9</kbd> | Move to workspace |
+| <kbd>Mod</kbd> + <kbd>R</kbd> | Cycle preset column width |
+| <kbd>Print</kbd> / <kbd>Ctrl</kbd>+<kbd>Print</kbd> / <kbd>Alt</kbd>+<kbd>Print</kbd> | Screenshot / output / window |
+| <kbd>XF86AudioRaiseVolume</kbd>/<kbd>Lower</kbd>/<kbd>Mute</kbd> | Volume control |
+| <kbd>XF86AudioPlay</kbd>/<kbd>Next</kbd>/<kbd>Prev</kbd> | MPRIS media control |
+| <kbd>XF86MonBrightnessUp</kbd>/<kbd>Down</kbd> | Brightness |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | Quit niri |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Power off monitors |
+
+> **Verify with `dms ipc list`** — function names differ between DMS releases; this table comes from the official 1.5 docs + live `dms ipc list` on v1.5.3.
 
 ### Lock / Idle
 
@@ -1533,6 +1596,8 @@ dms ipc call night schedule 20:00 06:00  # manual time-based schedule
 - **Missing fonts / icons** — DMS needs a Material Symbols icon font plus a Nerd Font; both are in the step 3b install (`ttf-material-symbols-variable` + `ttf-jetbrains-mono-nerd`). If icons still render as boxes after install, run `fc-cache -f`.
 - **IPC returns "not running"** — `dms ipc` only works while the shell is up; ensure `spawn-at-startup "dms" "run"` fired (check with `pgrep -x dms`).
 - **Customizing** — DMS keeps config under `~/.config/DankMaterialShell/`; the settings UI is `dms ipc call settings focusOrToggle`.
+- **Default keybinds missing (only custom binds work)** — `dms/binds.kdl` was created empty (e.g. `touch`ed) so DMS defaults never loaded. Populate it from the canonical source (see [Niri Config Integration](#niri-config-integration)) and verify with `dms keybinds show niri` (expect ~140 binds, `source: dms-default`).
+- **`dms greeter install` fails over SSH with "a terminal is required"** — the installer's internal sudo needs a TTY. Replicate its steps manually with `SUDO_ASKPASS` (see the [greeter choice](#login-manager-greeter-choice) section): `usermod -aG greeter <user>`, write `/etc/greetd/config.toml` (`command = "dms-greeter --command niri"`, `user = "greeter"`), `systemctl enable greetd`, `systemctl disable sddm`, then `dms greeter sync` (as user, NOT root) to initialize `/var/cache/dms-greeter` + theme symlinks.
 
 ---
 

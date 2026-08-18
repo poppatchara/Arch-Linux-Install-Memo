@@ -30,7 +30,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 |-----------|---------|--------|---------|
 | **Niri** | `niri` | `extra` (official) | Scrollable-tiling Wayland compositor |
 | **Noctalia v5** | `noctalia-git` | AUR | Desktop shell: bars, launcher, dock, notifications, wallpaper, OSD, lock screen, clipboard, night light |
-| **DMS** *(secondary)* | `dms-shell-niri` | `extra` (official) | DankMaterialShell — Quickshell+Go desktop shell: bar, spotlight launcher, notifications, control center, lock/idle, clipboard, theming |
+| **DMS** *(secondary)* | `dms-shell-niri` | `extra` (official) | DankMaterialShell — Quickshell+Go desktop shell: bar, spotlight launcher, notifications, control center, lock/idle, clipboard, wallpaper, night mode, theming |
 | **SDDM** | `sddm` | `extra` (official) | Display manager — replaces `plasma-login-manager` (see [SDDM Login Manager](#sddm-login-manager)) |
 
 **Pick one shell — Noctalia (default) or DMS (secondary).** Noctalia is a native C++ shell that replaces 6 separate tools (bar / launcher / notifications / wallpaper / lock+idle / clipboard / night light). DMS is the Quickshell+Go alternative — see [DMS Shell Setup (secondary)](#dms-shell-setup-secondary). Do **not** install both.
@@ -114,6 +114,8 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 on an ex
 | <kbd>Mod</kbd> + <kbd>M</kbd> | `dms ipc call processlist focusOrToggle` (task manager) |
 | <kbd>Mod</kbd> + <kbd>,</kbd> | `dms ipc call settings focusOrToggle` (settings) |
 | <kbd>Mod</kbd> + <kbd>N</kbd> | `dms ipc call notifications toggle` (notification center) |
+| <kbd>Mod</kbd> + <kbd>Alt</kbd> + <kbd>N</kbd> | `dms ipc call night toggle` (night mode — see [Night Mode](#night-mode-built-in)) |
+| <kbd>Mod</kbd> + <kbd>P</kbd> | `dms ipc call wallpaper set <path>` (set wallpaper — see [Wallpaper & Layer Rules](#wallpaper--layer-rules)) |
 | <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 5` |
 | <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 5` |
 | <kbd>XF86AudioMute</kbd> | `dms ipc call audio mute` |
@@ -280,11 +282,17 @@ Skip this step unless you chose the DMS path — do **not** install both shells.
 ```bash
 # DankMaterialShell — official extra (pulls dms-shell + dgop + quickshell + accountsservice)
 sudo pacman -S --noconfirm --needed dms-shell-niri
+
+# Required by DMS but NOT auto-pulled:
+sudo pacman -S --noconfirm --needed \
+  matugen \                        # color scheme engine — DMS runs the `matugen` binary at runtime
+  ttf-material-symbols-variable \  # Material Symbols icon font (DMS icons/UI)
+  ttf-jetbrains-mono-nerd          # Nerd Font for UI text
 ```
 
 > **What this is:** [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) is a **Quickshell + Go** desktop shell with Material 3 design — the Quickshell-based alternative to Noctalia's native C++ rewrite. `dms-shell-niri` is the Niri-specific extra package (depends on `dms-shell` + `niri`); a generic `dms-shell` variant exists for other compositors. Binary: `dms`, start with `dms run`, control with `dms ipc call <target> <function>`. Config lives in `~/.config/DankMaterialShell/`.
 >
-> **What DMS replaces:** bar, launcher (`dms ipc call spotlight toggle`), notifications, control center, lock screen + idle, clipboard manager, and wallpaper via `matugen` theming. It does **not** provide a night-light (use `wlsunset` if you need one on this path) — unlike Noctalia which bundles everything.
+> **What DMS replaces:** bar, launcher (`dms ipc call spotlight toggle`), notifications, control center, lock screen + idle, clipboard manager, **wallpaper** (`dms ipc call wallpaper set ...`), and **night mode** (`dms ipc call night toggle` — gamma/color-temperature with suncalc scheduling). Theming is driven by **`matugen`** — this is why it's listed above: DMS spawns the `matugen` binary itself, and `dms-shell` does **not** declare it as a dependency (verified from `dms-shell`'s Depends On).
 >
 > **AUR policy:** `dms-shell-git` exists on AUR (development build) if you want newer than extra's `dms-shell` — review the PKGBUILD first (`yay -G dms-shell-git`). Extra's stable 1.5.x is the recommended choice.
 
@@ -301,7 +309,7 @@ sudo pacman -S --noconfirm --needed dms-shell-niri
 | `wlsunset` (night light) | Built-in night light |
 | `noctalia-shell` | Replaced by `noctalia-git` (v5) |
 
-> **DMS path note:** if you chose DMS (secondary) instead of Noctalia, the same "NOT needed" row applies to DMS differently — DMS covers bar / launcher / notifications / lock+idle / clipboard, but **not** wallpaper or night light. Install `dms-shell-niri` in step 3b and skip step 3; do **not** install both shells.
+> **DMS path note:** if you chose DMS (secondary) instead of Noctalia, the same "NOT needed" row applies to DMS differently — DMS covers bar / launcher / notifications / lock+idle / clipboard **and** wallpaper + night mode (built-in, verified from DMS source v1.5.3: `night` + `wallpaper` IPC targets with gamma/suncalc and wallpaper-set scheduling). Install `dms-shell-niri` **plus the required extras** in step 3b (notably `matugen`, which DMS execs but doesn't declare as a dependency) and skip step 3; do **not** install both shells.
 
 ---
 
@@ -1339,7 +1347,7 @@ export DISPLAY=:0
 
 > **Alternative path — only if you chose DMS over Noctalia.** Skip this entire section otherwise.
 
-[DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) is a **Quickshell + Go** desktop shell — the Material-3-styled alternative to Noctalia's native C++ rewrite. It replaces bar, launcher (spotlight), notifications, control center, lock screen + idle, clipboard, and wallpaper theming (via `matugen`). Unlike Noctalia it does **not** bundle a night light.
+[DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) is a **Quickshell + Go** desktop shell — the Material-3-styled alternative to Noctalia's native C++ rewrite. It replaces bar, launcher (spotlight), notifications, control center, lock screen + idle, clipboard, wallpaper, and **night mode** (built-in gamma/color-temperature) — all verified from DMS source v1.5.3.
 
 ### Niri Config Integration
 
@@ -1435,22 +1443,26 @@ binds {
 
 > **Confirm the lock target/function name on the live install** (`dms ipc list`) — lock IPC naming changed between DMS versions.
 
-### Night Light (not provided by DMS)
+### Night Mode (built-in)
 
-Unlike Noctalia, DMS has no built-in night light. Install `wlsunset` if you want it:
-
-```bash
-sudo pacman -S --noconfirm --needed wlsunset
-```
+DMS has a built-in night mode — gamma/color-temperature control with suncalc-based scheduling (verified from DMS source: `night` IPC target with `toggle`/`temperature`/`schedule` functions). No `wlsunset` needed on this path:
 
 ```kdl
-spawn-at-startup "wlsunset" "-l" "13.7" "-t" "100.5"
+binds {
+    Mod+Alt+N { spawn "dms" "ipc" "call" "night" "toggle"; }
+}
+```
+
+```bash
+dms ipc call night temperature 3500      # set color temperature (Kelvin)
+dms ipc call night automation location   # auto schedule via suncalc (or "time")
+dms ipc call night schedule 20:00 06:00  # manual time-based schedule
 ```
 
 ### Troubleshooting (DMS)
 
 - **Shell won't start** — run `dms run` in a terminal and read the error. DMS needs `quickshell` (pulled by `dms-shell`); the tagged `quickshell` release works (unlike Caelestia which needs `quickshell-git`).
-- **Missing fonts / icons** — DMS needs a Material Symbols icon font plus a Nerd Font (e.g. `ttf-jetbrains-mono-nerd`); install via `sudo pacman -S --noconfirm --needed ttf-material-symbols-variable`.
+- **Missing fonts / icons** — DMS needs a Material Symbols icon font plus a Nerd Font; both are in the step 3b install (`ttf-material-symbols-variable` + `ttf-jetbrains-mono-nerd`). If icons still render as boxes after install, run `fc-cache -f`.
 - **IPC returns "not running"** — `dms ipc` only works while the shell is up; ensure `spawn-at-startup "dms" "run"` fired (check with `pgrep -x dms`).
 - **Customizing** — DMS keeps config under `~/.config/DankMaterialShell/`; the settings UI is `dms ipc call settings focusOrToggle`.
 

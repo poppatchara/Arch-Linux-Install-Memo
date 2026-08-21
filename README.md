@@ -14,15 +14,16 @@ Not the best way. Just the way I like.
 | [Niri + Noctalia v5](Niri_Noctalia_v5.md) 🏔️ | Companion — detailed Niri config, keybinds, greeter reference (Noctalia default, DMS secondary) |
 | [Hyprland + Celestia](Hyprland-Scrolling.md) 🪟 | Companion — Hyprland scrolling layout, Lua config, Celestia shell, SDDM |
 | [Hyprland + Celestia — Native Tiling](Hyprland-Tiling.md) 🪟 | Companion — Hyprland dwindle/master tiling, Lua config, Celestia shell, SDDM |
+| [Hyprland + DMS](Hyprland_DMS.md) 🎨 | Companion — Hyprland 0.55+ Lua + DankMaterialShell (Material 3, matugen theming) |
 
 ## 🧱 Decision Matrix
 
-| Decision | A | B | C |
-|----------|---|---|---|
-| **Kernel** | linux-zen | linux-cachyos | linux / linux-lts |
-| **Repos** | Vanilla Arch | CachyOS | |
-| **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling)* |
-| **Bootloader** | GRUB | Limine | |
+| Decision | A | B | C | D |
+|----------|---|---|---|----|
+| **Kernel** | linux-zen | linux-cachyos | linux / linux-lts | |
+| **Repos** | Vanilla Arch | CachyOS | | |
+| **Desktop** | KDE Plasma | Niri + Noctalia | Hyprland + Celestia *(scrolling or tiling)* | Hyprland + DMS 🎨 |
+| **Bootloader** | GRUB | Limine | | |
 
 All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
@@ -32,6 +33,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ### 2026-08-19
 
+- **New guide — Hyprland + DMS:** `Hyprland_DMS.md` — Hyprland 0.55+ **Lua** config + **DankMaterialShell 1.5** (official `dms-shell-hyprland`, Material 3). Follows official docs: DMS installation (systemd user session — `hyprland-session.target` + `hl.on("hyprland.start")` hook + `systemctl --user add-wants hyprland-session.target dms`), Hyprland Lua config (`hl.config`/`hl.bind`/`hl.env`/`hl.window_rule`), DMS-generated Lua fragments, keybinds & IPC reference, matugen application theming (+dank16), Qt/KDE theming via `qt6ct-kde`, SDDM/DankGreeter choice, faillock pitfall. README companion table + Decision Matrix gain the new desktop option (column D).
 - **Niri guide — DMS Qt/KDE app theming via `qt6ct-kde` + faillock lock-loop pitfall:** `Niri_Noctalia_v5.md` DMS path — new **Qt/KDE App Theming** subsection (AUR `qt6ct-kde` is a patched `qt6ct` that reads KDE `.colors`; point `~/.config/qt6ct/qt6ct.conf` at the matugen-generated `DankMatugenDark.colors`, set `QT_QPA_PLATFORMTHEME=qt6ct` in environment.d + niri env block, enable DMS `qtThemingEnabled`). The DMS env note's per-app `QT_QPA_PLATFORMTHEME_QT6=kde` override is replaced (the `kde` plugin needs `plasma-integration` → krunner/libplasma). Troubleshooting gains the **faillock lock loop** (verified on pop_arch): `sudo -A`/askpass broken over SSH (`pam_unix(sudo:auth): conversation failed` — fails even with the correct password) + a background `yay --sudoloop --sudoflags "-A"` compounding → `pam_faillock` locks the shared system-auth → greeter login bounces too. Fixes: `echo "<pw>" | sudo -S <cmd>` instead of `-A`, never `yay --sudoloop -A`, reset via `su -c "faillock --reset --user <user>"` (su has no faillock chain).
 
 ### 2026-08-18

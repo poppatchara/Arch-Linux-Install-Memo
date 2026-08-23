@@ -359,7 +359,12 @@ Create `~/.config/niri/config.kdl`:
 // ============================================================
 
 input {
-    keyboard { xkb { layout "us,th" options "grp:lalt_lshift_toggle" } }
+    keyboard {
+        xkb {
+            layout "us,th"
+            options "grp:lalt_lshift_toggle"
+        }
+    }
 }
 
 // ---- Autostart Noctalia v5 ----
@@ -404,7 +409,9 @@ layout {
     center-focused-column "never"      // Don't auto-center — prevents viewport shift on focus change
 }
 overview {
-    workspace-shadow { off }
+    workspace-shadow {
+        off
+    }
 }
 
 // Option 3: Flat Color (no wallpaper, solid background)
@@ -414,11 +421,16 @@ overview {
 
 // ---- Blur ----
 window-rule {
-    background-effect { blur true xray false }
+    background-effect {
+        blur true
+        xray false
+    }
 }
 layer-rule {
     match namespace="^noctalia-(bar-[^"]+|notification|dock|panel|attached-panel|osd)$"
-    background-effect { xray false }
+    background-effect {
+        xray false
+    }
 }
 blur {
     passes 2

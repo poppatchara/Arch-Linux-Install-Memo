@@ -333,7 +333,10 @@ sudo pacman -S --noconfirm --needed \
 
 #### KDE System Settings & GTK Theme Sync
 
+> **DMS path: skip this too.** `systemsettings` + `kde-gtk-config` + `breeze-gtk` are the Noctalia path's GTK-sync stack (removed on pop_arch — in the same 19-package Plasma/KWin drop). On the DMS path, GTK apps are themed by matugen itself (Material 3 → GTK) plus `adw-gtk-theme` from the core list — nothing extra needed.
+
 ```bash
+# Noctalia path only:
 # systemsettings : KDE config GUI
 # kde-gtk-config : Sync KDE theme to GTK apps  
 # breeze-gtk     : Breeze theme for GTK apps

@@ -9,11 +9,11 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 (default
 ## 📖 Table of Contents
 
 1. [Overview](#overview)
-2. [Quick Reference — Keybinds & Usage](#quick-reference--keybinds--usage)
+2. [Quick Reference — Keybinds & Usage](#quick-reference-keybinds-usage)
 3. [Installation](#installation)
 4. [Niri Configuration](#niri-configuration)
 5. [Session File for SDDM](#session-file-for-sddm)
-6. [Post-Install & Tweaks](#post-install--tweaks)
+6. [Post-Install & Tweaks](#post-install-tweaks)
 7. [Complete DE Experience](#complete-de-experience)
 8. [KDE Integration](#kde-integration)
 9. [Login Manager (greeter choice)](#login-manager-greeter-choice)
@@ -119,7 +119,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 (default
 | <kbd>Mod</kbd> + <kbd>Y</kbd> | `dms ipc call dash toggle wallpaper` (wallpaper browser — `dankdash` deprecated in v1.5.3) |
 | <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> | Hotkey overlay / keybind cheatsheet (DMS default) |
 | <kbd>Mod</kbd> + <kbd>O</kbd> / <kbd>Mod</kbd> + <kbd>Tab</kbd> | Toggle overview (DMS default) |
-| <kbd>Mod</kbd> + <kbd>P</kbd> | `dms ipc call wallpaper set <path>` (set wallpaper — see [Wallpaper & Layer Rules](#wallpaper--layer-rules)) |
+| <kbd>Mod</kbd> + <kbd>P</kbd> | `dms ipc call wallpaper set <path>` (set wallpaper — see [Wallpaper & Layer Rules](#wallpaper-layer-rules)) |
 | <kbd>XF86AudioRaiseVolume</kbd> | `dms ipc call audio increment 3` |
 | <kbd>XF86AudioLowerVolume</kbd> | `dms ipc call audio decrement 3` |
 | <kbd>XF86AudioMute</kbd> | `dms ipc call audio mute` |
@@ -1091,7 +1091,12 @@ XDG_MENU_PREFIX=plasma- kbuildsycoca6 --noincremental
 spawn-at-startup "kded6"
 ```
 
-**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND niri's `environment {}` block (so niri-spawned apps see them). Systemd user services and portals can't read niri's `environment {}` block. Additionally, **IPC-spawned processes mid-session don't inherit niri's `environment {}` block either** (verified on pop_arch 2026-08-24): `niri msg action spawn -- ...` inherits the compositor's launch env, not what you just edited. So after editing the env block, either log out/in once (cleanest — every bind then has the full env), or set it for the live session with `systemctl --user set-environment VAR=...` and re-spawn.
+**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND niri's `environment {}` block (so niri-spawned apps see them). Systemd user services and portals can't read niri's `environment {}` block. Additionally, **IPC-spawned processes mid-session don't inherit niri's `environment {}` block either** (verified on pop_arch 2026-08-24): `niri msg action spawn -- ...` inherits the compositor's launch env, not what you just edited. Note: `systemctl --user set-environment VAR=...` only updates the **systemd user manager** env — niri itself won't see it, so `niri msg action spawn` children still get the old env. So after editing the env block, either log out/in once (cleanest — every bind then has the full env), or inject the variable directly for a one-off process:
+
+```bash
+# One-off: give a single spawned process the new env without a re-login
+niri msg action spawn -- env VAR=value command
+```
 
 Create `~/.config/environment.d/10-kde-on-niri.conf`:
 
@@ -1532,8 +1537,10 @@ If kitty has `background_opacity` set but the terminal still looks fully opaque 
 # ~/.config/kitty/kitty.conf
 background_opacity 0.8            # 0.8 = 20% see-through; 0.85 ≈ invisible on dark bg
 dynamic_background_opacity yes    # allows runtime tuning (Ctrl+Shift+M)
-map ctrl+shift+m toggle_opacity   # cycle through opacity levels live
+map ctrl+shift+m     set_background_opacity +0.1   # increase opacity live
+map ctrl+shift+alt+m set_background_opacity -0.1   # decrease opacity live
 ```
+> **Note:** kitty ≥0.36+ removed the old `toggle_opacity` action — use `set_background_opacity` (with `+`/`-` deltas or absolute 0–1) instead.
 
 2. **What is behind the terminal** — a semi-transparent terminal over a solid near-black background (flat wallpaper color, no visible wallpaper layer) *looks* opaque no matter the opacity. Verify the wallpaper/noctalia backdrop is actually rendering before assuming kitty is broken.
 

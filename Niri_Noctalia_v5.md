@@ -1527,6 +1527,56 @@ xdg-settings set default-web-browser brave.desktop
 
 Note: a `plasma-browser-integration-host` child running under Brave is expected (the Plasma Browser Integration extension uses it) and is not the cause.
 
+### Brave Video Plays But Screen Is Black / No Picture (Netflix, NVIDIA Wayland)
+
+Symptom: video *plays* — audio runs, timeline advances, `readyState=4`, no console error — but the picture is **pure black**. Verified on pop_arch 2026-08-24 (Brave 151.1.93.138, RTX 4070 Ti SUPER, niri 26.04, NVIDIA driver with VA-API).
+
+Root cause: the VA-API decoder produces frames (confirmed via CDP: `currentTime` advances, ~339 frames decoded, 0 dropped) but the decoded textures fail to reach the compositor through **ANGLE GL** on NVIDIA Wayland. Chromium's GPU process defaults to ANGLE; on NVIDIA the video texture import silently fails → black. Switching to **native EGL** (`--use-gl=egl`) fixes the import.
+
+**Fix — two parts, both required:**
+
+1. **Desktop override** — copy the system entry to the user override and append the flags to `Exec=`:
+
+```bash
+cp /usr/share/applications/brave-browser.desktop ~/.local/share/applications/brave-browser.desktop
+# edit ~/.local/share/applications/brave-browser.desktop → Exec=brave ... %U becomes:
+# Exec=brave --enable-features=VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL --disable-features=UseChromeOSDirectVideoDecoder --use-gl=egl %U
+```
+
+The override must keep the name `brave-browser.desktop` (same as the system file) to mask it. All four flags together are what works:
+
+| Flag | Why |
+|------|-----|
+| `VaapiOnNvidiaGPUs` | Unlocks VA-API decode on NVIDIA (off by default per Chromium blocklist) |
+| `AcceleratedVideoDecodeLinuxGL` | Routes decoded frames over the GL import path |
+| `AcceleratedVideoDecodeLinuxZeroCopyGL` | Zero-copy texture import |
+| `--use-gl=egl` | **Critical** — native EGL instead of ANGLE; without it the frames decode but never display |
+
+2. **Env vars** so the VA-API bridge sees the NVIDIA driver — set in **both** niri's `environment {}` block (`~/.config/niri/config.kdl`) and `~/.config/environment.d/10-kde-on-niri.conf`:
+
+```kdl
+environment {
+    LIBVA_DRIVER_NAME "nvidia"
+    GBM_BACKEND "nvidia-drm"
+}
+```
+
+```bash
+# ~/.config/environment.d/10-kde-on-niri.conf
+LIBVA_DRIVER_NAME=nvidia
+GBM_BACKEND=nvidia-drm
+```
+
+Verify the running instance actually picked up the flags (a debug/`--remote-debugging-port` instance does not count — check the real one launched from the desktop entry):
+
+```bash
+MAIN=$(pgrep -f "^/opt/brave-bin/brave " | head -1)
+tr "\0" "\n" < /proc/$MAIN/cmdline | grep -- "--use-gl=egl"
+# chrome://gpu → Video Decode should read "Hardware accelerated"
+```
+
+Diagnosis shortcut (if a fresh video still shows black): use CDP against a `--remote-debugging-port=9222` instance and `document.querySelector('video')` — if `paused:false`, `currentTime` advances and `readyState:4` but the screenshot is black, the decode → compositor import path is broken (ANGLE), not the decoder. Adding only `VaapiOnNvidiaGPUs` + `AcceleratedVideoDecodeLinuxGL` produces exactly this symptom; `--use-gl=egl` resolves it.
+
 ### Kitty Opacity Looks Solid / Terminal "Still Opaque"
 
 If kitty has `background_opacity` set but the terminal still looks fully opaque (verified on pop_arch 2026-08-24), check two layers:

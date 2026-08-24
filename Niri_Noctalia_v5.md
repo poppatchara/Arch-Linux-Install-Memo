@@ -406,7 +406,8 @@ layer-rule {
 }
 layout {
     background-color "transparent"
-    center-focused-column "never"      // Don't auto-center — prevents viewport shift on focus change
+    // Don't auto-center — prevents viewport shift on focus change.
+    center-focused-column "never"
 }
 overview {
     workspace-shadow {
@@ -452,9 +453,50 @@ binds {
     XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
     XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
     XF86AudioMute         { spawn-sh "noctalia msg volume-mute; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
-    XF86MonBrightnessUp   { spawn-sh "noctalia msg brightness-up"; }
-    XF86MonBrightnessDown { spawn-sh "noctalia msg brightness-down"; }
+    XF86MonBrightnessUp   { spawn-sh "/home/pop/.local/bin/brightness.sh up"; }
+    XF86MonBrightnessDown { spawn-sh "/home/pop/.local/bin/brightness.sh down"; }
 }
+```
+
+> **Why wrapper, not `noctalia msg brightness-*`:** the Noctalia IPC brightness commands control the **sysfs backlight** (`/sys/class/backlight/`) — which exists **only on laptops**. On a desktop monitor there is no backlight device, so `noctalia msg brightness-up/down` silently does nothing. Use the DDC/CI wrapper below instead (see [Desktop Monitor Brightness (DDC/CI)](#desktop-monitor-brightness-ddcci)).
+
+```bash
+# ~/.local/bin/brightness.sh  (chmod +x)
+#!/usr/bin/env bash
+# Desktop monitor brightness via DDC/CI (ddcutil).
+# MSI MAG341CQ — requires DDC/CI enabled in monitor OSD (Settings → DDC/CI → ON).
+set -uo pipefail
+case "${1:-}" in
+  up)   ddcutil setvcp 10 + 5 --noverify --brief 2>/dev/null ;;
+  down) ddcutil setvcp 10 - 5 --noverify --brief 2>/dev/null ;;
+  *)    echo "usage: brightness.sh up|down" >&2; exit 2 ;;
+esac
+```
+
+```bash
+# Install ddcutil + i2c permissions (udev rule gives 0660 at next login)
+sudo pacman -S --noconfirm --needed ddcutil
+sudo gpasswd -a $USER i2c
+```
+
+```bash
+# /etc/udev/rules.d/90-i2c.rules — allow i2c access without root
+KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
+```
+
+### Desktop Monitor Brightness (DDC/CI)
+
+`noctalia msg brightness-*` only controls the sysfs backlight on **laptop** displays. For a desktop monitor (verified on pop_arch 2026-08-24, MSI MAG341CQ 34" on DP-3), use **DDC/CI** via `ddcutil` + the wrapper above:
+
+1. Install `ddcutil`, add the user to the `i2c` group, and drop in the udev rule above. At next login the user owns `/dev/i2c-*`.
+2. Bind the keybinds to `brightness.sh up|down` (shown above), then reload the config (the keybind example above is already wired).
+3. **⚠️ Monitor must allow DDC/CI writes.** MSI MAG341CQ rejects writes by default — `DDCRC_VERIFY: current value does not match requested value` even though reads work (`VCP 10 = 100`). Enable **Settings → DDC/CI → ON** in the monitor OSD. If it still refuses, the model doesn't implement DDC brightness writes (MSI 2019 units) — fall back to the monitor's own OSD keys.
+
+```bash
+# Test after enabling DDC/CI in the OSD — should change, not DDCRC_VERIFY:
+ddcutil setvcp 10 - 5 --noverify --brief
+# Verify capabilities expose brightness (feature 10):
+ddcutil capabilities | grep -iA3 'Feature: 10'
 ```
 
 ### Wallpaper Options
@@ -466,6 +508,28 @@ Uncomment only **one** of the options above:
 | **Option 1** (Blurred Overview) | `match namespace="^noctalia-backdrop"` | Wallpaper visible only in overview, blurred & tinted |
 | **Option 2** ★ (Stationary) | `match namespace="^noctalia-wallpaper"` | Wallpaper visible always, does not scroll with workspaces |
 | **Option 3** (Flat Color) | `overview { backdrop-color "..." }` | Solid color, no wallpaper |
+
+### Centering Behavior (new windows in the center)
+
+`center-focused-column` takes `"never"` / `"always"` / `"on-overflow"` (see the `layout {}` block above — the example sets `"never"` to avoid viewport shift on focus change). Noctalia's own fragment (`noctalia.kdl`) defaults to `"on-overflow"` — center only when columns overflow the screen. Companion `always-center-single-column` (`since 0.1.9`) centers the **first/single** column on a workspace.
+
+To get **new-window-on-empty-workspace centered** — the common "open an app → it appears in the middle" feel — add a `user-override.kdl` and include it **after** `noctalia.kdl` so it wins the merge (later include overrides earlier keys; duplicate `layout {}` in the same file is an error, but separate files merge fine):
+
+```kdl
+// ~/.config/niri/user-override.kdl
+// User overrides — included AFTER noctalia.kdl so these win on merge.
+layout {
+    always-center-single-column
+}
+```
+
+```kdl
+// In config.kdl, keep noctalia.kdl then the override:
+include "noctalia.kdl"
+include "user-override.kdl"
+```
+
+This gives: empty workspace → first window centered; multiple columns → `on-overflow` (center only when crowded). Verified on pop_arch 2026-08-24 (user picked `on-overflow` + `always-center-single-column`).
 
 ### Per-Widget Desktop Layer Rules
 
@@ -1027,7 +1091,7 @@ XDG_MENU_PREFIX=plasma- kbuildsycoca6 --noincremental
 spawn-at-startup "kded6"
 ```
 
-**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND niri's `environment {}` block (so niri-spawned apps see them). Systemd user services and portals can't read niri's `environment {}` block.
+**Environment variables must go in TWO places** — `~/.config/environment.d/` (so systemd/portals see them) AND niri's `environment {}` block (so niri-spawned apps see them). Systemd user services and portals can't read niri's `environment {}` block. Additionally, **IPC-spawned processes mid-session don't inherit niri's `environment {}` block either** (verified on pop_arch 2026-08-24): `niri msg action spawn -- ...` inherits the compositor's launch env, not what you just edited. So after editing the env block, either log out/in once (cleanest — every bind then has the full env), or set it for the live session with `systemctl --user set-environment VAR=...` and re-spawn.
 
 Create `~/.config/environment.d/10-kde-on-niri.conf`:
 
@@ -1427,6 +1491,61 @@ spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 > ```
 >
 > Verified on pop_arch 2026-08-19 — `xdg-desktop-portal-wlr` 0.8.2 satisfies `niri` + `lutris` after removing `xdg-desktop-portal-kde`.
+
+### Brave Won't Save "Set as Default Browser" (asks on every launch)
+
+Symptom: Brave asks to be set as the default browser every launch — the choice doesn't persist (verified on pop_arch 2026-08-24, Brave 151.1.93.138).
+
+Diagnosis checklist (what was checked and ruled out):
+
+- Profile ownership/mode: `~/.config/BraveSoftware/Brave-Browser/` is `pop:pop 700` and **writable** (write test passed) — not a permissions issue.
+- `Preferences` / `Secure Preferences` exist in `Default/` and `Preferences` **is actively written** (mtime updates while running) — the profile is not read-only and settings do save.
+- **Anomaly:** the `First Run` marker file is still present (0 bytes) even after a long-running session. Chromium normally deletes `First Run` after the first run completes; if it lingers, Chromium can re-trigger the "first-run" default-browser/re-onboarding path every launch.
+- Brave writes DBs normally (History/Cookies/Web Data update) — no coredumps, no journal errors, no immutable flags (btrfs `@home` is rw).
+
+Likely causes / next steps (in order):
+
+```bash
+# 1. Check the actual xdg default — Brave's check goes through xdg-settings:
+xdg-settings get default-web-browser
+# 2. Is brave.desktop registered as handler?
+grep -i "brave" ~/.config/mimeapps.list 2>/dev/null || echo "not in mimeapps.list"
+# 3. Remove the stale First Run marker (safe — Brave is running fine otherwise):
+rm -f ~/.config/BraveSoftware/Brave-Browser/First\ Run
+```
+
+If the xdg-settings entry points elsewhere, set it explicitly:
+
+```bash
+xdg-settings set default-web-browser brave.desktop
+```
+
+Note: a `plasma-browser-integration-host` child running under Brave is expected (the Plasma Browser Integration extension uses it) and is not the cause.
+
+### Kitty Opacity Looks Solid / Terminal "Still Opaque"
+
+If kitty has `background_opacity` set but the terminal still looks fully opaque (verified on pop_arch 2026-08-24), check two layers:
+
+1. **kitty config itself** — confirm the value and add runtime cycling so you can tune without editing:
+
+```ini
+# ~/.config/kitty/kitty.conf
+background_opacity 0.8            # 0.8 = 20% see-through; 0.85 ≈ invisible on dark bg
+dynamic_background_opacity yes    # allows runtime tuning (Ctrl+Shift+M)
+map ctrl+shift+m toggle_opacity   # cycle through opacity levels live
+```
+
+2. **What is behind the terminal** — a semi-transparent terminal over a solid near-black background (flat wallpaper color, no visible wallpaper layer) *looks* opaque no matter the opacity. Verify the wallpaper/noctalia backdrop is actually rendering before assuming kitty is broken.
+
+Matching another machine's kitty look exactly: copy the theme files so the config, theme, and current-theme all match byte-for-byte:
+
+```bash
+# Compare across machines (pop_arch vs Chuwi in this case):
+ssh chuwi 'cat ~/.config/kitty/kitty.conf' | diff - ~/.config/kitty/kitty.conf
+# kitty.conf, themes/noctalia.conf, and current-theme.conf must all match (md5)
+```
+
+On pop_arch this produced identical md5s (`kitty.conf 303c049c…`, theme files `b3293715…`) — the only remaining visual difference was the wallpaper behind the window.
 
 ### DISPLAY=:0 for X11 Apps
 

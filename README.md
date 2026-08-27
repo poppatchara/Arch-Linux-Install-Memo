@@ -31,6 +31,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-08-27
+
+- **Niri guide — system sound feedback (FreeDesktop theme):** `Niri_Noctalia_v5.md` — new **System Sound Feedback (FreeDesktop theme)** subsection under Complete DE Experience. `libcanberra` + `sound-theme-freedesktop` ship the audio files, but the active theme defaults to `""` (silent) — two gsettings lines (`theme-name 'freedesktop'`, `event-sounds true`) make the volume/mute binds audible, with dconf + `canberra-gtk-play` verification commands. Verified on pop_arch 2026-08-27 (live test exit=0; DMS volume OSD path doesn't use canberra — Noctalia path only).
+
 ### 2026-08-24
 
 - **Niri guide — audit fixes (Sol/gpt-5.6-sol):** `Niri_Noctalia_v5.md` — Kitty troubleshooting no longer recommends the dead `toggle_opacity` action (removed in kitty ≥0.36; use `set_background_opacity` with `+`/`-` deltas — verified against installed kitty 0.48.2 on pop_arch), adds a second `-0.1` bind for bidirectional live opacity. KDE Integration env note corrected: `systemctl --user set-environment` only updates the systemd user manager env, NOT niri — so `niri msg action spawn` children still get the old env; the reliable live-session path is `niri msg action spawn -- env VAR=value command` (or re-login). Fixed 3 pre-existing broken TOC anchors (`--keybinds--usage`, `--tweaks`, `--layer-rules` → single-dash slugs; anchor scan now 0 missing).

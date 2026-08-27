@@ -733,6 +733,29 @@ yay -S --noconfirm --needed phinger-cursors
 
 **Alternative:** Bibata Classic (AUR `bibata-cursor-git`) if you prefer the rounded Classic look — both work with Niri; just set the active theme in the cursors section above.
 
+### System Sound Feedback (FreeDesktop theme)
+
+`libcanberra` plays event sounds via the **Freedesktop sound theme** — the `sound-theme-freedesktop` package above ships the actual `.oga` files. The volume/mute keybinds already call `canberra-gtk-play -i audio-volume-change`, but the **default theme is empty unless you select one**. Two clicks of config make the feedback audible:
+
+```bash
+# Activate the freedesktop sound theme + enable event sounds (GNOME settings daemon
+# is the canberra backend on a bare Niri setup; these gsettings are read by it)
+gsettings set org.gnome.desktop.sound theme-name 'freedesktop'
+gsettings set org.gnome.desktop.sound event-sounds true
+```
+
+**Verify** (should print `'freedesktop'` and `true`):
+
+```bash
+dconf read /org/gnome/desktop/sound/theme-name
+dconf read /org/gnome/desktop/sound/event-sounds
+
+# Live test — you should hear a "tick" on the volume change sound
+canberra-gtk-play -i audio-volume-change -d 'volume feedback test'
+```
+
+> **Why this step exists:** `sound-theme-freedesktop` installs the files, but the active theme defaults to `""` (silent). Verified on pop_arch 2026-08-27 — the gsettings lines above are what make the volume binds audible. DMS's own volume OSD (`dms ipc call audio increment`) doesn't use canberra, so this only affects the Noctalia path keybinds.
+
 ### Session Restore (Testing)
 
 Niri has no built-in session restore. [nirinit](https://github.com/amaanq/nirinit) fills the gap — it auto-saves open windows every 5 minutes and restores them when Niri starts.

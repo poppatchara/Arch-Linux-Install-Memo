@@ -837,6 +837,9 @@ Add these to the `binds {}` block in your niri config. Multi-line blocks are use
     Mod+Shift+Q {
         spawn-sh "noctalia msg panel-toggle session"
     }
+    Mod+Shift+S {
+        spawn "spectacle -r"
+    }
     Mod+Tab {
         toggle-overview
     }

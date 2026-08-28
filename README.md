@@ -34,6 +34,7 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 ### 2026-08-27
 
 - **Niri guide — system sound feedback (FreeDesktop theme):** `Niri_Noctalia_v5.md` — new **System Sound Feedback (FreeDesktop theme)** subsection under Complete DE Experience. `libcanberra` + `sound-theme-freedesktop` ship the audio files, but the active theme defaults to `""` (silent) — two gsettings lines (`theme-name 'freedesktop'`, `event-sounds true`) make the volume/mute binds audible, with dconf + `canberra-gtk-play` verification commands. Verified on pop_arch 2026-08-27 (live test exit=0; DMS volume OSD path doesn't use canberra — Noctalia path only).
+- **Niri guide — Keybind Additions missing `Mod+Shift+S`:** the copy-paste block in `Niri_Noctalia_v5.md` omitted the rectangle-screenshot bind (present in the full config sample at line 450 and in Quick Reference, but absent from the DE Applications block users actually copy). Added `Mod+Shift+S { spawn "spectacle -r"; }` — matches live pop_arch config (verified working).
 
 ### 2026-08-24
 

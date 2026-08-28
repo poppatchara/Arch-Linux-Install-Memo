@@ -385,6 +385,14 @@ window-rule {
     default-window-height { fixed 920; }
 }
 
+// Satty annotation window: floating, fixed size (centered over capture)
+window-rule {
+    match app-id="com.gabm.satty"
+    open-floating true
+    default-column-width { fixed 800; }
+    default-window-height { fixed 600; }
+}
+
 debug {
     // Required for Noctalia notification actions & window activation
     honor-xdg-activation-with-invalid-serial
@@ -1649,6 +1657,25 @@ ssh chuwi 'cat ~/.config/kitty/kitty.conf' | diff - ~/.config/kitty/kitty.conf
 ```
 
 On pop_arch this produced identical md5s (`kitty.conf 303c049c…`, theme files `b3293715…`) — the only remaining visual difference was the wallpaper behind the window.
+
+### Kitty CJK / Thai Tofu (Missing Glyphs)
+
+A `font_family` that has no Thai or CJK glyphs (e.g. a Latin-only Nerd Font) renders those scripts as tofu boxes. Two facts matter on kitty:
+
+1. **Multiple `font_family` lines are *last-wins*, not a fallback chain** — putting `font_family Noto Sans CJK SC` after your main font does **not** add fallbacks; it *replaces* the family.
+2. The correct tool is **`symbol_map`** — it maps a Unicode range to a specific fallback font per script:
+
+```ini
+# ~/.config/kitty/kitty.conf
+font_family Noto Sans Thai                          # main font (or your Nerd Font)
+symbol_map U+0E00-U+0E7F Noto Sans Thai              # Thai
+symbol_map U+3400-U+4DBF,U+4E00-U+9FFF,U+F900-U+FAFF,U+20000-U+2A6DF Noto Sans CJK SC   # CJK ideographs (SC)
+symbol_map U+3040-U+30FF,U+31F0-U+31FF,U+FF00-U+FFEF Noto Sans CJK JP                    # Kana + fullwidth
+```
+
+Verified on pop_arch 2026-08-28: with `symbol_map` in place, `kitty --debug-font-fallback` loads `NotoSansCJKsc`/`NotoSansCJKkr` and U+5148 (`先`) / U+53BB (`去`) no longer report missing-glyph errors.
+
+> **Gotcha:** a running kitty does **not** pick up config changes live — restart it (or use `kitty +kitten config`-style reload). Also `--config <file>` is unreliable with `--debug-font-fallback` in headless/pipe mode (it falls back to defaults) — test font fallback in a real interactive kitty instance.
 
 ### DISPLAY=:0 for X11 Apps
 

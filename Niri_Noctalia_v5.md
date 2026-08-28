@@ -135,7 +135,7 @@ Installing Niri (scrollable-tiling Wayland compositor) with Noctalia v5 (default
 | <kbd>PrtSc</kbd> | Screenshot full screen |
 | <kbd>Ctrl</kbd> + <kbd>PrtSc</kbd> | Screenshot current output |
 | <kbd>Alt</kbd> + <kbd>PrtSc</kbd> | Screenshot focused window |
-| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Rectangle screenshot (Spectacle) |
+| <kbd>Mod</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Rectangle screenshot → annotate (grim + slurp + satty) |
 
 ### 🔄 Other
 
@@ -447,7 +447,7 @@ binds {
     Mod+S       { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma   { spawn-sh "noctalia msg settings-toggle"; }
     Mod+Tab     { toggle-overview; }                       // Overview
-    Mod+Shift+S { spawn "spectacle -r"; }                  // Rectangle screenshot
+    Mod+Shift+S { spawn-sh "grim -g \"$(slurp)\" - | satty -f -"; }   // Region screenshot → annotate
 
     // Audio & Brightness (with freedesktop sound feedback)
     XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up; canberra-gtk-play -i audio-volume-change -d 'volume feedback'"; }
@@ -705,21 +705,26 @@ sudo pacman -S --noconfirm --needed \
   dolphin \
   ark \
   gwenview \
-  spectacle \
+  grim slurp satty wl-clipboard \
   kate \
   kdeconnect
 ```
 
 | Package | Purpose |
-|---------|---------|
+|---------|--------|
 | `dolphin` | GUI file manager (`Mod+E`) |
 | `ark` | Archive manager (zip/tar/7z) |
 | `gwenview` | Image viewer |
-| `spectacle` | Screenshot tool |
+| `grim` | Wayland screenshot capture (native, no portal) |
+| `slurp` | Interactive region select for `grim` |
+| `satty` | Screenshot annotation (modern GTK, native) |
+| `wl-clipboard` | Wayland clipboard (`wl-copy` — screenshot copy) |
 | `kate` | Text editor |
 | `kdeconnect` | Phone integration (notifications, file transfer, clipboard sync) |
 | `ffmpegthumbs` | Video thumbnails KIO plugin | Pre-installed with KDE graphics |
 | `ffmpegthumbnailer` | Video thumbnail generator | Install manually: `sudo pacman -S ffmpegthumbnailer` |
+
+> **Screenshot stack — why not Spectacle:** KDE's Spectacle relies on KWin's private screenshot interface, which does **not** exist in the Noctalia path (KWin is not installed). On Niri, use the native `grim` + `slurp` + `satty` stack — same as the Hyprland guide, works via wlr-screencopy protocol, no portal needed. Verified on pop_arch 2026-08-28 (`grim` captures, `satty` annotates under Niri).
 
 **Cursor theme (Phinger — matches the Hyprland guide):**
 
@@ -838,7 +843,7 @@ Add these to the `binds {}` block in your niri config. Multi-line blocks are use
         spawn-sh "noctalia msg panel-toggle session"
     }
     Mod+Shift+S {
-        spawn "spectacle -r"
+        spawn-sh "grim -g \"$(slurp)\" - | satty -f -"
     }
     Mod+Tab {
         toggle-overview
@@ -1746,7 +1751,7 @@ binds {
     Mod+E      { spawn "dolphin"; }
     Mod+B      { spawn "firefox"; }
     Mod+Shift+Q { spawn "dms" "ipc" "call" "sessions" "open"; }
-    Mod+Shift+S { spawn "spectacle" "-r"; }
+    Mod+Shift+S { spawn-sh "grim -g \"$(slurp)\" - | satty -f -"; }
     Mod+Alt+N  { spawn "dms" "ipc" "call" "night" "toggle"; }  // DMS defaults lack night toggle
 }
 ```

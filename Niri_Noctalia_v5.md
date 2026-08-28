@@ -1231,6 +1231,21 @@ window-rule {
 
 To find app-ids and titles for other windows, use `niri msg pick-window` then click the window.
 
+### Satty Floating Window
+
+Satty's annotation window opens tiled by default. Float it with a fixed size so it appears centered over the captured region (verified on pop_arch 2026-08-28 — `niri msg windows` reports `Is floating: yes`, 934×600 centered):
+
+```kdl
+window-rule {
+    match app-id="com.gabm.satty"
+    open-floating true
+    default-column-width { fixed 800; }
+    default-window-height { fixed 600; }
+}
+```
+
+> **App ID is `com.gabm.satty`**, not `satty` — check with `niri msg windows` (or `niri msg pick-window`).
+
 ### Video Thumbnails in Dolphin
 
 ```bash

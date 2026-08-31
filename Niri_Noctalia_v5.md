@@ -1550,6 +1550,8 @@ spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 > ```
 >
 > Verified on pop_arch 2026-08-19 — `xdg-desktop-portal-wlr` 0.8.2 satisfies `niri` + `lutris` after removing `xdg-desktop-portal-kde`.
+>
+> **⚠️ pkexec must run from the graphical session:** the polkit agent registers with the **graphical** session bus only. Running `pkexec` over SSH (or from any non-graphical session) fails with `Error executing command as another user: No authentication agent found` — the agent exists, but not for the SSH session. Launch GUI apps that need elevation (GParted, grub-customizer) from a terminal inside the graphical session. Verified on pop_arch 2026-08-31.
 
 ### Brave Won't Save "Set as Default Browser" (asks on every launch)
 
@@ -1694,6 +1696,17 @@ export DISPLAY=:0
 ```
 
 > **Note:** `environment.d` files use `KEY=VALUE` syntax and require **absolute paths**. They are read by systemd user services and portals on login.
+
+#### Root X11 Apps (pkexec) — "cannot open display: :0"
+
+Setting `DISPLAY=:0` alone is **not enough** for X11 apps that re-exec as **root via pkexec** (GParted, grub-customizer, etc.). The root process gets `Authorization required, but no authorization protocol specified` / `Gtk-WARNING: cannot open display: :0`, because xwayland-satellite's X server access control only allows the session user (`SI:localuser:<user>`).
+
+```bash
+# Install xhost — required for the SI:localuser grant used by root-launching apps
+sudo pacman -S --noconfirm --needed xorg-xhost
+```
+
+> **Why:** GParted's launcher script already auto-runs `xhost +SI:localuser:root` before `pkexec` so the root process can open `:0` — but that grant silently fails when `xhost` is not installed, leaving the root GUI dead with a display error. With `xorg-xhost` installed the grant happens automatically per launch (no manual `xhost` command needed). Verified on pop_arch 2026-08-31 (GParted 1.8.1 window opened after installing `xorg-xhost`).
 
 ---
 ## DMS Shell Setup (secondary)

@@ -31,6 +31,12 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-08-31
+
+- **Niri guide — Root X11 apps (pkexec) need `xorg-xhost`:** new **Root X11 Apps (pkexec) — "cannot open display: :0"** subsection under `### DISPLAY=:0 for X11 Apps` — GParted/grub-customizer etc. re-exec as root via `pkexec`, and the root process fails with `Authorization required, but no authorization protocol specified` / `cannot open display: :0` because xwayland-satellite's access control only allows the session user. GParted's launcher auto-runs `xhost +SI:localuser:root` before `pkexec`, but that silently fails when `xhost` isn't installed. Fix: `sudo pacman -S xorg-xhost` (grant happens automatically per launch). Verified on pop_arch 2026-08-31 (GParted 1.8.1 window opened after install).
+- **Niri guide — polkit agent is graphical-session-only:** `### polkit Authentication Agent` gains a warning that `pkexec` must run from the graphical session — over SSH it fails with `No authentication agent found` even though the agent is running (it registers with the graphical session bus only). Verified on pop_arch 2026-08-31.
+- **Niri guide — sudo TERMINFO env_keep fix:** `/etc/sudoers.d/terminfo` (`Defaults env_keep += "TERMINFO"`) + fixed wrong mode on `/etc/sudoers.d/pacman` (0640 → 0440) — resolves `sudo: sorry, you are not allowed to set the following environment variables: TERMINFO` from the kitty `alias sudo='sudo TERMINFO="$TERMINFO" TERM="$TERM"'` in `~/.bashrc`. Verified `visudo -c` parsed OK.
+
 ### 2026-08-27
 
 - **Niri guide — screenshot stack switched to native grim/slurp/satty:** Spectacle does **not** work under Niri — it depends on KWin's private screenshot interface, which doesn't exist in the Noctalia path (KWin removed). Verified on pop_arch 2026-08-28: `spectacle -r` silently no-ops (no window opens); native `grim` (wlr-screencopy) captures fine and `satty` annotates. Replaced Spectacle with the same native stack as the Hyprland guide: package list (`grim slurp satty wl-clipboard`), full config sample, Keybind Additions, DMS keybinds block, and Quick Reference — `Mod+Shift+S { spawn-sh "grim -g \"$(slurp)\" - | satty -f -"; }`. Live pop_arch config updated + reloaded (niri validate passed).

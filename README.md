@@ -31,6 +31,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-09-08
+
+- **KDE guide gains SDDM + pixie as an alternative login:** `KDE_Plasma.md` — new **Alternative login: SDDM + pixie (optional)** section (after PAM config). `plasma-login-manager` remains the default (native, ships its own PAM), but users who want the pixie Pixel/Material-3 login screen (same theme as Niri/Hyprland paths) can swap to SDDM. Key verification baked in: **PLM does not support custom QML themes** (appearance = Plasma color scheme + wallpaper via *Apply Plasma Settings* — confirmed by Fedora F44 proposal + KDE issue tracker), so pixie requires the SDDM path; **on KDE nothing extra is needed** (`kwin`, `layer-shell-qt`, Qt6 engine already come with `plasma-desktop` — unlike the Niri path), Arch's `sddm` package ships `/etc/pam.d/sddm` with KWallet hooks (no manual PAM write — confirmed via PKGBUILD `backup=` + package file listing; the manual PAM rewrite in the Niri guide is Niri-path-only). Includes theme.conf, Wayland greeter drop-in (01-wayland.conf), test-on-spare-VT workflow, rollback. Main guide §9 table + login-manager note + Secret Storage note updated to reflect the KDE alternative.
+
 ### 2026-09-05
 
 - **Niri guide — RAR extraction needs `unrar`:** `ark` alone can't extract `.rar` — bsdtar/libarchive handles only a subset of RARs, so Ark's GUI extract fails while zip/7z work. Added `unrar` to the KDE-preferred additions package list + table (`unrar x file.rar`, Ark auto-detects the backend). Verified on pop_arch 2026-09-05 (Ark failed → installed `unrar 1:7.2.7-1` → extract works).

@@ -5,7 +5,7 @@
 
 ## Overview
 
-Plasma 6.6+ ships `plasma-login-manager` as its native login screen (replaces SDDM). All-in-one desktop: compositor (KWin), shell, apps, integrated — install and stop.
+Plasma 6.6+ ships `plasma-login-manager` as its native login screen (replaces SDDM). All-in-one desktop: compositor (KWin), shell, apps, integrated — install and stop. *Want the pixie (Pixel UI) login screen instead? See [Alternative login: SDDM + pixie](#alternative-login-sddm--pixie-optional).*
 
 ## Installation
 
@@ -67,6 +67,77 @@ EOF
 
 > `/etc/pam.d/plasmalogin` shadows the vendor file — don't create it unless you actually need the override.
 > KWallet auto-unlock (optional): wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
+
+## Alternative login: SDDM + pixie (optional)
+
+`plasma-login-manager` is the default above — native, ships its own PAM, KWallet hooks included. Its one limitation: **it does not support custom QML themes** (appearance = Plasma color scheme + wallpaper only, applied via *Apply Plasma Settings* in the login-screen KCM).
+
+If you want a **pixie** login screen (Pixel UI / Material Design 3 — the same theme the Niri/Hyprland paths use), swap the display manager to SDDM instead:
+
+```bash
+# SDDM (official) — must be >= 0.20.0 to avoid bug #1476 (90s shutdowns).
+# Arch's package is current (0.21+), so this is already satisfied.
+sudo pacman -S --noconfirm --needed sddm
+
+# pixie theme (AUR, theme author xCaptaiN09) — Material 3 / Pixel UI
+# 🔒 AUR — review `yay -G pixie-sddm-git` before installing if desired.
+yay -S --noconfirm --needed pixie-sddm-git
+```
+
+> **On the KDE path nothing extra is needed:** `kwin`, `layer-shell-qt`, and the Qt6 engine (`qt6-declarative`/`qt6-svg`) already come with `plasma-desktop` — the Wayland greeter and QML theme both work out of the box. (The Niri path has to install those separately; you don't.)
+
+Point SDDM at pixie and switch to the Wayland greeter (drops the Xorg greeter — saves ~135MB, and tears down cleanly with the session):
+
+```bash
+sudo sh -c 'echo "\
+[Theme]\
+Current=pixie" > /etc/sddm.conf.d/theme.conf'
+
+sudo tee /etc/sddm.conf.d/01-wayland.conf > /dev/null <<'EOF'
+[General]
+DisplayServer=wayland
+GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell,XCURSOR_THEME=phinger-cursors-dark
+
+[Wayland]
+CompositorCommand=kwin_wayland --drm --no-lockscreen --no-global-shortcuts --locale1
+EOF
+```
+
+> **Config source:** [Arch Wiki — SDDM §Wayland → KDE Plasma/KWin](https://wiki.archlinux.org/title/SDDM#KDE_Plasma_/_KWin). `CompositorCommand` needs the full flag set (`--drm` = KMS/DRM rendering, `--no-global-shortcuts` drops the KWin shortcut layer, `--locale1` reads the layout from `localectl`); `--no-lockscreen` alone is not enough. `GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell` makes QML themes composite as layer-shell surfaces — without it the greeter may not render. `XCURSOR_THEME` is **required**: sddm injects `GreeterEnvironment` verbatim and its packaged default leaves the cursor theme empty → the Wayland greeter shows no cursor at all.
+
+**PAM — already shipped:** Arch's `sddm` package ships `/etc/pam.d/sddm` (system-login + `pam_kwallet5`/`pam_gnome_keyring` hooks) — no manual PAM file needed on a stock install. Verify it exists and has the KWallet hook:
+
+```bash
+ls -la /etc/pam.d/sddm
+grep -i kwallet /etc/pam.d/sddm   # expect: -session optional pam_kwallet5.so ...
+```
+
+Test on a spare VT, then switch:
+
+```bash
+# Do NOT disable plasmalogin yet — test first (leave your session running)
+sudo systemctl start sddm
+```
+
+Switch to TTY1 — pixie login screen with the **Plasma** session entry (SDDM lists every `*.desktop` in `/usr/share/wayland-sessions/`, so `plasma.desktop` appears automatically). If it works, switch back and enable:
+
+```bash
+sudo systemctl enable sddm --now
+sudo systemctl disable plasmalogin
+sudo reboot
+```
+
+**Rollback** (from a TTY, Ctrl+Alt+F3):
+
+```bash
+sudo rm /etc/sddm.conf.d/01-wayland.conf && sudo systemctl restart sddm   # back to X11 greeter
+sudo pacman -S --noconfirm plasma-login-manager
+sudo systemctl disable sddm
+sudo systemctl enable plasmalogin
+sudo reboot
+```
+
+> Theming note: pixie only works on SDDM. If you stay on `plasma-login-manager`, the login screen follows your Plasma theme + wallpaper (see [KDE_Theming.md](KDE_Theming.md)) — no QML login themes supported.
 
 ## Desktop Apps
 

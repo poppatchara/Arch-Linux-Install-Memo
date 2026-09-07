@@ -1341,7 +1341,7 @@ Each path has a dedicated companion guide with the full install + config. Open t
 
 | Path | Guide | What you get | Login screen |
 |------|-------|-------------|--------------|
-| 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` |
+| 🖥️ **KDE Plasma** | [`KDE_Plasma.md`](KDE_Plasma.md) (+ [theming](KDE_Theming.md)) | Full desktop — compositor, shell, apps, all integrated | `plasma-login-manager` *(or SDDM + pixie — see the guide)* |
 | 🏔️ **Niri + Noctalia** | [`Niri_Noctalia_v5.md`](Niri_Noctalia_v5.md) | Scrollable-tiling compositor + native shell (bar, launcher, dock, notifications, wallpaper) — DMS as secondary shell option | `sddm` + `pixie-sddm-git` |
 | 🪟 **Hyprland + Noctalia (Scrolling)** | [`Hyprland-Scrolling.md`](Hyprland-Scrolling.md) | Tiling compositor with Niri-style scrolling tape + Noctalia shell | `sddm` |
 | 🪟 **Hyprland + Noctalia (Tiling)** | [`Hyprland-Tiling.md`](Hyprland-Tiling.md) | Tiling compositor with classic dwindle/master layout + Noctalia shell | `sddm` |
@@ -1349,7 +1349,7 @@ Each path has a dedicated companion guide with the full install + config. Open t
 
 KDE Plasma is the mainstream choice: everything works out of the box, familiar desktop metaphor, KDE apps integrate perfectly. Niri + Noctalia is leaner: scrollable-tiling workflow, lower resource usage, keyboard-driven, but still has a full shell. Hyprland + Noctalia is the tinkerer's pick: Lua config with hot-reload, two layout philosophies, and the same native C++ Noctalia shell.
 
-**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin`, Niri + Hyprland → `sddm` (with the `pixie` theme). Enable exactly one. The KDE packages referenced in the guides (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* a compositor — they don't pull the Plasma desktop.
+**No conflict between paths:** each uses its own login manager — KDE → `plasmalogin` (default) or SDDM + pixie (optional, see `KDE_Plasma.md`), Niri + Hyprland → `sddm` (with the `pixie` theme). Enable exactly one. The KDE packages referenced in the guides (`plasma-integration`, `kded`, `dolphin`) are libraries/apps for KDE apps *on* a compositor — they don't pull the Plasma desktop.
 
 ### ▸ Secret Storage (all paths)
 
@@ -1359,9 +1359,7 @@ Apps need a secrets backend to safely store passwords. GTK apps (VS Code, Chromi
 sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanager kwallet-pam
 ```
 
-> PAM hooks for the login manager are added in the SDDM setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/sddm` to exist first.
->
-> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks in the vendor PAM file — verify with `grep -i kwallet /usr/lib/pam.d/plasmalogin` (no `/etc/pam.d/plasmalogin` needed unless you want to override; Arch `libpam` reads the vendor dir as fallback).
+> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks in the vendor PAM file — verify with `grep -i kwallet /usr/lib/pam.d/plasmalogin` (no `/etc/pam.d/plasmalogin` needed unless you want to override; Arch `libpam` reads the vendor dir as fallback). If you chose **SDDM + pixie on the KDE path**, Arch's `sddm` package ships `/etc/pam.d/sddm` with the same hooks — no manual PAM file needed (see the SDDM + pixie section in `KDE_Plasma.md`). The manual PAM rewrite in `Niri_Noctalia_v5.md` is for the **Niri path only** (older sddm installs there may lack the shipped file).
 >
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 

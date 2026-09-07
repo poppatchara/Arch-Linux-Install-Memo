@@ -1361,7 +1361,7 @@ sudo pacman -S --noconfirm --needed gnome-keyring libsecret kwallet kwalletmanag
 
 > PAM hooks for the login manager are added in the SDDM setup in `Niri_Noctalia_v5.md` — they need `/etc/pam.d/sddm` to exist first.
 >
-> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks — verify with `grep -i kwallet /etc/pam.d/plasmalogin`; if missing, add the same `auth optional` / `session optional` lines used for sddm above.
+> **KDE path (Plasma Login Manager):** `plasmalogin` ships its own `pam_kwallet`/`pam_gnome_keyring` hooks in the vendor PAM file — verify with `grep -i kwallet /usr/lib/pam.d/plasmalogin` (no `/etc/pam.d/plasmalogin` needed unless you want to override; Arch `libpam` reads the vendor dir as fallback).
 >
 > KWallet auto-unlock: wallet password = login password, blowfish encryption, wallet name = `kdewallet`.
 

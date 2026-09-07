@@ -712,6 +712,7 @@ This section polishes Niri + Noctalia v5 into a full desktop environment. Config
 sudo pacman -S --noconfirm --needed \
   dolphin \
   ark \
+  unrar \
   gwenview \
   grim slurp satty wl-clipboard \
   kate \
@@ -721,7 +722,8 @@ sudo pacman -S --noconfirm --needed \
 | Package | Purpose |
 |---------|--------|
 | `dolphin` | GUI file manager (`Mod+E`) |
-| `ark` | Archive manager (zip/tar/7z) |
+| `ark` | Archive manager (zip/tar/7z) — RAR extraction needs the `unrar` backend below (bsdtar/libarchive alone can't handle all RARs) |
+| `unrar` | RAR extraction backend for Ark/Dolphin/CLI (`unrar x file.rar`). Without it, `.rar` extract fails in the GUI even though 7z/zip work. |
 | `gwenview` | Image viewer |
 | `grim` | Wayland screenshot capture (native, no portal) |
 | `slurp` | Interactive region select for `grim` |

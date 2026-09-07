@@ -31,6 +31,10 @@ All 4 decisions are independent. See the unified guide for detailed walkthrough.
 
 ## 📝 Changelog
 
+### 2026-09-05
+
+- **Niri guide — RAR extraction needs `unrar`:** `ark` alone can't extract `.rar` — bsdtar/libarchive handles only a subset of RARs, so Ark's GUI extract fails while zip/7z work. Added `unrar` to the KDE-preferred additions package list + table (`unrar x file.rar`, Ark auto-detects the backend). Verified on pop_arch 2026-09-05 (Ark failed → installed `unrar 1:7.2.7-1` → extract works).
+
 ### 2026-08-31
 
 - **Niri guide — Root X11 apps (pkexec) need `xorg-xhost`:** new **Root X11 Apps (pkexec) — "cannot open display: :0"** subsection under `### DISPLAY=:0 for X11 Apps` — GParted/grub-customizer etc. re-exec as root via `pkexec`, and the root process fails with `Authorization required, but no authorization protocol specified` / `cannot open display: :0` because xwayland-satellite's access control only allows the session user. GParted's launcher auto-runs `xhost +SI:localuser:root` before `pkexec`, but that silently fails when `xhost` isn't installed. Fix: `sudo pacman -S xorg-xhost` (grant happens automatically per launch). Verified on pop_arch 2026-08-31 (GParted 1.8.1 window opened after install).
